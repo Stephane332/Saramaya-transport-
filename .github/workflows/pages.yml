@@ -1,10 +1,12 @@
 # Publie la version web de l'application sur GitHub Pages.
 #
 # Le résultat est une adresse ouvrable depuis un téléphone, sans ordinateur et sans
-# passer par les stores — pratique pour montrer le projet.
+# passer par les stores :
+#
+#     https://stephane332.github.io/Saramaya-transport-/
 #
 # À activer une seule fois : Settings → Pages → Source : « GitHub Actions ».
-# Tant que ce réglage n'est pas fait, ce workflow ne publie rien.
+# Tant que ce réglage n'est pas fait, le job de publication échoue sans rien casser.
 
 name: Publier la version web
 
@@ -40,13 +42,17 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Construire la version web
-        # Les chemins doivent être relatifs : le site est servi depuis un sous-dossier.
-        run: npx expo export --platform web --output-dir dist
+        # Le site est servi depuis un sous-dossier : sans ce préfixe, tous les
+        # chemins vers /_expo/... pointeraient à la racine du domaine.
         env:
+          EXPO_BASE_URL: /${{ github.event.repository.name }}
           EXPO_NO_TELEMETRY: '1'
+        run: npx expo export --platform web --output-dir dist
 
-      - name: Éviter le traitement Jekyll
-        run: touch dist/.nojekyll
+      - name: Préparer pour l'hébergement statique
+        # Balises d'installation sur l'écran d'accueil, repli des liens profonds
+        # en 404.html, et .nojekyll pour que le dossier _expo ne soit pas ignoré.
+        run: node scripts/preparer-pages.mjs dist "/${{ github.event.repository.name }}"
 
       - uses: actions/upload-pages-artifact@v3
         with:

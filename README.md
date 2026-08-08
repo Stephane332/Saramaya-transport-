@@ -115,6 +115,35 @@ npx tsc --noEmit                        # types
 npx expo export --platform web          # build web
 ```
 
+## Tester sur un téléphone
+
+**Avec un ordinateur** — `npx expo start` affiche un QR code à scanner avec Expo Go
+(gratuit sur l'App Store et le Play Store). L'application s'ouvre sur le téléphone, en
+natif, avec les animations et la 3D.
+
+**Sans ordinateur** — la version web est publiée automatiquement sur GitHub Pages à
+chaque push :
+
+```
+https://stephane332.github.io/Saramaya-transport-/
+```
+
+Ouverte dans Safari puis ajoutée à l'écran d'accueil (Partager → *Sur l'écran d'accueil*),
+elle s'ouvre en plein écran, avec son icône et sans barre de navigateur.
+
+**À activer une seule fois** dans le dépôt : `Settings` → `Pages` → `Source` :
+**GitHub Actions**. Sans ce réglage, le workflow construit le site mais ne le publie pas.
+
+Pour reproduire ce build en local :
+
+```bash
+EXPO_BASE_URL=/Saramaya-transport- npx expo export --platform web --output-dir dist
+node scripts/preparer-pages.mjs dist /Saramaya-transport-
+```
+
+Le préfixe est indispensable : GitHub Pages sert le site depuis un sous-dossier, et sans
+lui tous les chemins vers `_expo/` pointeraient à la racine du domaine — page blanche.
+
 ## Écrans
 
 | Écran | Route | Rôle |
