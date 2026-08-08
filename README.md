@@ -191,6 +191,7 @@ src/
   sync/                 types.ts (SyncProvider), localProvider.ts
   theme/                couleurs, typographie, espacements
 docs/presentation/      argumentaire, chiffres à collecter, déroulé de démonstration
+docs/integration/       comment se brancher sur la billetterie Digiparc de la compagnie
 ```
 
 **Fichiers à lire en premier** : `src/lib/confirmation.ts` porte toute la logique de
