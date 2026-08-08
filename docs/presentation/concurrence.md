@@ -118,14 +118,16 @@ Dessinez-le sur une feuille devant eux, ou imprimez-le.
 | **Écran de surveillance en gare** | ✗ | ✗ | **✓** |
 | **Report au lieu du remboursement** | ✗ | ✗ | **✓** |
 | **Liste d'attente automatique** | ✗ (à la main) | ✗ | **✓** |
-| Colis | ✓ | ✓ | à venir |
+| Colis — envoi | ✓ (code au guichet) | ✓ | ✓ |
+| **Colis — code partagé et suivi** | **✗** | ✗ | **✓** |
+| **Trois classes affichées** | ~ (au téléphone) | — | **✓** |
 | International | ✗ | ✓ | — |
 
-Les cinq lignes en gras sont **ce que personne ne fait**. C'est votre proposition.
+Les lignes en gras sont **ce que personne ne fait**. C'est votre proposition.
 
 ---
 
-## Ce que nous ajoutons — les cinq différences
+## Ce que nous ajoutons — les six différences
 
 ### 1. Le billet marche sans réseau
 
@@ -162,7 +164,29 @@ l'application propose **d'abord de reporter** : aucun franc ne sort de la caisse
 client ne perd rien, la place repart à la vente immédiatement. Le remboursement devient
 l'exception, dans une liste « à traiter » avec le montant déjà calculé.
 
-### 5. L'écran de la gare
+### 5. Le colis, du code perdu au colis suivi
+
+La compagnie annonce déjà la « Distribution et Réception de courrier », et le procédé
+actuel est simple : l'expéditeur repart du guichet avec un code, qu'il envoie lui-même au
+destinataire par WhatsApp.
+
+Ça marche — jusqu'au jour où le code se perd dans une conversation, où le destinataire ne
+sait pas que le colis est arrivé, ou où l'expéditeur rappelle la gare pour demander où en
+est son envoi.
+
+L'application garde exactement le même geste, mais le rend fiable :
+
+- Le code est **généré** et affiché en grand, avec son QR — plus de recopie à la main.
+- Il part au destinataire **en un geste**, dans un message déjà rédigé qui contient le
+  code, la gare de retrait et son téléphone.
+- Le colis **se suit** : déposé, en route, arrivé, retiré. Le destinataire est prévenu
+  quand il arrive vraiment.
+- Un colis qui dort **plus de 48 h** au guichet est signalé : il encombre la gare, et
+  quelqu'un doit relancer.
+
+C'est le service qu'ils ont déjà, débarrassé de ses frictions. Aucun concurrent ne le fait.
+
+### 6. L'écran de la gare
 
 TSR a une billetterie en ligne, mais rien n'a été pensé pour **l'agent**. Notre écran lui
 donne le manifeste du départ, les statuts en direct — vert, orange, rouge — les
@@ -175,7 +199,7 @@ remboursements à préparer et la liste d'attente. Il surveille au lieu de tél�
 Après avoir montré tout ce que fait TSR :
 
 > « Voilà où en est votre concurrent. Rattraper ça, c'est le minimum — et l'application
-> le fait. Mais rattraper ne suffit pas : je vous propose cinq choses que TSR ne fait
+> le fait. Mais rattraper ne suffit pas : je vous propose six choses que TSR ne fait
 > pas, et qui répondent à des problèmes que vous avez et qu'ils n'ont pas. »
 
 Puis vous enchaînez sur les appels de confirmation.

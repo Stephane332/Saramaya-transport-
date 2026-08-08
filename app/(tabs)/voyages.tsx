@@ -157,7 +157,7 @@ export default function Voyages() {
                   {l.origine} → {l.destination}
                 </Txt>
                 <Txt v="petit" couleur={couleurs.marqueVif}>
-                  {montant(l.tarifs.CLASSIQUE)}
+                  {montant(l.tarifs.ORDINAIRE)}
                 </Txt>
               </View>
             </Pressable>

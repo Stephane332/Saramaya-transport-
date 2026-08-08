@@ -17,7 +17,15 @@ import {
   Txt,
 } from '../../src/components/base';
 import { PlanSieges } from '../../src/components/PlanSieges';
-import { GARES, LIGNES, PLANS_BUS, garesDeLaVille, ligneParId, nombreDeSieges } from '../../src/data/reseau';
+import {
+  GARES,
+  LIBELLES_CLASSE,
+  LIGNES,
+  PLANS_BUS,
+  garesDeLaVille,
+  ligneParId,
+  nombreDeSieges,
+} from '../../src/data/reseau';
 import { identifiantDepart, siegesOccupes } from '../../src/lib/disponibilite';
 import { decalerHeure, montant } from '../../src/lib/format';
 import { useApp } from '../../src/store/useApp';
@@ -46,7 +54,7 @@ export default function Reserver() {
   const [ligneId, setLigneId] = useState<string | null>(null);
   const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [heure, setHeure] = useState<string | null>(null);
-  const [classe, setClasse] = useState<Classe>('CLASSIQUE');
+  const [classe, setClasse] = useState<Classe>('ORDINAIRE');
   const [siege, setSiege] = useState<number | null>(null);
   const [gareId, setGareId] = useState<string | null>(null);
 
@@ -120,10 +128,10 @@ export default function Reserver() {
                 </View>
                 <View style={styles.entre}>
                   <Txt v="petit" couleur={couleurs.texteFaible}>
-                    {l.horaires.length} départs · {l.distanceKm} km
+                    {l.departs.length} départs · {l.distanceKm} km
                   </Txt>
                   <Txt v="petit" couleur={couleurs.marqueVif}>
-                    dès {montant(l.tarifs.CLASSIQUE)}
+                    dès {montant(l.tarifs.ORDINAIRE)}
                   </Txt>
                 </View>
               </Carte>
@@ -164,46 +172,45 @@ export default function Reserver() {
 
       {etape === 'DEPART' && ligne ? (
         <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
-          <Section>Départ et classe</Section>
-          <View style={styles.selecteurClasse}>
-            {(['CLASSIQUE', 'VIP'] as Classe[]).map((c) => (
-              <Pressable key={c} style={{ flex: 1 }} onPress={() => setClasse(c)}>
-                <View style={[styles.optionClasse, classe === c && styles.optionClasseActive]}>
-                  <BadgeClasse classe={c} petit />
-                  <Txt v="corpsFort">{montant(ligne.tarifs[c])}</Txt>
-                  <Txt v="minuscule" couleur={couleurs.texteFaible} numberOfLines={1}>
-                    {PLANS_BUS[c].equipements[0]}
-                  </Txt>
-                </View>
-              </Pressable>
-            ))}
-          </View>
+          <Section>Choisissez votre départ</Section>
+          <Txt v="petit" couleur={couleurs.texteFaible}>
+            Chaque départ a sa classe : la compagnie fait rouler des cars Ordinaire,
+            VIP 1re classe et VIP directe à des horaires différents.
+          </Txt>
 
-          {ligne.horaires.map((h, i) => {
-            const occ = siegesOccupes(identifiantDepart(ligne.id, date, h, classe), classe);
-            const total = nombreDeSieges(classe);
+          {ligne.departs.map((d, i) => {
+            const occ = siegesOccupes(
+              identifiantDepart(ligne.id, date, d.heure, d.classe),
+              d.classe,
+            );
+            const total = nombreDeSieges(d.classe);
             const libres = total - occ.length;
             return (
               <Pressable
-                key={h}
+                key={d.heure}
                 onPress={() => {
-                  setHeure(h);
+                  setHeure(d.heure);
+                  setClasse(d.classe);
                   setSiege(null);
                   setEtape('SIEGE');
                 }}
               >
                 <Carte index={i} style={{ gap: espace.sm }}>
                   <View style={styles.entre}>
-                    <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: espace.sm }}>
-                      <Txt v="sousTitre">{h}</Txt>
-                      <Txt v="minuscule" couleur={couleurs.texteFaible}>
-                        CONVOCATION {decalerHeure(h, -30)}
-                      </Txt>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.md }}>
+                      <Txt v="sousTitre">{d.heure}</Txt>
+                      <BadgeClasse classe={d.classe} petit />
                     </View>
-                    <Txt
-                      v="petit"
-                      couleur={libres < 8 ? couleurs.attention : couleurs.succes}
-                    >
+                    <Txt v="corpsFort" couleur={couleurs.marqueVif}>
+                      {montant(ligne.tarifs[d.classe])}
+                    </Txt>
+                  </View>
+                  <View style={styles.entre}>
+                    <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                      CONVOCATION {decalerHeure(d.heure, -30)} ·{' '}
+                      {PLANS_BUS[d.classe].equipements[0].toUpperCase()}
+                    </Txt>
+                    <Txt v="petit" couleur={libres < 8 ? couleurs.attention : couleurs.succes}>
                       {libres} places
                     </Txt>
                   </View>
@@ -294,7 +301,7 @@ export default function Reserver() {
             </Txt>
             <Txt v="petit" couleur={couleurs.texteFaible}>
               {ligne.origine} → {ligne.destination} · {heure} ·{' '}
-              {classe === 'VIP' ? 'VIP' : 'Classique'}
+              {LIBELLES_CLASSE[classe]}
               {siege ? ` · siège ${siege}` : ''}
             </Txt>
           </LinearGradient>
@@ -391,7 +398,7 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
       ligneId: 'ligne-ouahigouya-ouaga',
       date: format(new Date(), 'yyyy-MM-dd'),
       heure: '16:00',
-      classe: 'CLASSIQUE',
+      classe: 'ORDINAIRE',
       siege: 93,
       montant: 3500,
     });

@@ -99,6 +99,12 @@ export default function Accueil() {
           onPress={() => router.push('/reserver?scan=1')}
         />
         <Raccourci
+          icone="cube"
+          titre="Envoyer un colis"
+          detail="Le code part au destinataire par WhatsApp"
+          onPress={() => router.push('/colis')}
+        />
+        <Raccourci
           icone="repeat"
           titre="Refaire un trajet"
           detail={
@@ -119,15 +125,15 @@ export default function Accueil() {
                 {l.origine} → {l.destination}
               </Txt>
               <Txt v="petit" couleur={couleurs.texteFaible}>
-                {l.horaires.length} départs · {l.distanceKm} km
+                {l.departs.length} départs · {l.distanceKm} km
               </Txt>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Txt v="corpsFort" couleur={couleurs.marqueVif}>
-                {montant(l.tarifs.CLASSIQUE)}
+                {montant(l.tarifs.ORDINAIRE)}
               </Txt>
               <Txt v="minuscule" couleur={couleurs.vip}>
-                VIP {montant(l.tarifs.VIP)}
+                VIP {montant(l.tarifs.VIP_1RE)}
               </Txt>
             </View>
           </View>

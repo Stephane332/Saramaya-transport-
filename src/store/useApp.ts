@@ -1,14 +1,27 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { VOYAGEUR_DEMO, construireReservations } from '../data/seed';
+import { VOYAGEUR_DEMO, construireColis, construireReservations } from '../data/seed';
 import { LocalProvider } from '../sync/localProvider';
 import type { DemandeReservation, TicketScanne } from '../sync/types';
-import type { Reservation, Voyageur } from '../types';
+import { genererCodeRetrait } from '../lib/colis';
+import type { Colis, Reservation, TailleColis, Voyageur } from '../types';
+
+export interface DemandeColis {
+  destinataireNom: string;
+  destinataireTelephone: string;
+  gareDepartId: string;
+  gareArriveeId: string;
+  taille: TailleColis;
+  description: string;
+  valeurDeclaree: number;
+  montant: number;
+}
 
 interface EtatApp {
   voyageur: Voyageur | null;
   reservations: Reservation[];
+  colis: Colis[];
   /** Rappels déjà joués, par réservation — pour ne jamais répéter une étape. */
   rappelsJoues: Record<string, string[]>;
   /** Réservations dont la place a été réattribuée : la rétractation n'est plus possible. */
@@ -20,6 +33,10 @@ interface EtatApp {
   reinitialiser: () => void;
 
   creer: (d: DemandeReservation) => Promise<Reservation>;
+  envoyerColis: (d: DemandeColis, moyen: Colis['moyenPaiement']) => Promise<Colis>;
+  marquerCodePartage: (id: string) => void;
+  /** Démonstration : fait avancer un colis d'une étape dans son suivi. */
+  avancerColis: (id: string) => void;
   confirmer: (id: string) => Promise<void>;
   annuler: (id: string) => Promise<void>;
   reprendre: (id: string) => Promise<void>;
@@ -38,6 +55,7 @@ export const useApp = create<EtatApp>()(
     (set, get) => ({
       voyageur: null,
       reservations: [],
+      colis: [],
       rappelsJoues: {},
       placesReattribuees: [],
       amorce: false,
@@ -47,6 +65,7 @@ export const useApp = create<EtatApp>()(
         set({
           voyageur: VOYAGEUR_DEMO,
           reservations: construireReservations(),
+          colis: construireColis(),
           amorce: true,
         });
       },
@@ -57,6 +76,7 @@ export const useApp = create<EtatApp>()(
         set({
           voyageur: VOYAGEUR_DEMO,
           reservations: construireReservations(),
+          colis: construireColis(),
           rappelsJoues: {},
           placesReattribuees: [],
           amorce: true,
@@ -100,6 +120,40 @@ export const useApp = create<EtatApp>()(
         return provider(get, set).importerTicketPapier(t, voyageur);
       },
 
+      envoyerColis: async (d, moyen) => {
+        const maintenant = new Date();
+        const colis: Colis = {
+          id: `colis-${Date.now()}`,
+          reference: `C-${48200 + get().colis.length * 7}`,
+          codeRetrait: genererCodeRetrait(),
+          expediteurId: get().voyageur?.id ?? VOYAGEUR_DEMO.id,
+          ...d,
+          statut: 'DEPOSE',
+          deposeLe: maintenant.toISOString(),
+          codePartage: false,
+          moyenPaiement: moyen,
+        };
+        set({ colis: [colis, ...get().colis] });
+        return colis;
+      },
+
+      marquerCodePartage: (id) =>
+        set({
+          colis: get().colis.map((c) => (c.id === id ? { ...c, codePartage: true } : c)),
+        }),
+
+      avancerColis: (id) =>
+        set({
+          colis: get().colis.map((c) => {
+            if (c.id !== id) return c;
+            const maintenant = new Date().toISOString();
+            if (c.statut === 'DEPOSE') return { ...c, statut: 'EN_TRANSIT' };
+            if (c.statut === 'EN_TRANSIT') return { ...c, statut: 'ARRIVE', arriveLe: maintenant };
+            if (c.statut === 'ARRIVE') return { ...c, statut: 'RETIRE', retireLe: maintenant };
+            return c;
+          }),
+        }),
+
       marquerRappelJoue: (id, etapeId) => {
         const actuels = get().rappelsJoues[id] ?? [];
         if (actuels.includes(etapeId)) return;
@@ -112,6 +166,7 @@ export const useApp = create<EtatApp>()(
       partialize: (s) => ({
         voyageur: s.voyageur,
         reservations: s.reservations,
+        colis: s.colis,
         rappelsJoues: s.rappelsJoues,
         placesReattribuees: s.placesReattribuees,
         amorce: s.amorce,

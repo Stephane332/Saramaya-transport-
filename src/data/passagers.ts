@@ -6,11 +6,13 @@
  * seulement ceux-là — qui demandent encore de décrocher le téléphone.
  */
 
+import type { Classe } from '../types';
+
 export interface PassagerManifeste {
   nom: string;
   telephone: string;
   siege: number;
-  classe: 'CLASSIQUE' | 'VIP';
+  classe: Classe;
   etat: 'CONFIRME' | 'PAYE_NON_CONFIRME' | 'SANS_REPONSE' | 'ANNULE' | 'INJOIGNABLE' | 'EMBARQUE';
   montant: number;
   notificationDelivree: boolean;
@@ -42,7 +44,7 @@ const ETATS: PassagerManifeste['etat'][] = [
   ...Array<PassagerManifeste['etat']>(2).fill('INJOIGNABLE'),
 ];
 
-export function manifesteDemo(classe: 'CLASSIQUE' | 'VIP', tarif: number): PassagerManifeste[] {
+export function manifesteDemo(classe: Classe, tarif: number): PassagerManifeste[] {
   return NOMS.map((nom, i) => {
     const etat = ETATS[i % ETATS.length];
     return {

@@ -26,6 +26,7 @@ export default function DispositionRacine() {
         >
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="billet/[id]" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="colis/[id]" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen
             name="confirmation/[id]"
             options={{ animation: 'fade', presentation: 'fullScreenModal' }}

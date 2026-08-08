@@ -7,7 +7,13 @@
  */
 
 import { addDays, addMinutes, format, parseISO } from 'date-fns';
-import { JOURS_VALIDITE, MINUTES_CONVOCATION, ligneParId, nombreDeSieges } from '../data/reseau';
+import {
+  JOURS_VALIDITE,
+  LIBELLES_CLASSE,
+  MINUTES_CONVOCATION,
+  ligneParId,
+  nombreDeSieges,
+} from '../data/reseau';
 import { identifiantDepart, siegesOccupes } from '../lib/disponibilite';
 import { decalerHeure } from '../lib/format';
 import type { Classe, Reservation, Voyageur } from '../types';
@@ -64,28 +70,28 @@ export class LocalProvider implements SyncProvider {
   }): Promise<DepartDisponible[]> {
     const ligne = ligneParId(ligneId);
     if (!ligne) return [];
-    const classes: Classe[] = classe ? [classe] : ['CLASSIQUE', 'VIP'];
 
-    return ligne.horaires.flatMap((heure) =>
-      classes.map((c) => {
-        const id = identifiantDepart(ligneId, date, heure, c);
-        const occupes = siegesOccupes(id, c);
-        const total = nombreDeSieges(c);
+    // La classe n'est pas un choix : elle est attachée au départ.
+    return ligne.departs
+      .filter((d) => !classe || d.classe === classe)
+      .map((d) => {
+        const id = identifiantDepart(ligneId, date, d.heure, d.classe);
+        const occupes = siegesOccupes(id, d.classe);
+        const total = nombreDeSieges(d.classe);
         return {
           id,
           ligneId,
           gareDepartId: '',
           date,
-          heure,
-          convocation: decalerHeure(heure, -MINUTES_CONVOCATION),
-          classe: c,
-          tarif: ligne.tarifs[c],
+          heure: d.heure,
+          convocation: decalerHeure(d.heure, -MINUTES_CONVOCATION),
+          classe: d.classe,
+          tarif: ligne.tarifs[d.classe],
           placesTotal: total,
           placesLibres: total - occupes.length,
           siegesOccupes: occupes,
         } satisfies DepartDisponible;
-      }),
-    );
+      });
   }
 
   async historique(voyageurId: string): Promise<Reservation[]> {
@@ -172,7 +178,7 @@ export class LocalProvider implements SyncProvider {
       date,
       heure,
       convocation: decalerHeure(heure, -MINUTES_CONVOCATION),
-      classe: t.classe ?? 'CLASSIQUE',
+      classe: t.classe ?? 'ORDINAIRE',
       siege: t.siege ?? null,
       montant: t.montant ?? 0,
       statut: parseISO(`${date}T${heure}:00`) < maintenant ? 'EMBARQUE' : 'PAYEE',
@@ -201,7 +207,7 @@ export function messagePourLaGare(r: Reservation, voyageur: Voyageur): string {
     `Trajet : ${trajet}`,
     `Date : ${format(parseISO(r.date), 'dd/MM/yyyy')}`,
     `Départ : ${r.heure} (convocation ${r.convocation})`,
-    `Classe : ${r.classe === 'VIP' ? 'VIP' : 'Classique'}`,
+    `Classe : ${LIBELLES_CLASSE[r.classe]}`,
     r.siege ? `Siège souhaité : ${r.siege}` : null,
     `Tarif : ${r.montant} F`,
     `Nom : ${voyageur.nom} ${voyageur.prenom}`,

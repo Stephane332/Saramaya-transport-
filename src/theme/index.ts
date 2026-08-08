@@ -62,6 +62,7 @@ export const degrades = {
   /** Le bandeau du ticket papier, et lui seul. */
   ticket: ['#F0357F', '#8E1149'] as const,
   vip: ['#F0CE7A', '#B98A1E'] as const,
+  vipDirecte: ['#FFB35C', '#C7690D'] as const,
   classique: ['#7BA5F5', '#3A63BC'] as const,
   nuit: ['#1F1012', '#0A070E'] as const,
   chaleur: ['#F0562F', '#D81F26'] as const,

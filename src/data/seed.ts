@@ -9,7 +9,7 @@
 
 import { addDays, addMinutes, format, subDays } from 'date-fns';
 import { JOURS_VALIDITE, LIGNES, MINUTES_CONVOCATION } from './reseau';
-import type { Reservation, Voyageur } from '../types';
+import type { Classe, Colis, Reservation, Voyageur } from '../types';
 import { decalerHeure } from '../lib/format';
 
 export const VOYAGEUR_DEMO: Voyageur = {
@@ -28,7 +28,7 @@ interface Brouillon {
   gareDepartId: string;
   dateOffsetJours: number;
   heure: string;
-  classe: 'CLASSIQUE' | 'VIP';
+  classe: Classe;
   siege: number | null;
   montant: number;
   statut: Reservation['statut'];
@@ -48,18 +48,19 @@ function prochainDepartReel(
   ligneId: string,
   minutesMinimum: number,
   maintenant: Date,
-): { date: string; heure: string } {
-  const horaires = LIGNES.find((l) => l.id === ligneId)?.horaires ?? ['16:00'];
+): { date: string; heure: string; classe: Classe } {
+  const departs = LIGNES.find((l) => l.id === ligneId)?.departs ?? [];
   const seuil = addMinutes(maintenant, minutesMinimum);
 
-  for (const h of horaires) {
-    const [hh, mm] = h.split(':').map(Number);
+  for (const d of departs) {
+    const [hh, mm] = d.heure.split(':').map(Number);
     const candidat = new Date(maintenant);
     candidat.setHours(hh, mm, 0, 0);
-    if (candidat >= seuil) return { date: jour(candidat), heure: h };
+    if (candidat >= seuil) return { date: jour(candidat), heure: d.heure, classe: d.classe };
   }
   // Plus rien aujourd'hui : premier départ de demain.
-  return { date: jour(addDays(maintenant, 1)), heure: horaires[0] };
+  const premier = departs[0];
+  return { date: jour(addDays(maintenant, 1)), heure: premier.heure, classe: premier.classe };
 }
 
 const BROUILLONS: Brouillon[] = [
@@ -72,7 +73,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-ouahigouya',
     dateOffsetJours: 0,
     heure: '16:00',
-    classe: 'VIP',
+    classe: 'VIP_1RE',
     siege: 12,
     montant: 5000,
     statut: 'OPTION',
@@ -86,7 +87,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-ouaga-gounghin',
     dateOffsetJours: 6,
     heure: '08:30',
-    classe: 'VIP',
+    classe: 'VIP_1RE',
     siege: 4,
     montant: 8000,
     statut: 'PAYEE',
@@ -102,7 +103,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-ouahigouya',
     dateOffsetJours: -2,
     heure: '16:00',
-    classe: 'CLASSIQUE',
+    classe: 'ORDINAIRE',
     siege: 93,
     montant: 3500,
     statut: 'EMBARQUE',
@@ -116,7 +117,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-ouaga-tampouy',
     dateOffsetJours: -16,
     heure: '10:00',
-    classe: 'CLASSIQUE',
+    classe: 'ORDINAIRE',
     siege: 41,
     montant: 3500,
     statut: 'EMBARQUE',
@@ -129,7 +130,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-ouaga-gounghin',
     dateOffsetJours: -34,
     heure: '14:30',
-    classe: 'VIP',
+    classe: 'VIP_1RE',
     siege: 7,
     montant: 8000,
     statut: 'EMBARQUE',
@@ -142,7 +143,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-bobo-tounouma',
     dateOffsetJours: -38,
     heure: '22:30',
-    classe: 'VIP',
+    classe: 'VIP_1RE',
     siege: 9,
     montant: 8000,
     statut: 'EMBARQUE',
@@ -156,7 +157,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-ouahigouya',
     dateOffsetJours: -52,
     heure: '06:00',
-    classe: 'CLASSIQUE',
+    classe: 'ORDINAIRE',
     siege: 28,
     montant: 3500,
     statut: 'ANNULEE',
@@ -169,7 +170,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-ouaga-tampouy',
     dateOffsetJours: -67,
     heure: '11:00',
-    classe: 'CLASSIQUE',
+    classe: 'ORDINAIRE',
     siege: 15,
     montant: 2500,
     statut: 'EMBARQUE',
@@ -183,7 +184,7 @@ const BROUILLONS: Brouillon[] = [
     gareDepartId: 'gare-ouahigouya',
     dateOffsetJours: -91,
     heure: '14:00',
-    classe: 'CLASSIQUE',
+    classe: 'ORDINAIRE',
     siege: 52,
     montant: 3500,
     statut: 'EMBARQUE',
@@ -197,6 +198,7 @@ export function construireReservations(maintenant: Date = new Date()): Reservati
   return BROUILLONS.map((b, index) => {
     let date: string;
     let heure = b.heure;
+    let classe = b.classe;
 
     if (b.prochainHoraireReel) {
       const prochain = prochainDepartReel(
@@ -206,6 +208,8 @@ export function construireReservations(maintenant: Date = new Date()): Reservati
       );
       date = prochain.date;
       heure = prochain.heure;
+      // La classe est celle du départ retenu, pas celle du brouillon.
+      classe = prochain.classe;
     } else {
       const d =
         b.dateOffsetJours >= 0
@@ -228,9 +232,9 @@ export function construireReservations(maintenant: Date = new Date()): Reservati
       date,
       heure,
       convocation: decalerHeure(heure, -MINUTES_CONVOCATION),
-      classe: b.classe,
+      classe,
       siege: b.siege,
-      montant: b.montant,
+      montant: LIGNES.find((l) => l.id === b.ligneId)?.tarifs[classe] ?? b.montant,
       statut: b.statut,
       moyenPaiement: b.moyenPaiement,
       supports: b.supports,
@@ -241,4 +245,73 @@ export function construireReservations(maintenant: Date = new Date()): Reservati
       importeDuPapier: b.importeDuPapier,
     } satisfies Reservation;
   });
+}
+
+/**
+ * Colis de démonstration : un en cours de route, un arrivé qui attend son
+ * destinataire, et un déjà retiré.
+ */
+export function construireColis(maintenant: Date = new Date()): Colis[] {
+  const il_y_a = (heures: number) =>
+    new Date(maintenant.getTime() - heures * 3600000).toISOString();
+
+  return [
+    {
+      id: 'colis-1',
+      reference: 'C-48120',
+      codeRetrait: 'KRD-729',
+      expediteurId: VOYAGEUR_DEMO.id,
+      destinataireNom: 'OUEDRAOGO Fatimata',
+      destinataireTelephone: '70451288',
+      gareDepartId: 'gare-ouahigouya',
+      gareArriveeId: 'gare-ouaga-gounghin',
+      taille: 'PETIT',
+      description: 'Documents et vêtements',
+      valeurDeclaree: 25000,
+      montant: 2500,
+      statut: 'EN_TRANSIT',
+      deposeLe: il_y_a(3),
+      codePartage: true,
+      moyenPaiement: 'ORANGE_MONEY',
+    },
+    {
+      id: 'colis-2',
+      reference: 'C-47903',
+      codeRetrait: 'TQM-486',
+      expediteurId: VOYAGEUR_DEMO.id,
+      destinataireNom: 'KABORE Boukary',
+      destinataireTelephone: '76330914',
+      gareDepartId: 'gare-ouaga-gounghin',
+      gareArriveeId: 'gare-bobo-tounouma',
+      taille: 'MOYEN',
+      description: 'Carton de pièces détachées',
+      valeurDeclaree: 120000,
+      montant: 7000,
+      statut: 'ARRIVE',
+      deposeLe: il_y_a(30),
+      arriveLe: il_y_a(24),
+      codePartage: true,
+      moyenPaiement: 'ORANGE_MONEY',
+    },
+    {
+      id: 'colis-3',
+      reference: 'C-46551',
+      codeRetrait: 'BXN-234',
+      expediteurId: VOYAGEUR_DEMO.id,
+      destinataireNom: 'ZONGO Issouf',
+      destinataireTelephone: '65817402',
+      gareDepartId: 'gare-ouaga-tampouy',
+      gareArriveeId: 'gare-ouahigouya',
+      taille: 'ENVELOPPE',
+      description: 'Dossier administratif',
+      valeurDeclaree: 0,
+      montant: 1000,
+      statut: 'RETIRE',
+      deposeLe: il_y_a(24 * 12),
+      arriveLe: il_y_a(24 * 12 - 4),
+      retireLe: il_y_a(24 * 11),
+      codePartage: true,
+      moyenPaiement: 'ESPECES_GUICHET',
+    },
+  ];
 }

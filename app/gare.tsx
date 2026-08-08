@@ -16,7 +16,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Bouton, Carte, Ecran, Jauge, Section, Trait, Txt } from '../src/components/base';
-import { LIGNES, MINUTES_LIBERATION_PLACE, ligneParId } from '../src/data/reseau';
+import { LIBELLES_CLASSE_COURT, MINUTES_LIBERATION_PLACE, ligneParId } from '../src/data/reseau';
 import { ETIQUETTES_ETAT, manifesteDemo, type PassagerManifeste } from '../src/data/passagers';
 import { montant, telephone } from '../src/lib/format';
 import { couleurs, degrades, espace, rayon } from '../src/theme';
@@ -26,10 +26,15 @@ const LIGNE_DEMO = 'ligne-ouahigouya-ouaga';
 export default function EcranGare() {
   const router = useRouter();
   const ligne = ligneParId(LIGNE_DEMO)!;
-  const [heure, setHeure] = useState(ligne.horaires[3] ?? ligne.horaires[0]);
+  const [heure, setHeure] = useState(ligne.departs[3]?.heure ?? ligne.departs[0].heure);
   const [filtre, setFiltre] = useState<'TOUS' | 'A_TRAITER'>('TOUS');
 
-  const passagers = useMemo(() => manifesteDemo('CLASSIQUE', ligne.tarifs.CLASSIQUE), [ligne]);
+  const classeDuDepart =
+    ligne.departs.find((d) => d.heure === heure)?.classe ?? 'ORDINAIRE';
+  const passagers = useMemo(
+    () => manifesteDemo(classeDuDepart, ligne.tarifs[classeDuDepart]),
+    [ligne, classeDuDepart],
+  );
 
   const compte = useMemo(() => {
     const c = { CONFIRME: 0, PAYE_NON_CONFIRME: 0, SANS_REPONSE: 0, ANNULE: 0, INJOIGNABLE: 0, EMBARQUE: 0 };
@@ -67,17 +72,17 @@ export default function EcranGare() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={{ flexDirection: 'row', gap: espace.sm }}>
-          {ligne.horaires.map((h) => (
-            <Pressable key={h} onPress={() => setHeure(h)}>
-              <View style={[styles.creneau, h === heure && styles.creneauActif]}>
-                <Txt v="corpsFort" couleur={h === heure ? '#fff' : couleurs.texteDoux}>
-                  {h}
+          {ligne.departs.map((d) => (
+            <Pressable key={d.heure} onPress={() => setHeure(d.heure)}>
+              <View style={[styles.creneau, d.heure === heure && styles.creneauActif]}>
+                <Txt v="corpsFort" couleur={d.heure === heure ? '#fff' : couleurs.texteDoux}>
+                  {d.heure}
                 </Txt>
                 <Txt
                   v="minuscule"
-                  couleur={h === heure ? 'rgba(255,255,255,0.75)' : couleurs.texteFaible}
+                  couleur={d.heure === heure ? 'rgba(255,255,255,0.75)' : couleurs.texteFaible}
                 >
-                  {ligne.origine.slice(0, 4).toUpperCase()} → {ligne.destination.slice(0, 4).toUpperCase()}
+                  {LIBELLES_CLASSE_COURT[d.classe]}
                 </Txt>
               </View>
             </Pressable>

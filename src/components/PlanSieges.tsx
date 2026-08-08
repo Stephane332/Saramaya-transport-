@@ -107,7 +107,7 @@ export function PlanSieges({ classe, occupes, choisi, onChoisir }: Props) {
         <Puce couleur={couleurs.surfaceHaute} bordure={couleurs.bordureForte} texte="Libre" />
         <Puce couleur="rgba(255,255,255,0.05)" bordure="transparent" texte="Occupé" />
         <Puce
-          couleur={classe === 'VIP' ? couleurs.vip : couleurs.marque}
+          couleur={classe === 'ORDINAIRE' ? couleurs.marque : couleurs.vip}
           bordure="transparent"
           texte="Votre place"
         />
@@ -133,13 +133,13 @@ function Siege({
     return (
       <Pressable onPress={onPress}>
         <LinearGradient
-          colors={classe === 'VIP' ? degrades.vip : degrades.marque}
+          colors={classe === 'ORDINAIRE' ? degrades.marque : degrades.vip}
           style={styles.siege}
         >
           <Ionicons
             name="checkmark"
             size={14}
-            color={classe === 'VIP' ? '#3B2A05' : '#fff'}
+            color={classe === 'ORDINAIRE' ? '#fff' : '#3B2A05'}
           />
         </LinearGradient>
       </Pressable>

@@ -16,7 +16,7 @@
  * kilomètres parcourus affiché au voyageur.
  */
 
-import type { Gare, Ligne, Ville } from '../types';
+import type { Classe, Gare, Ligne, TailleColis, Ville } from '../types';
 
 export const VILLES: Ville[] = [
   'Ouagadougou',
@@ -96,6 +96,38 @@ export const GARES: Gare[] = [
   },
 ];
 
+/**
+ * Départs Ouagadougou ↔ Bobo-Dioulasso, repris tels quels de la page
+ * « Horaires & Tarifs » de la compagnie : chaque créneau porte sa classe.
+ *
+ * Une source secondaire (annuaire touristique) donne une grille légèrement
+ * différente. En cas de doute, c'est la leur qui fait foi — à reconfirmer
+ * au guichet avant toute présentation.
+ */
+const DEPARTS_OUAGA_BOBO: Ligne['departs'] = [
+  { heure: '08:00', classe: 'ORDINAIRE' },
+  { heure: '08:30', classe: 'VIP_1RE' },
+  { heure: '09:30', classe: 'VIP_DIRECTE' },
+  { heure: '10:30', classe: 'ORDINAIRE' },
+  { heure: '12:30', classe: 'ORDINAIRE' },
+  { heure: '14:30', classe: 'ORDINAIRE' },
+  { heure: '16:30', classe: 'VIP_1RE' },
+  { heure: '18:30', classe: 'VIP_DIRECTE' },
+  { heure: '22:30', classe: 'ORDINAIRE' },
+];
+
+/**
+ * Ouahigouya ↔ Ouagadougou : les quatre horaires sont publiés, mais pas la
+ * classe de chaque départ. Le créneau de 16:00 est confirmé Ordinaire par un
+ * ticket réel à 3 500 F ; les autres sont à vérifier au guichet.
+ */
+const DEPARTS_OUAHIGOUYA: Ligne['departs'] = [
+  { heure: '06:00', classe: 'ORDINAIRE' },
+  { heure: '10:00', classe: 'VIP_1RE' },
+  { heure: '14:00', classe: 'ORDINAIRE' },
+  { heure: '16:00', classe: 'ORDINAIRE' },
+];
+
 export const LIGNES: Ligne[] = [
   {
     id: 'ligne-ouahigouya-ouaga',
@@ -103,8 +135,8 @@ export const LIGNES: Ligne[] = [
     destination: 'Ouagadougou',
     dureeMinutes: 180,
     distanceKm: 182,
-    tarifs: { CLASSIQUE: 3500, VIP: 5000 },
-    horaires: ['06:00', '10:00', '14:00', '16:00'],
+    tarifs: { ORDINAIRE: 3500, VIP_1RE: 5000, VIP_DIRECTE: 5000 },
+    departs: DEPARTS_OUAHIGOUYA,
   },
   {
     id: 'ligne-ouaga-ouahigouya',
@@ -112,8 +144,8 @@ export const LIGNES: Ligne[] = [
     destination: 'Ouahigouya',
     dureeMinutes: 180,
     distanceKm: 182,
-    tarifs: { CLASSIQUE: 3500, VIP: 5000 },
-    horaires: ['06:00', '10:00', '14:00', '16:00'],
+    tarifs: { ORDINAIRE: 3500, VIP_1RE: 5000, VIP_DIRECTE: 5000 },
+    departs: DEPARTS_OUAHIGOUYA,
   },
   {
     id: 'ligne-ouaga-bobo',
@@ -121,8 +153,8 @@ export const LIGNES: Ligne[] = [
     destination: 'Bobo-Dioulasso',
     dureeMinutes: 300,
     distanceKm: 356,
-    tarifs: { CLASSIQUE: 6500, VIP: 8000 },
-    horaires: ['08:30', '09:30', '12:30', '14:30', '18:30', '22:30', '23:45'],
+    tarifs: { ORDINAIRE: 6500, VIP_1RE: 8000, VIP_DIRECTE: 8000 },
+    departs: DEPARTS_OUAGA_BOBO,
   },
   {
     id: 'ligne-bobo-ouaga',
@@ -130,18 +162,23 @@ export const LIGNES: Ligne[] = [
     destination: 'Ouagadougou',
     dureeMinutes: 300,
     distanceKm: 356,
-    tarifs: { CLASSIQUE: 6500, VIP: 8000 },
-    horaires: ['08:30', '09:30', '12:30', '14:30', '18:30', '22:30', '23:45'],
+    tarifs: { ORDINAIRE: 6500, VIP_1RE: 8000, VIP_DIRECTE: 8000 },
+    departs: DEPARTS_OUAGA_BOBO,
   },
-  // Distances mesurées, mais horaires estimés — à confirmer auprès de la compagnie.
+  // Distances mesurées, mais horaires et classes estimés — à confirmer.
   {
     id: 'ligne-ouaga-koudougou',
     origine: 'Ouagadougou',
     destination: 'Koudougou',
     dureeMinutes: 105,
     distanceKm: 100,
-    tarifs: { CLASSIQUE: 2500, VIP: 3500 },
-    horaires: ['07:00', '11:00', '15:00', '18:00'],
+    tarifs: { ORDINAIRE: 2500, VIP_1RE: 3500, VIP_DIRECTE: 3500 },
+    departs: [
+      { heure: '07:00', classe: 'ORDINAIRE' },
+      { heure: '11:00', classe: 'ORDINAIRE' },
+      { heure: '15:00', classe: 'VIP_1RE' },
+      { heure: '18:00', classe: 'ORDINAIRE' },
+    ],
   },
   {
     id: 'ligne-ouaga-boromo',
@@ -149,8 +186,12 @@ export const LIGNES: Ligne[] = [
     destination: 'Boromo',
     dureeMinutes: 165,
     distanceKm: 180,
-    tarifs: { CLASSIQUE: 3500, VIP: 4500 },
-    horaires: ['08:30', '12:30', '18:30'],
+    tarifs: { ORDINAIRE: 3500, VIP_1RE: 4500, VIP_DIRECTE: 4500 },
+    departs: [
+      { heure: '08:30', classe: 'ORDINAIRE' },
+      { heure: '12:30', classe: 'ORDINAIRE' },
+      { heure: '18:30', classe: 'VIP_1RE' },
+    ],
   },
 ];
 
@@ -181,7 +222,7 @@ export function lignesDepuis(ville: Ville): Ligne[] {
  * chargeur USB, boisson offerte) ; le classique en 2+2 climatisé.
  */
 export interface PlanBus {
-  classe: 'CLASSIQUE' | 'VIP';
+  classe: Classe;
   rangees: number;
   /** Sièges à gauche du couloir, puis à droite. */
   gauche: number;
@@ -191,17 +232,17 @@ export interface PlanBus {
   equipements: string[];
 }
 
-export const PLANS_BUS: Record<'CLASSIQUE' | 'VIP', PlanBus> = {
-  CLASSIQUE: {
-    classe: 'CLASSIQUE',
+export const PLANS_BUS: Record<Classe, PlanBus> = {
+  ORDINAIRE: {
+    classe: 'ORDINAIRE',
     rangees: 16,
     gauche: 2,
     droite: 2,
     fond: 5,
     equipements: ['Climatisation', 'Sièges inclinables'],
   },
-  VIP: {
-    classe: 'VIP',
+  VIP_1RE: {
+    classe: 'VIP_1RE',
     rangees: 13,
     gauche: 2,
     droite: 1,
@@ -212,11 +253,40 @@ export const PLANS_BUS: Record<'CLASSIQUE' | 'VIP', PlanBus> = {
       'Écouteurs fournis',
       'Chargeur USB',
       'Boisson offerte',
+      'Climatisation',
+    ],
+  },
+  VIP_DIRECTE: {
+    classe: 'VIP_DIRECTE',
+    rangees: 13,
+    gauche: 2,
+    droite: 1,
+    fond: 4,
+    equipements: [
+      'Sans arrêt intermédiaire',
+      'Sièges extra-larges',
+      'Écran TV individuel',
+      'Chargeur USB',
+      'Boisson offerte',
+      'Climatisation',
     ],
   },
 };
 
-export function nombreDeSieges(classe: 'CLASSIQUE' | 'VIP'): number {
+/** Libellés courts, tels que la compagnie les emploie. */
+export const LIBELLES_CLASSE: Record<Classe, string> = {
+  ORDINAIRE: 'Ordinaire',
+  VIP_1RE: 'VIP 1re classe',
+  VIP_DIRECTE: 'VIP directe',
+};
+
+export const LIBELLES_CLASSE_COURT: Record<Classe, string> = {
+  ORDINAIRE: 'ORDINAIRE',
+  VIP_1RE: 'VIP 1RE',
+  VIP_DIRECTE: 'VIP DIRECTE',
+};
+
+export function nombreDeSieges(classe: Classe): number {
   const p = PLANS_BUS[classe];
   return p.rangees * (p.gauche + p.droite) + p.fond;
 }

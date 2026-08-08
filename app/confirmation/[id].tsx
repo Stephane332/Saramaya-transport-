@@ -27,7 +27,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { Bouton, Carte, Ecran, Section, Trait, Txt } from '../../src/components/base';
+import { BadgeClasse, Bouton, Carte, Ecran, Section, Trait, Txt } from '../../src/components/base';
 import { ligneParId } from '../../src/data/reseau';
 import { politiqueAnnulation } from '../../src/lib/annulation';
 import { dateHeureConvocation, dateHeureDepart, estProtegee } from '../../src/lib/confirmation';
@@ -318,11 +318,14 @@ function Report({ reservationId }: { reservationId: string }) {
       </View>
 
       <Section>Nouveau départ</Section>
-      {(ligne?.horaires ?? []).map((h) => (
-        <Pressable key={h} onPress={() => appliquer(h)}>
+      {(ligne?.departs ?? []).map((d) => (
+        <Pressable key={d.heure} onPress={() => appliquer(d.heure)}>
           <Carte style={{ paddingVertical: espace.md }}>
             <View style={styles.entre}>
-              <Txt v="sousTitre">{h}</Txt>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.md }}>
+                <Txt v="sousTitre">{d.heure}</Txt>
+                <BadgeClasse classe={d.classe} petit />
+              </View>
               <Ionicons name="chevron-forward" size={18} color={couleurs.texteFaible} />
             </View>
           </Carte>

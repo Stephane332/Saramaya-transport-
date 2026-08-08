@@ -1,6 +1,11 @@
 /** Modèle métier — transport de voyageurs Saramaya. */
 
-export type Classe = 'CLASSIQUE' | 'VIP';
+/**
+ * Les trois classes annoncées par la compagnie sur sa page Services :
+ * « Transport Ordinaire / VIP Directe / VIP 1e Classe ». Tous les cars sont
+ * climatisés — ce n'est donc pas un critère de distinction.
+ */
+export type Classe = 'ORDINAIRE' | 'VIP_1RE' | 'VIP_DIRECTE';
 
 export type Ville =
   | 'Ouagadougou'
@@ -26,8 +31,16 @@ export interface Ligne {
   dureeMinutes: number;
   distanceKm: number;
   tarifs: Record<Classe, number>;
-  /** Horaires de référence, au format HH:mm. */
-  horaires: string[];
+  /**
+   * Départs de la journée. Chaque créneau porte sa classe : la compagnie ne
+   * laisse pas choisir, c'est le départ qui est Ordinaire, VIP 1re ou VIP Directe.
+   */
+  departs: DepartHoraire[];
+}
+
+export interface DepartHoraire {
+  heure: string;
+  classe: Classe;
 }
 
 export interface Depart {
@@ -148,4 +161,50 @@ export interface LigneSurveillance {
   notificationDelivree: boolean;
   /** Vrai seulement pour les rares cas où l'agent doit décrocher son téléphone. */
   appelNecessaire: boolean;
+}
+
+
+/* ── Courrier et colis ──────────────────────────────────────────────────────
+ *
+ * La compagnie assure la « distribution et réception de courrier ». Aujourd'hui,
+ * l'expéditeur reçoit un code au guichet et l'envoie lui-même au destinataire par
+ * WhatsApp ; rien ne suit le colis, et un code perdu devient un litige.
+ */
+
+export type StatutColis =
+  | 'DEPOSE'
+  | 'EN_TRANSIT'
+  | 'ARRIVE'
+  | 'RETIRE'
+  | 'RETOUR_EXPEDITEUR';
+
+export type TailleColis = 'ENVELOPPE' | 'PETIT' | 'MOYEN' | 'GRAND';
+
+export interface Colis {
+  id: string;
+  /** Référence interne, comme pour un billet. */
+  reference: string;
+  /** Le code que le destinataire présente au guichet pour retirer le colis. */
+  codeRetrait: string;
+
+  expediteurId: string;
+  destinataireNom: string;
+  destinataireTelephone: string;
+
+  gareDepartId: string;
+  gareArriveeId: string;
+
+  taille: TailleColis;
+  description: string;
+  /** Au-delà de 50 000 F, la déclaration est obligatoire (conditions au dos du ticket). */
+  valeurDeclaree: number;
+  montant: number;
+
+  statut: StatutColis;
+  deposeLe: string;
+  arriveLe?: string;
+  retireLe?: string;
+  /** Vrai dès que le code a été transmis au destinataire. */
+  codePartage: boolean;
+  moyenPaiement?: MoyenPaiement;
 }

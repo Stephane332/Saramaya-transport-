@@ -21,6 +21,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { couleurs, degrades, espace, ombre, rayon, typo } from '../theme';
+import type { Classe } from '../types';
 
 const PressableAnime = Animated.createAnimatedComponent(Pressable);
 
@@ -229,11 +230,20 @@ export function Bouton({
 
 /* ── Pastilles ─────────────────────────────────────────────────────────────── */
 
-export function BadgeClasse({ classe, petit = false }: { classe: 'CLASSIQUE' | 'VIP'; petit?: boolean }) {
-  const vip = classe === 'VIP';
+const HABILLAGE_CLASSE: Record<
+  Classe,
+  { degrade: readonly [string, string]; encre: string; libelle: string }
+> = {
+  ORDINAIRE: { degrade: degrades.classique, encre: '#0B1830', libelle: 'ORDINAIRE' },
+  VIP_1RE: { degrade: degrades.vip, encre: '#3B2A05', libelle: 'VIP 1RE' },
+  VIP_DIRECTE: { degrade: degrades.vipDirecte, encre: '#2B1503', libelle: 'VIP DIRECTE' },
+};
+
+export function BadgeClasse({ classe, petit = false }: { classe: Classe; petit?: boolean }) {
+  const h = HABILLAGE_CLASSE[classe];
   return (
     <LinearGradient
-      colors={vip ? degrades.vip : degrades.classique}
+      colors={h.degrade}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.badge, petit && { paddingVertical: 3, paddingHorizontal: 8 }]}
@@ -241,10 +251,10 @@ export function BadgeClasse({ classe, petit = false }: { classe: 'CLASSIQUE' | '
       <Text
         style={[
           typo.minuscule,
-          { color: vip ? '#3B2A05' : '#0B1830', fontSize: petit ? 9 : 11, fontWeight: '800' },
+          { color: h.encre, fontSize: petit ? 9 : 11, fontWeight: '800' },
         ]}
       >
-        {vip ? 'VIP' : 'CLASSIQUE'}
+        {h.libelle}
       </Text>
     </LinearGradient>
   );

@@ -21,7 +21,7 @@ export default function DispositionOnglets() {
           paddingTop: 8,
           elevation: 0,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700', letterSpacing: 0.1 },
         tabBarBackground: () =>
           Platform.OS === 'web' ? null : (
             <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
@@ -45,9 +45,16 @@ export default function DispositionOnglets() {
         }}
       />
       <Tabs.Screen
+        name="colis"
+        options={{
+          title: 'Colis',
+          tabBarIcon: ({ color, size }) => <Ionicons name="cube" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="voyages"
         options={{
-          title: 'Mes voyages',
+          title: 'Voyages',
           tabBarIcon: ({ color, size }) => <Ionicons name="time" size={size} color={color} />,
         }}
       />
