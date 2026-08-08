@@ -9,7 +9,7 @@ export default function DispositionOnglets() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: couleurs.magentaVif,
+        tabBarActiveTintColor: couleurs.marqueVif,
         tabBarInactiveTintColor: couleurs.texteFaible,
         tabBarStyle: {
           position: 'absolute',

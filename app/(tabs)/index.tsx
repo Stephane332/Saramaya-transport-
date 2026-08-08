@@ -121,7 +121,7 @@ export default function Accueil() {
               </Txt>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Txt v="corpsFort" couleur={couleurs.magentaVif}>
+              <Txt v="corpsFort" couleur={couleurs.marqueVif}>
                 {montant(l.tarifs.CLASSIQUE)}
               </Txt>
               <Txt v="minuscule" couleur={couleurs.vip}>
@@ -158,7 +158,7 @@ function CarteProchainVoyage({
           style={styles.carteVoyage}
         >
           <View style={styles.rangeeLigne}>
-            <Txt v="section" couleur={couleurs.magentaVif}>
+            <Txt v="section" couleur={couleurs.marqueVif}>
               PROCHAIN VOYAGE
             </Txt>
             <BadgeStatut statut={reservation.statut} />
@@ -173,7 +173,7 @@ function CarteProchainVoyage({
             </View>
             <View style={styles.fleche}>
               <View style={styles.pointille} />
-              <Ionicons name="bus" size={16} color={couleurs.magentaVif} />
+              <Ionicons name="bus" size={16} color={couleurs.marqueVif} />
               <View style={styles.pointille} />
             </View>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
@@ -209,7 +209,7 @@ function CarteProchainVoyage({
               <Txt v="minuscule" couleur={couleurs.texteFaible}>
                 DÉPART
               </Txt>
-              <Txt v="corpsFort" couleur={couleurs.magentaVif}>
+              <Txt v="corpsFort" couleur={couleurs.marqueVif}>
                 {compteARebours(depart)}
               </Txt>
             </View>
@@ -256,7 +256,7 @@ function Stat({
       entering={FadeInDown.delay(300 + index * 90).springify().damping(18)}
       style={styles.stat}
     >
-      <Ionicons name={icone} size={16} color={couleurs.magentaVif} />
+      <Ionicons name={icone} size={16} color={couleurs.marqueVif} />
       <Txt v={petit ? 'corpsFort' : 'chiffres'} style={petit ? { marginTop: 6 } : undefined} numberOfLines={1}>
         {valeur}
       </Txt>

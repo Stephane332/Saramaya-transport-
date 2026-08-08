@@ -90,7 +90,7 @@ export default function Billet() {
 
       {/* Le billet, dessiné comme le ticket papier. */}
       <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.billet}>
-        <LinearGradient colors={degrades.marque} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.souche}>
+        <LinearGradient colors={degrades.ticket} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.souche}>
           <View>
             <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
               TICKET DE VOYAGE
@@ -128,7 +128,7 @@ export default function Billet() {
                 {gare?.nom}
               </Txt>
             </View>
-            <Ionicons name="arrow-forward" size={18} color={couleurs.magentaVif} />
+            <Ionicons name="arrow-forward" size={18} color={couleurs.marqueVif} />
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
               <Txt v="minuscule" couleur={couleurs.texteFaible}>
                 ARRIVÉE
@@ -353,7 +353,7 @@ export default function Billet() {
             <Animated.View entering={FadeIn} style={{ gap: espace.sm }}>
               {CONDITIONS_TRANSPORT.map((c, i) => (
                 <View key={i} style={{ flexDirection: 'row', gap: espace.sm }}>
-                  <Txt v="petit" couleur={couleurs.magentaVif}>
+                  <Txt v="petit" couleur={couleurs.marqueVif}>
                     {i + 1}.
                   </Txt>
                   <Txt v="petit" couleur={couleurs.texteFaible} style={{ flex: 1 }}>
@@ -375,7 +375,7 @@ function Case({ titre, valeur, accent = false }: { titre: string; valeur: string
       <Txt v="minuscule" couleur={couleurs.texteFaible}>
         {titre}
       </Txt>
-      <Txt v="corpsFort" couleur={accent ? couleurs.magentaVif : couleurs.texte} numberOfLines={1}>
+      <Txt v="corpsFort" couleur={accent ? couleurs.marqueVif : couleurs.texte} numberOfLines={1}>
         {valeur}
       </Txt>
     </View>

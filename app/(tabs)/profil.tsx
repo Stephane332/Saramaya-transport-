@@ -133,7 +133,7 @@ function Reglage({
 }) {
   return (
     <View style={styles.reglage}>
-      <Ionicons name={icone} size={18} color={couleurs.magentaVif} />
+      <Ionicons name={icone} size={18} color={couleurs.marqueVif} />
       <View style={{ flex: 1 }}>
         <Txt v="corpsFort">{titre}</Txt>
         {detail ? (
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
     padding: 3,
     justifyContent: 'center',
   },
-  interrupteurActif: { backgroundColor: couleurs.magenta },
+  interrupteurActif: { backgroundColor: couleurs.marque },
   pastilleInterrupteur: {
     width: 20,
     height: 20,

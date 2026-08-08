@@ -1,24 +1,44 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="760" height="200" role="img" aria-label="Siraba">
+  <g transform="translate(8,10) scale(0.352)">
+    <clipPath id="coins"><rect width="512" height="512" rx="116"/></clipPath>
+    <g clip-path="url(#coins)">
   <defs>
-    <linearGradient id="fondH" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#F0357F"/>
-      <stop offset="0.55" stop-color="#D6216F"/>
-      <stop offset="1" stop-color="#8E1149"/>
+    <linearGradient id="rougeH" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F0362F"/>
+      <stop offset="0.55" stop-color="#D81F26"/>
+      <stop offset="1" stop-color="#9E1218"/>
     </linearGradient>
+    <filter id="ombreH" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="9" stdDeviation="14" flood-color="#3A0508" flood-opacity="0.30"/>
+    </filter>
   </defs>
 
-  <g transform="translate(8,10) scale(0.352)">
-    <rect width="512" height="512" rx="116" fill="url(#fondH)"/>
-    <ellipse cx="150" cy="90" rx="230" ry="150" fill="#FFFFFF" opacity="0.10"/>
-    <path d="M 172 404 C 172 330 340 322 340 256 C 340 190 172 182 172 108"
-          fill="none" stroke="#FFFFFF" stroke-width="64" stroke-linecap="round"/>
-    <path d="M 172 404 C 172 330 340 322 340 256 C 340 190 172 182 172 108"
-          fill="none" stroke="#B3175C" stroke-width="9" stroke-linecap="round"
-          stroke-dasharray="24 32" opacity="0.5"/>
-    <circle cx="172" cy="404" r="19" fill="#F04E37"/>
-    <circle cx="172" cy="404" r="8" fill="#FFFFFF"/>
-    <circle cx="172" cy="108" r="19" fill="#0A070E" opacity="0.85"/>
-    <circle cx="172" cy="108" r="8" fill="#FFFFFF"/>
+  <!-- Carrosserie blanche : le fond des autocars -->
+  <rect width="512" height="512" rx="116" fill="#FBF8F9"/>
+
+  <!--
+    La grande courbe rouge qui balaie le flanc des bus Saramaya : elle monte de
+    l'arrière-bas vers l'avant-haut. Reprise ici comme signature de la marque.
+  -->
+  <path d="M 0 512 L 0 372 C 150 372 236 300 300 196 C 348 118 420 74 512 66 L 512 512 Z"
+        fill="url(#rougeH)"/>
+
+  <!-- Anneau rouge, en écho à l'écusson rond peint sur les flancs -->
+  <circle cx="256" cy="238" r="132" fill="none" stroke="#D81F26" stroke-width="17"/>
+  <circle cx="256" cy="238" r="112" fill="#FBF8F9"/>
+
+  <!-- La route qui serpente, et qui dessine en même temps la lettre S -->
+  <path d="M 208 320 C 208 275 300 270 300 238 C 300 206 208 201 208 156"
+        fill="none" stroke="#D81F26" stroke-width="38" stroke-linecap="round"
+        filter="url(#ombreH)"/>
+  <path d="M 208 320 C 208 275 300 270 300 238 C 300 206 208 201 208 156"
+        fill="none" stroke="#FBF8F9" stroke-width="5" stroke-linecap="round"
+        stroke-dasharray="14 19" opacity="0.85"/>
+
+  <!-- Départ et arrivée -->
+  <circle cx="208" cy="320" r="13" fill="#9E1218"/>
+  <circle cx="208" cy="156" r="13" fill="#15131A"/>
+</g>
   </g>
 
   <text x="222" y="112"

@@ -85,14 +85,27 @@ Fichiers dans `assets/logo/` : `logo.svg` (pastille carrée) et `logo-horizontal
 (avec le nom). Les icônes de l'application en sont générées.
 
 **Ce qu'il représente :** une route qui serpente, et qui dessine en même temps la lettre S.
-Le point orange en bas est le départ, le point sombre en haut l'arrivée, et la ligne
-discontinue au milieu est le marquage au sol. Lu de loin, c'est une lettre ; lu de près, c'est
-un trajet.
+Le point en bas est le départ, le point sombre en haut l'arrivée, et la ligne discontinue au
+milieu est le marquage au sol. Lu de loin, c'est une lettre ; lu de près, c'est un trajet.
 
-**Les couleurs viennent du ticket Saramaya** — le magenta de l'en-tête, le rouge-orangé du
-logo. C'est volontaire : l'application est visuellement parente de la compagnie sans usurper
-son nom. Si demain vous l'ouvrez à d'autres transporteurs, la palette se change en une ligne
-dans `src/theme/index.ts`.
+Il est posé sur fond blanc traversé par la courbe rouge des autocars, dans un anneau rouge qui
+rappelle l'écusson de leurs flancs.
+
+**Les couleurs viennent des autocars eux-mêmes** — carrosserie blanche, rouge vif — et la
+courbe du logo reprend le grand balayage peint sur leurs flancs. Le magenta du ticket papier
+est conservé à part, et ne sert qu'à dessiner le billet dans l'application : le billet
+numérique reste ainsi reconnaissable à côté du vrai.
+
+**Jusqu'où aller dans la ressemblance.** Reprendre leurs couleurs et leur langage visuel — la
+courbe, la forme ronde de l'écusson — est légitime et souhaitable : l'application a l'air
+d'appartenir à la même famille. Copier leur emblème lui-même ne l'est pas : c'est exactement
+ce qu'une marque déposée interdit, et cela vous fragiliserait au moment de négocier. Le mark
+central reste donc la route en S de Siraba, à l'intérieur d'un anneau qui, lui, fait écho au
+leur.
+
+Le jour où la compagnie adopte l'application, elle pourra y mettre son vrai logo : c'est une
+ligne à changer. Et si vous l'ouvrez à un autre transporteur, toute la palette se change dans
+`src/theme/index.ts`, où les couleurs de marque et celles du ticket sont déjà séparées.
 
 **Il fonctionne en petit.** Testez-le à 40 pixels : la forme reste lisible, ce qui est la
 seule vraie exigence d'une icône d'application.

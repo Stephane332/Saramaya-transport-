@@ -107,7 +107,7 @@ export function PlanSieges({ classe, occupes, choisi, onChoisir }: Props) {
         <Puce couleur={couleurs.surfaceHaute} bordure={couleurs.bordureForte} texte="Libre" />
         <Puce couleur="rgba(255,255,255,0.05)" bordure="transparent" texte="Occupé" />
         <Puce
-          couleur={classe === 'VIP' ? couleurs.vip : couleurs.magenta}
+          couleur={classe === 'VIP' ? couleurs.vip : couleurs.marque}
           bordure="transparent"
           texte="Votre place"
         />

@@ -109,7 +109,7 @@ function Alarme({ reservationId }: { reservationId: string }) {
             {ligne?.origine} → {ligne?.destination}
           </Txt>
           <View style={styles.rappelHoraire}>
-            <Txt v="corpsFort" couleur={couleurs.magentaVif}>
+            <Txt v="corpsFort" couleur={couleurs.marqueVif}>
               Départ {r.heure}
             </Txt>
             <Txt v="petit" couleur={couleurs.texteFaible}>
@@ -389,5 +389,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: couleurs.bordure,
   },
-  jourActif: { backgroundColor: couleurs.magentaProfond, borderColor: couleurs.magentaVif },
+  jourActif: { backgroundColor: couleurs.marqueProfond, borderColor: couleurs.marqueVif },
 });

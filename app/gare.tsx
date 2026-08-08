@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
-  creneauActif: { backgroundColor: couleurs.magentaProfond, borderColor: couleurs.magentaVif },
+  creneauActif: { backgroundColor: couleurs.marqueProfond, borderColor: couleurs.marqueVif },
   bandeauGain: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     borderRadius: rayon.rond,
     backgroundColor: couleurs.surfaceHaute,
   },
-  optionBasculeActive: { backgroundColor: couleurs.magentaProfond },
+  optionBasculeActive: { backgroundColor: couleurs.marqueProfond },
   rangeePassager: {
     flexDirection: 'row',
     alignItems: 'center',

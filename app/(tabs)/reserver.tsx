@@ -122,7 +122,7 @@ export default function Reserver() {
                   <Txt v="petit" couleur={couleurs.texteFaible}>
                     {l.horaires.length} départs · {l.distanceKm} km
                   </Txt>
-                  <Txt v="petit" couleur={couleurs.magentaVif}>
+                  <Txt v="petit" couleur={couleurs.marqueVif}>
                     dès {montant(l.tarifs.CLASSIQUE)}
                   </Txt>
                 </View>
@@ -209,7 +209,7 @@ export default function Reserver() {
                   </View>
                   <Jauge
                     valeur={occ.length / total}
-                    couleur={libres < 8 ? couleurs.attention : couleurs.magenta}
+                    couleur={libres < 8 ? couleurs.attention : couleurs.marque}
                   />
                 </Carte>
               </Pressable>
@@ -257,7 +257,7 @@ export default function Reserver() {
             <Trait />
             <View style={styles.entre}>
               <Txt v="corpsFort">Total</Txt>
-              <Txt v="sousTitre" couleur={couleurs.magentaVif}>
+              <Txt v="sousTitre" couleur={couleurs.marqueVif}>
                 {montant(ligne.tarifs[classe])}
               </Txt>
             </View>
@@ -289,7 +289,7 @@ export default function Reserver() {
             <Txt v="minuscule" couleur={couleurs.texteFaible}>
               MONTANT À RÉGLER
             </Txt>
-            <Txt v="geant" couleur={couleurs.magentaVif}>
+            <Txt v="geant" couleur={couleurs.marqueVif}>
               {montant(ligne.tarifs[classe])}
             </Txt>
             <Txt v="petit" couleur={couleurs.texteFaible}>
@@ -302,7 +302,7 @@ export default function Reserver() {
           {enPaiement ? (
             <Carte>
               <View style={{ alignItems: 'center', gap: espace.md, paddingVertical: espace.lg }}>
-                <ActivityIndicator color={couleurs.magentaVif} size="large" />
+                <ActivityIndicator color={couleurs.marqueVif} size="large" />
                 <Txt v="corpsFort">Paiement en cours…</Txt>
                 <Txt v="petit" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
                   Validez la demande reçue sur votre téléphone
@@ -352,10 +352,10 @@ function FilAriane({ index, onAller }: { index: number; onAller: (i: number) => 
               <View
                 style={[
                   styles.barre,
-                  { backgroundColor: passee || active ? couleurs.magentaVif : 'rgba(255,255,255,0.1)' },
+                  { backgroundColor: passee || active ? couleurs.marqueVif : 'rgba(255,255,255,0.1)' },
                 ]}
               />
-              <Txt v="minuscule" couleur={active ? couleurs.magentaVif : couleurs.texteFaible}>
+              <Txt v="minuscule" couleur={active ? couleurs.marqueVif : couleurs.texteFaible}>
                 {e.titre.toUpperCase()}
               </Txt>
             </View>
@@ -417,7 +417,7 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
 
       <LinearGradient colors={degrades.marqueDouce} style={styles.viseur}>
         <View style={styles.cadreScan}>
-          <Ionicons name="scan-outline" size={64} color={couleurs.magentaVif} />
+          <Ionicons name="scan-outline" size={64} color={couleurs.marqueVif} />
           <Txt v="petit" couleur={couleurs.texteFaible}>
             Cadrez le code-barres du ticket
           </Txt>
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     borderColor: couleurs.bordure,
     gap: 2,
   },
-  jourActif: { backgroundColor: couleurs.magentaProfond, borderColor: couleurs.magentaVif },
+  jourActif: { backgroundColor: couleurs.marqueProfond, borderColor: couleurs.marqueVif },
   selecteurClasse: { flexDirection: 'row', gap: espace.md },
   optionClasse: {
     alignItems: 'flex-start',
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: couleurs.bordure,
   },
-  optionClasseActive: { borderColor: couleurs.magentaVif, backgroundColor: 'rgba(214,33,111,0.12)' },
+  optionClasseActive: { borderColor: couleurs.marqueVif, backgroundColor: 'rgba(214,33,111,0.12)' },
   montantAPayer: {
     borderRadius: rayon.xl,
     padding: espace.xl,

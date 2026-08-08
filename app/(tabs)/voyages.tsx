@@ -65,7 +65,7 @@ export default function Voyages() {
             <Txt v="minuscule" couleur={couleurs.texteFaible}>
               TOTAL DÉPENSÉ
             </Txt>
-            <Txt v="chiffres" couleur={couleurs.magentaVif}>
+            <Txt v="chiffres" couleur={couleurs.marqueVif}>
               {montant(depense)}
             </Txt>
           </View>
@@ -152,11 +152,11 @@ export default function Voyages() {
           return (
             <Pressable key={ligneId} onPress={() => router.push('/reserver')}>
               <View style={styles.raccourci}>
-                <Ionicons name="repeat" size={18} color={couleurs.magentaVif} />
+                <Ionicons name="repeat" size={18} color={couleurs.marqueVif} />
                 <Txt v="corpsFort" style={{ flex: 1 }}>
                   {l.origine} → {l.destination}
                 </Txt>
-                <Txt v="petit" couleur={couleurs.magentaVif}>
+                <Txt v="petit" couleur={couleurs.marqueVif}>
                   {montant(l.tarifs.CLASSIQUE)}
                 </Txt>
               </View>
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: couleurs.bordure,
   },
-  filtreActif: { backgroundColor: couleurs.magentaProfond, borderColor: couleurs.magentaVif },
+  filtreActif: { backgroundColor: couleurs.marqueProfond, borderColor: couleurs.marqueVif },
   raccourci: {
     flexDirection: 'row',
     alignItems: 'center',

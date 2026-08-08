@@ -1,7 +1,14 @@
 /**
- * Identité visuelle dérivée du ticket papier Saramaya Transport :
- * le magenta de l'en-tête et le rouge-orangé du logo, posés sur un fond
- * très sombre pour faire ressortir les animations.
+ * Identité visuelle Saramaya Transport, relevée sur les autocars eux-mêmes :
+ * carrosserie blanche, grande courbe rouge vif, écusson rond rouge sur le flanc.
+ *
+ * Le rouge est donc la couleur de la marque. Le magenta, lui, n'appartient qu'à
+ * la papeterie : c'est celui de l'en-tête du ticket papier. Il est conservé à
+ * part, et ne sert qu'à dessiner le billet — pour que le billet numérique reste
+ * reconnaissable à côté du vrai.
+ *
+ * Le tout est posé sur un fond très sombre, qui fait ressortir le rouge comme la
+ * carrosserie blanche fait ressortir la courbe.
  */
 
 export const couleurs = {
@@ -12,12 +19,19 @@ export const couleurs = {
   surfaceHaute: '#1F1728',
   surfaceBasse: '#110C17',
 
-  // Marque
-  magenta: '#D6216F',
-  magentaVif: '#F0357F',
-  magentaProfond: '#8E1149',
-  orange: '#F04E37',
+  // Marque — le rouge des autocars
+  marque: '#D81F26',
+  marqueVif: '#F0362F',
+  marqueProfond: '#8E1017',
+  blanc: '#FFFFFF',
+  creme: '#F4EFF0',
+  orange: '#F0562F',
   orangeProfond: '#B93018',
+
+  // Papeterie — réservé au dessin du billet
+  ticket: '#D6216F',
+  ticketVif: '#F0357F',
+  ticketProfond: '#8E1149',
 
   // Classes de service
   vip: '#E8B54B',
@@ -43,12 +57,14 @@ export const couleurs = {
 } as const;
 
 export const degrades = {
-  marque: ['#F0357F', '#8E1149'] as const,
-  marqueDouce: ['rgba(240,53,127,0.24)', 'rgba(170,25,88,0.06)', 'rgba(10,7,14,0)'] as const,
+  marque: ['#F0362F', '#8E1017'] as const,
+  marqueDouce: ['rgba(240,54,47,0.22)', 'rgba(170,20,24,0.06)', 'rgba(10,7,14,0)'] as const,
+  /** Le bandeau du ticket papier, et lui seul. */
+  ticket: ['#F0357F', '#8E1149'] as const,
   vip: ['#F0CE7A', '#B98A1E'] as const,
   classique: ['#7BA5F5', '#3A63BC'] as const,
-  nuit: ['#1B1024', '#0A070E'] as const,
-  chaleur: ['#F04E37', '#D6216F'] as const,
+  nuit: ['#1F1012', '#0A070E'] as const,
+  chaleur: ['#F0562F', '#D81F26'] as const,
   succes: ['#3DE3A3', '#17916A'] as const,
 };
 
@@ -91,7 +107,7 @@ export const ombre = {
     elevation: 8,
   },
   marquee: {
-    shadowColor: couleurs.magenta,
+    shadowColor: couleurs.marque,
     shadowOpacity: 0.45,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 10 },

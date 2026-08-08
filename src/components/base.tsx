@@ -54,7 +54,7 @@ export function Ecran({
   return (
     <View style={styles.ecran}>
       <LinearGradient
-        colors={['#1A0E22', couleurs.fond, couleurs.fondProfond]}
+        colors={['#22100F', couleurs.fond, couleurs.fondProfond]}
         locations={[0, 0.45, 1]}
         style={StyleSheet.absoluteFill}
       />
@@ -299,7 +299,7 @@ export function Rangee({
 }
 
 /** Barre de progression animée, utilisée pour le remplissage des bus. */
-export function Jauge({ valeur, couleur = couleurs.magenta }: { valeur: number; couleur?: string }) {
+export function Jauge({ valeur, couleur = couleurs.marque }: { valeur: number; couleur?: string }) {
   const largeur = useSharedValue(0);
   largeur.value = withTiming(Math.min(1, Math.max(0, valeur)), { duration: 900 });
   const anim = useAnimatedStyle(() => ({ width: `${largeur.value * 100}%` }));
