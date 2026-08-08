@@ -144,6 +144,28 @@ node scripts/preparer-pages.mjs dist /Saramaya-transport-
 Le préfixe est indispensable : GitHub Pages sert le site depuis un sous-dossier, et sans
 lui tous les chemins vers `_expo/` pointeraient à la racine du domaine — page blanche.
 
+## Si l'installation échoue
+
+**`npm error code ECONNRESET`** — la connexion a lâché au milieu du téléchargement, et
+`node_modules` est resté incomplet. Toutes les erreurs qui suivent en découlent, à commencer
+par `Failed to resolve plugin for module`. Le dépôt contient un `.npmrc` qui fait réessayer
+npm longuement ; en cas d'échec malgré tout, relancez simplement `npm install` — il reprend
+là où il s'est arrêté.
+
+**`EPERM: operation not permitted, rmdir` sous Windows** — un antivirus, OneDrive ou un
+processus resté ouvert verrouille les fichiers pendant que npm les remplace. Trois choses
+aident, dans cet ordre :
+
+1. **Placez le projet hors du dossier utilisateur**, par exemple `C:\dev\` — `C:\Users\<nom>`
+   est analysé en permanence par Windows Defender et souvent synchronisé par OneDrive.
+2. **Fermez tout ce qui touche au dossier** : éditeur, terminaux, serveur Expo en cours.
+3. En dernier recours, supprimez `node_modules` et relancez `npm install`.
+
+**`Failed to resolve plugin for module` alors que l'installation semble complète** — regardez
+le chemin dans la trace. S'il pointe vers un `node_modules` *au-dessus* du projet (par exemple
+`C:\Users\<nom>\node_modules`), ce dossier parasite masque celui du projet : supprimez-le.
+Il vient généralement d'un `npm install` lancé par erreur dans le dossier personnel.
+
 ## Écrans
 
 | Écran | Route | Rôle |
