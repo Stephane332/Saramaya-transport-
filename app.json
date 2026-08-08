@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Saramaya",
+    "slug": "saramaya-transport",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "saramaya",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A070E"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.saramaya.compagnon",
+      "infoPlist": {
+        "NSCameraUsageDescription": "La caméra sert à scanner le code-barres de vos tickets papier pour les ajouter à vos voyages."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A070E"
+      },
+      "package": "com.saramaya.compagnon",
+      "edgeToEdgeEnabled": true,
+      "permissions": ["CAMERA", "VIBRATE", "RECEIVE_BOOT_COMPLETED", "SCHEDULE_EXACT_ALARM"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "La caméra sert à scanner le code-barres de vos tickets papier."
+        }
+      ],
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
