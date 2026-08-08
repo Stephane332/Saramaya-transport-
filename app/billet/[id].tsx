@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import QRCode from 'react-native-qrcode-svg';
+import { CodeBarres } from '../../src/components/CodeBarres';
 import {
   BadgeClasse,
   BadgeStatut,
@@ -20,7 +21,7 @@ import {
 import { CONDITIONS_TRANSPORT, gareParId, ligneParId } from '../../src/data/reseau';
 import { politiqueAnnulation } from '../../src/lib/annulation';
 import { dateHeureDepart, retractationPossible } from '../../src/lib/confirmation';
-import { compteARebours, joursAvantExpiration, montant } from '../../src/lib/format';
+import { compteARebours, joursAvantExpiration, montant, telephone } from '../../src/lib/format';
 import { messagePourLaGare } from '../../src/sync/localProvider';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
@@ -108,6 +109,11 @@ export default function Billet() {
             <Txt v="sousTitre" couleur="#fff">
               {r.reference}
             </Txt>
+            <View style={styles.sens}>
+              <Txt v="minuscule" couleur="#fff" style={{ fontSize: 9 }}>
+                ALLER SIMPLE
+              </Txt>
+            </View>
           </View>
         </LinearGradient>
 
@@ -154,8 +160,15 @@ export default function Billet() {
           <Trait />
 
           <View style={styles.grille}>
+            <Case
+              titre="LIGNE"
+              valeur={`${ligne?.origine.toUpperCase()}-${ligne?.destination}`}
+            />
+          </View>
+
+          <View style={styles.grille}>
             <Case titre="NOM" valeur={`${voyageur.nom} ${voyageur.prenom}`} />
-            <Case titre="CONTACT" valeur={voyageur.telephone} />
+            <Case titre="CONTACT" valeur={telephone(voyageur.telephone)} />
           </View>
 
           {/* Perforation, comme sur le ticket détachable. */}
@@ -194,6 +207,28 @@ export default function Billet() {
                 ))}
               </View>
             </View>
+          </View>
+
+          {/* Code-barres Code 39, lisible par les mêmes lecteurs que le ticket papier. */}
+          <View style={styles.zoneCodeBarres}>
+            <CodeBarres valeur={r.reference} hauteur={40} />
+            <Txt v="minuscule" couleur="#0A070E" style={{ letterSpacing: 4 }}>
+              {r.reference}
+            </Txt>
+          </View>
+
+          <View style={{ gap: 2 }}>
+            <Txt v="minuscule" couleur={couleurs.texteFaible}>
+              TICKET NON REMBOURSABLE · VALIDE UNIQUEMENT POUR CE TRAJET · 30 JOURS
+            </Txt>
+            {gare ? (
+              <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                {gare.nom.toUpperCase()} · {gare.telephones.join(' · ')}
+              </Txt>
+            ) : null}
+            <Txt v="minuscule" couleur={couleurs.texteFaible}>
+              www.saramayatransport.com
+            </Txt>
           </View>
         </View>
       </Animated.View>
@@ -372,7 +407,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: espace.lg,
   },
-  numero: { alignItems: 'flex-end' },
+  numero: { alignItems: 'flex-end', gap: 4 },
+  sens: {
+    borderRadius: rayon.rond,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.45)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  zoneCodeBarres: {
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#fff',
+    borderRadius: rayon.md,
+    paddingVertical: espace.md,
+    paddingHorizontal: espace.lg,
+  },
   corpsBillet: { padding: espace.lg, gap: espace.md },
   trajet: { flexDirection: 'row', alignItems: 'center', gap: espace.md },
   grille: { flexDirection: 'row', gap: espace.md },

@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, Layout } from 'react-native-reanimated';
 import {
   BadgeClasse,
@@ -22,9 +22,9 @@ import { identifiantDepart, siegesOccupes } from '../../src/lib/disponibilite';
 import { decalerHeure, montant } from '../../src/lib/format';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
-import type { Classe } from '../../src/types';
+import type { Classe, MoyenPaiement } from '../../src/types';
 
-type Etape = 'LIGNE' | 'DATE' | 'DEPART' | 'SIEGE' | 'RECAP';
+type Etape = 'LIGNE' | 'DATE' | 'DEPART' | 'SIEGE' | 'RECAP' | 'PAIEMENT';
 
 const ETAPES: { cle: Etape; titre: string }[] = [
   { cle: 'LIGNE', titre: 'Trajet' },
@@ -32,13 +32,16 @@ const ETAPES: { cle: Etape; titre: string }[] = [
   { cle: 'DEPART', titre: 'Départ' },
   { cle: 'SIEGE', titre: 'Place' },
   { cle: 'RECAP', titre: 'Résumé' },
+  { cle: 'PAIEMENT', titre: 'Paiement' },
 ];
 
 export default function Reserver() {
   const router = useRouter();
   const params = useLocalSearchParams<{ scan?: string }>();
   const creer = useApp((e) => e.creer);
+  const payer = useApp((e) => e.payer);
 
+  const [enPaiement, setEnPaiement] = useState<MoyenPaiement | null>(null);
   const [etape, setEtape] = useState<Etape>('LIGNE');
   const [ligneId, setLigneId] = useState<string | null>(null);
   const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -56,8 +59,13 @@ export default function Reserver() {
 
   const indexEtape = ETAPES.findIndex((e) => e.cle === etape);
 
-  const valider = async () => {
-    if (!ligne || !heure) return;
+  /**
+   * Le ticket n'existe qu'une fois payé — comme au guichet, où l'on repart avec le
+   * papier après avoir réglé. Tant que le paiement n'a pas abouti, rien n'est émis.
+   */
+  const payerEtEmettre = async (moyen: MoyenPaiement) => {
+    if (!ligne || !heure || enPaiement) return;
+    setEnPaiement(moyen);
     const reservation = await creer({
       voyageurId: 'voyageur-1',
       departId: identifiantDepart(ligne.id, date, heure, classe),
@@ -69,6 +77,10 @@ export default function Reserver() {
       siege,
       montant: ligne.tarifs[classe],
     });
+    // Le fournisseur de paiement mobile répond en quelques secondes.
+    await new Promise((r) => setTimeout(r, 1400));
+    await payer(reservation.id, moyen);
+    setEnPaiement(null);
     router.push(`/billet/${reservation.id}`);
   };
 
@@ -261,7 +273,67 @@ export default function Reserver() {
             </View>
           </Carte>
 
-          <Bouton titre="Créer ma réservation" sousTitre="Puis l'envoyer à la gare" onPress={valider} />
+          <Bouton
+            titre="Passer au paiement"
+            sousTitre={`${montant(ligne.tarifs[classe])} · le ticket est émis après le règlement`}
+            onPress={() => setEtape('PAIEMENT')}
+          />
+        </Animated.View>
+      ) : null}
+
+      {etape === 'PAIEMENT' && ligne && heure ? (
+        <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
+          <Section>Paiement</Section>
+
+          <LinearGradient colors={degrades.marqueDouce} style={styles.montantAPayer}>
+            <Txt v="minuscule" couleur={couleurs.texteFaible}>
+              MONTANT À RÉGLER
+            </Txt>
+            <Txt v="geant" couleur={couleurs.magentaVif}>
+              {montant(ligne.tarifs[classe])}
+            </Txt>
+            <Txt v="petit" couleur={couleurs.texteFaible}>
+              {ligne.origine} → {ligne.destination} · {heure} ·{' '}
+              {classe === 'VIP' ? 'VIP' : 'Classique'}
+              {siege ? ` · siège ${siege}` : ''}
+            </Txt>
+          </LinearGradient>
+
+          {enPaiement ? (
+            <Carte>
+              <View style={{ alignItems: 'center', gap: espace.md, paddingVertical: espace.lg }}>
+                <ActivityIndicator color={couleurs.magentaVif} size="large" />
+                <Txt v="corpsFort">Paiement en cours…</Txt>
+                <Txt v="petit" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
+                  Validez la demande reçue sur votre téléphone
+                  {enPaiement === 'ORANGE_MONEY' ? ' Orange Money' : ' Moov Money'}.
+                </Txt>
+              </View>
+            </Carte>
+          ) : (
+            <>
+              <Bouton
+                titre="Orange Money"
+                sousTitre={`Régler ${montant(ligne.tarifs[classe])}`}
+                onPress={() => payerEtEmettre('ORANGE_MONEY')}
+              />
+              <Bouton
+                titre="Moov Money"
+                sousTitre={`Régler ${montant(ligne.tarifs[classe])}`}
+                variante="secondaire"
+                onPress={() => payerEtEmettre('MOOV_MONEY')}
+              />
+              <Carte>
+                <View style={{ flexDirection: 'row', gap: espace.sm }}>
+                  <Ionicons name="lock-closed" size={18} color={couleurs.succes} />
+                  <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
+                    Votre billet est émis dès que le paiement est confirmé. Aucun ticket n'est
+                    créé avant — comme au guichet.
+                  </Txt>
+                </View>
+              </Carte>
+            </>
+          )}
         </Animated.View>
       ) : null}
     </Ecran>
@@ -389,6 +461,14 @@ const styles = StyleSheet.create({
     borderColor: couleurs.bordure,
   },
   optionClasseActive: { borderColor: couleurs.magentaVif, backgroundColor: 'rgba(214,33,111,0.12)' },
+  montantAPayer: {
+    borderRadius: rayon.xl,
+    padding: espace.xl,
+    alignItems: 'center',
+    gap: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(240,53,127,0.3)',
+  },
   viseur: { borderRadius: rayon.xl, padding: espace.xxl, alignItems: 'center' },
   cadreScan: {
     width: '100%',
