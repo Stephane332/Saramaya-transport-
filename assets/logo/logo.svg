@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Logo Siraba">
+  <defs>
+    <linearGradient id="fond" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F0357F"/>
+      <stop offset="0.55" stop-color="#D6216F"/>
+      <stop offset="1" stop-color="#8E1149"/>
+    </linearGradient>
+    <linearGradient id="bitume" x1="0.5" y1="1" x2="0.5" y2="0">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFE9F2"/>
+    </linearGradient>
+    <filter id="ombre" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#3A0620" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Pastille de marque -->
+  <rect width="512" height="512" rx="116" fill="url(#fond)"/>
+
+  <!-- Lueur haute, pour donner du volume à la pastille -->
+  <ellipse cx="150" cy="90" rx="230" ry="150" fill="#FFFFFF" opacity="0.10"/>
+
+  <!-- La route : un S qui est à la fois la voie et l'initiale -->
+  <path d="M 172 404 C 172 330 340 322 340 256 C 340 190 172 182 172 108"
+        fill="none" stroke="url(#bitume)" stroke-width="64" stroke-linecap="round"
+        filter="url(#ombre)"/>
+
+  <!-- Ligne médiane discontinue -->
+  <path d="M 172 404 C 172 330 340 322 340 256 C 340 190 172 182 172 108"
+        fill="none" stroke="#B3175C" stroke-width="9" stroke-linecap="round"
+        stroke-dasharray="24 32" opacity="0.5"/>
+
+  <!-- Point de départ, en bas de la voie -->
+  <circle cx="172" cy="404" r="19" fill="#F04E37"/>
+  <circle cx="172" cy="404" r="8" fill="#FFFFFF"/>
+
+  <!-- Point d'arrivée, en haut -->
+  <circle cx="172" cy="108" r="19" fill="#0A070E" opacity="0.85"/>
+  <circle cx="172" cy="108" r="8" fill="#FFFFFF"/>
+</svg>

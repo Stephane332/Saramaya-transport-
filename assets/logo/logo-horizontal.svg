@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 200" width="760" height="200" role="img" aria-label="Siraba">
+  <defs>
+    <linearGradient id="fondH" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F0357F"/>
+      <stop offset="0.55" stop-color="#D6216F"/>
+      <stop offset="1" stop-color="#8E1149"/>
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(8,10) scale(0.352)">
+    <rect width="512" height="512" rx="116" fill="url(#fondH)"/>
+    <ellipse cx="150" cy="90" rx="230" ry="150" fill="#FFFFFF" opacity="0.10"/>
+    <path d="M 172 404 C 172 330 340 322 340 256 C 340 190 172 182 172 108"
+          fill="none" stroke="#FFFFFF" stroke-width="64" stroke-linecap="round"/>
+    <path d="M 172 404 C 172 330 340 322 340 256 C 340 190 172 182 172 108"
+          fill="none" stroke="#B3175C" stroke-width="9" stroke-linecap="round"
+          stroke-dasharray="24 32" opacity="0.5"/>
+    <circle cx="172" cy="404" r="19" fill="#F04E37"/>
+    <circle cx="172" cy="404" r="8" fill="#FFFFFF"/>
+    <circle cx="172" cy="108" r="19" fill="#0A070E" opacity="0.85"/>
+    <circle cx="172" cy="108" r="8" fill="#FFFFFF"/>
+  </g>
+
+  <text x="222" y="112"
+        font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="82" font-weight="800" letter-spacing="-2" fill="#F7F2FA">SIRABA</text>
+  <text x="226" y="152"
+        font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+        font-size="23" font-weight="600" letter-spacing="5.5" fill="#C9BFD4">LA GRANDE ROUTE</text>
+</svg>

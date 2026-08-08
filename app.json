@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Saramaya",
-    "slug": "saramaya-transport",
+    "name": "Siraba",
+    "slug": "siraba",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "saramaya",
+    "scheme": "siraba",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.saramaya.compagnon",
+      "bundleIdentifier": "com.siraba.app",
       "infoPlist": {
         "NSCameraUsageDescription": "La caméra sert à scanner le code-barres de vos tickets papier pour les ajouter à vos voyages."
       }
@@ -25,9 +25,14 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A070E"
       },
-      "package": "com.saramaya.compagnon",
+      "package": "com.siraba.app",
       "edgeToEdgeEnabled": true,
-      "permissions": ["CAMERA", "VIBRATE", "RECEIVE_BOOT_COMPLETED", "SCHEDULE_EXACT_ALARM"]
+      "permissions": [
+        "CAMERA",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",

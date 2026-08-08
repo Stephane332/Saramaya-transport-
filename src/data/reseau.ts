@@ -1,10 +1,19 @@
 /**
  * Réseau Saramaya Transport.
  *
- * Les lignes Ouahigouya–Ouagadougou et Ouagadougou–Bobo-Dioulasso reprennent les
- * horaires et tarifs publiés par la compagnie. Koudougou et Boromo font partie des
- * cinq villes desservies, mais leurs horaires n'ont pas été trouvés publiquement :
- * les valeurs ci-dessous sont des estimations, à corriger sur place.
+ * Horaires et tarifs : publiés par la compagnie pour Ouahigouya–Ouagadougou et
+ * Ouagadougou–Bobo-Dioulasso. Koudougou et Boromo font partie des cinq villes
+ * desservies, mais leurs horaires n'ont pas été trouvés publiquement — ils sont
+ * marqués comme estimés ci-dessous.
+ *
+ * Distances routières :
+ *   Ouagadougou – Ouahigouya      182 km  (mesuré, RN2)
+ *   Ouagadougou – Bobo-Dioulasso  356 km  (mesuré, RN1)
+ *   Ouagadougou – Boromo          180 km  (RN1 ; Boromo est à mi-chemin de Bobo)
+ *   Ouagadougou – Koudougou       100 km  (route ; 75 km à vol d'oiseau)
+ *
+ * N'inscrivez ici que des valeurs vérifiables : elles alimentent le compteur de
+ * kilomètres parcourus affiché au voyageur.
  */
 
 import type { Gare, Ligne, Ville } from '../types';
@@ -103,7 +112,7 @@ export const LIGNES: Ligne[] = [
     origine: 'Ouagadougou',
     destination: 'Bobo-Dioulasso',
     dureeMinutes: 300,
-    distanceKm: 360,
+    distanceKm: 356,
     tarifs: { CLASSIQUE: 6500, VIP: 8000 },
     horaires: ['08:30', '09:30', '12:30', '14:30', '18:30', '22:30', '23:45'],
   },
@@ -112,11 +121,11 @@ export const LIGNES: Ligne[] = [
     origine: 'Bobo-Dioulasso',
     destination: 'Ouagadougou',
     dureeMinutes: 300,
-    distanceKm: 360,
+    distanceKm: 356,
     tarifs: { CLASSIQUE: 6500, VIP: 8000 },
     horaires: ['08:30', '09:30', '12:30', '14:30', '18:30', '22:30', '23:45'],
   },
-  // Horaires estimés — à confirmer auprès de la compagnie.
+  // Distances mesurées, mais horaires estimés — à confirmer auprès de la compagnie.
   {
     id: 'ligne-ouaga-koudougou',
     origine: 'Ouagadougou',
