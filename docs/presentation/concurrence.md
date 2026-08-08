@@ -54,14 +54,61 @@ Avoir sa propre application, c'est garder cette relation.
 
 ---
 
+## Ce que Saramaya a déjà — et pourquoi ça ne marche pas
+
+**C'est le point le plus important du dossier, et il faut le manier avec tact.**
+
+Saramaya possède déjà une réservation en ligne, sur son instance Digiparc :
+`saramaya-transport.digiparc.com/espace-client.html`. Le parcours existe — gare de départ,
+gare d'arrivée, date, horaire, nombre de passagers, résultats, informations passagers,
+confirmation.
+
+Mais le paiement, lui, n'est pas connecté. Pour régler, le voyageur doit **appeler un
+numéro** et composer lui-même un code Orange Money propre à chaque agence :
+
+| Agence | Numéros | Code de paiement |
+|---|---|---|
+| Bobo | 05484000 / 05484001 | 144107580857 · 144101249338 |
+| Ouaga Gounghin | 05484002 / 05484003 | 144101375257 · 144102254980 |
+| Ouaga Wemtenga | 05484004 / 05484005 | 144108988511 · 144103586558 |
+
+Puis une fenêtre lui demande : **« Avez-vous pu effectuer le paiement dans le délai de
+10 minutes ? Oui / Non »**.
+
+Lisez cette phrase deux fois. **Le système demande au client de déclarer lui-même s'il a
+payé.** Rien ne le vérifie.
+
+**Voilà pourquoi vos agents passent leurs journées au téléphone.** Ce n'est pas un défaut
+d'organisation, c'est la conséquence directe d'un paiement non réconcilié : puisque le
+système ne sait pas qui a payé, il faut appeler pour le demander. Tant que ce trou n'est pas
+bouché, aucune quantité d'efforts en gare ne le comblera.
+
+Et la page d'accueil de ce même site affiche encore du **Lorem Ipsum** — le texte de
+remplissage laissé par l'intégrateur. L'outil a été installé, puis abandonné en route.
+
+### Comment le dire sans les vexer
+
+Ne dites jamais « votre site ne marche pas ». Dites :
+
+> « Vous avez déjà fait le plus dur : vous avez un espace client et un système de
+> réservation. Ce qui manque, c'est le dernier maillon — la confirmation automatique du
+> paiement. C'est lui qui vous oblige à appeler tout le monde. »
+
+Vous ne leur vendez plus une application : vous leur proposez de **terminer** ce qu'ils ont
+commencé. Personne ne se sent attaqué, et l'investissement déjà fait dans Digiparc devient
+un argument pour vous, pas contre vous.
+
+---
+
 ## Le tableau à montrer
 
 Dessinez-le sur une feuille devant eux, ou imprimez-le.
 
 | | Saramaya aujourd'hui | TSR | **Notre application** |
 |---|---|---|---|
-| Réservation en ligne | ✗ (téléphone) | ✓ | ✓ |
-| Paiement Mobile Money | partiel (appel + OM) | ✓ | ✓ |
+| Réservation en ligne | ~ (existe, inachevée) | ✓ | ✓ |
+| Paiement Mobile Money | ✗ (code à composer soi-même) | ✓ | ✓ |
+| **Paiement vérifié automatiquement** | **✗ (déclaratif)** | ✓ | **✓** |
 | Billet électronique | ✗ | ✓ (e-mail/PDF) | ✓ (QR + code-barres) |
 | Compte client, historique | ✗ | ✓ | ✓ |
 | Choix du siège | ✗ (à la main) | ✓ | ✓ |
@@ -71,7 +118,7 @@ Dessinez-le sur une feuille devant eux, ou imprimez-le.
 | **Écran de surveillance en gare** | ✗ | ✗ | **✓** |
 | **Report au lieu du remboursement** | ✗ | ✗ | **✓** |
 | **Liste d'attente automatique** | ✗ (à la main) | ✗ | **✓** |
-| Colis | ✗ | ✓ | à venir |
+| Colis | ✓ | ✓ | à venir |
 | International | ✗ | ✓ | — |
 
 Les cinq lignes en gras sont **ce que personne ne fait**. C'est votre proposition.
@@ -137,12 +184,16 @@ Puis vous enchaînez sur les appels de confirmation.
 
 ## Une précision honnête
 
-Sur deux points, **TSR reste devant** et il faut le dire vous-même avant qu'on vous le
-demande : ils transportent des **colis**, et ils vendent à **l'international**. Notre
-application ne fait ni l'un ni l'autre aujourd'hui.
+Sur un point, **TSR reste devant** et il faut le dire vous-même avant qu'on vous le
+demande : ils vendent à **l'international**, vers la Côte d'Ivoire et le Bénin. Notre
+application ne le fait pas.
 
 Le dire renforce tout le reste. Un vendeur qui reconnaît une faiblesse devient crédible
 sur ses forces.
+
+À l'inverse, Saramaya assure déjà le **courrier et les colis** — c'est écrit sur son propre
+site. L'application ne les couvre pas encore : c'est une extension naturelle à mentionner
+comme suite, pas comme manque.
 
 ---
 

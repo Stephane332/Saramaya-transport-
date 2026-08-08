@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Bus3D } from '../../src/components/Bus3D';
+import { LogoSaramaya } from '../../src/components/LogoSaramaya';
 import {
   BadgeClasse,
   BadgeStatut,
@@ -54,7 +55,8 @@ export default function Accueil() {
   return (
     <Ecran>
       <Animated.View entering={FadeIn.duration(500)} style={styles.entete}>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, gap: 6 }}>
+          <LogoSaramaya hauteur={30} />
           <Txt v="petit" couleur={couleurs.texteFaible}>
             {format(new Date(), 'EEEE d MMMM', { locale: fr })}
           </Txt>

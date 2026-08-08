@@ -8,6 +8,7 @@ import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import QRCode from 'react-native-qrcode-svg';
 import { CodeBarres } from '../../src/components/CodeBarres';
+import { LogoSaramaya } from '../../src/components/LogoSaramaya';
 import {
   BadgeClasse,
   BadgeStatut,
@@ -91,13 +92,14 @@ export default function Billet() {
       {/* Le billet, dessiné comme le ticket papier. */}
       <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.billet}>
         <LinearGradient colors={degrades.ticket} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.souche}>
-          <View>
+          <View style={{ gap: 8, flex: 1 }}>
             <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
               TICKET DE VOYAGE
             </Txt>
-            <Txt v="sousTitre" couleur="#fff">
-              SARAMAYA TRANSPORT
-            </Txt>
+            {/* Sur leurs supports, l'emblème est toujours posé sur du blanc. */}
+            <View style={styles.plaqueLogo}>
+              <LogoSaramaya hauteur={40} surFondClair />
+            </View>
             <Txt v="minuscule" couleur="rgba(255,255,255,0.7)">
               Un service des hommes intègres
             </Txt>
@@ -408,6 +410,13 @@ const styles = StyleSheet.create({
     padding: espace.lg,
   },
   numero: { alignItems: 'flex-end', gap: 4 },
+  plaqueLogo: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: rayon.md,
+    paddingHorizontal: espace.md,
+    paddingVertical: espace.sm,
+  },
   sens: {
     borderRadius: rayon.rond,
     borderWidth: 1,

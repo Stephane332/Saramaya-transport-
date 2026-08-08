@@ -54,6 +54,14 @@ export const GARES: Gare[] = [
     decalageMinutes: -60,
   },
   {
+    id: 'gare-ouaga-wemtenga',
+    ville: 'Ouagadougou',
+    nom: 'Gare de Wemtenga',
+    adresse: 'Wemtenga, Ouagadougou',
+    telephones: ['60 94 22 22', '04 64 67 38'],
+    decalageMinutes: 0,
+  },
+  {
     id: 'gare-bobo-tounouma',
     ville: 'Bobo-Dioulasso',
     nom: 'Gare de Tounouma',
@@ -232,3 +240,38 @@ export const JOURS_VALIDITE = 30;
 
 /** Minutes avant le départ où la place d'un absent est cédée à la liste d'attente. */
 export const MINUTES_LIBERATION_PLACE = 5;
+
+
+/**
+ * Numéros de réservation, ligne par ligne, relevés sur le site de la compagnie.
+ * Ce sont eux qu'on appelle aujourd'hui pour réserver — et eux que l'application
+ * pré-remplit pour que l'agent n'ait plus qu'à saisir.
+ */
+export const TELEPHONES_RESERVATION: Record<string, string[]> = {
+  'ligne-ouaga-bobo': ['60 81 86 86', '60 81 87 87', '04 63 22 27'],
+  'ligne-bobo-ouaga': ['60 81 89 89', '60 94 25 25', '04 67 48 38'],
+  'ligne-ouahigouya-ouaga': ['53 89 60 60'],
+  'ligne-ouaga-ouahigouya': ['03 93 25 25'],
+  'ligne-ouaga-koudougou': ['50 97 74 74'],
+  'ligne-koudougou-ouaga': ['50 97 73 73'],
+  'ligne-ouaga-boromo': ['60 94 29 29'],
+};
+
+/** Contacts généraux, tels que publiés par la compagnie. */
+export const CONTACTS_COMPAGNIE = {
+  telephone: '+226 20 95 23 47',
+  mobile: '+226 70 27 02 57',
+  email: 'contact@saramayatransport.com',
+  site: 'www.saramayatransport.com',
+  devise: 'Sécurité, Confort, Respect',
+} as const;
+
+/**
+ * Délai de paiement d'une réservation faite en ligne.
+ *
+ * C'est la règle de leur propre espace client : passé ce délai, une fenêtre
+ * demande au voyageur « Avez-vous pu effectuer le paiement dans le délai de
+ * 10 minutes ? ». Rien ne vérifie la réponse — c'est précisément ce trou que
+ * l'application vient combler.
+ */
+export const MINUTES_OPTION_PAIEMENT = 10;
