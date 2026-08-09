@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
@@ -103,6 +104,55 @@ export function Txt({
     <Text numberOfLines={numberOfLines} style={[typo[v], { color: couleur }, style]}>
       {children}
     </Text>
+  );
+}
+
+/**
+ * En-tête avec flèche de retour.
+ *
+ * Le même geste au même endroit sur tous les écrans : sans repère constant, on
+ * cherche la sortie, et chercher la sortie dans une file d'attente à la gare suffit
+ * à faire refermer l'application. La zone tactile fait 44 points, le minimum pour
+ * être atteinte du pouce sans viser.
+ */
+export function EnTeteRetour({
+  onRetour,
+  titre,
+  etiquette,
+  icone = 'chevron-back',
+}: {
+  onRetour: () => void;
+  titre?: string;
+  /** Pastille à droite, par exemple « ÉTAPE 2 SUR 5 ». */
+  etiquette?: ReactNode;
+  icone?: 'chevron-back' | 'close';
+}) {
+  return (
+    <View style={styles.enTeteRetour}>
+      <Pressable
+        onPress={() => {
+          if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          onRetour();
+        }}
+        // Élargit la cible tactile au-delà du dessin, sans décaler la mise en page.
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Retour"
+        style={styles.boutonRetour}
+      >
+        <Ionicons name={icone} size={22} color={couleurs.texte} />
+      </Pressable>
+
+      {titre ? (
+        <Text style={[typo.sousTitre, { color: couleurs.texte, flex: 1 }]} numberOfLines={1}>
+          {titre}
+        </Text>
+      ) : (
+        <View style={{ flex: 1 }} />
+      )}
+
+      {etiquette}
+    </View>
   );
 }
 
@@ -321,6 +371,21 @@ export function Jauge({ valeur, couleur = couleurs.marque }: { valeur: number; c
 }
 
 const styles = StyleSheet.create({
+  enTeteRetour: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espace.md,
+  },
+  boutonRetour: {
+    width: 44,
+    height: 44,
+    borderRadius: rayon.rond,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: couleurs.surfaceHaute,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+  },
   ecran: { flex: 1, backgroundColor: couleurs.fond },
   enteteSection: {
     flexDirection: 'row',

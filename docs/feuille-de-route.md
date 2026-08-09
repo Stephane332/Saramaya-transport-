@@ -129,6 +129,24 @@ démonstration devant la compagnie.
 
 Trois voies, chacune bloquée par **un réglage extérieur au code** :
 
+### Attention — le dépôt est privé, et cela change tout pour Pages
+
+Vérifié par l'API GitHub : `"private": true`, `"has_pages": false`.
+
+**GitHub Pages sur un dépôt privé exige un abonnement payant** (Pro, Team ou
+Enterprise). Sur un compte gratuit, activer Pages ne suffira pas.
+
+Et **il ne faut pas rendre ce dépôt public pour contourner le problème** : il
+contient l'argumentaire de vente, l'analyse de la concurrence, la note sur leurs
+failles de sécurité et cette feuille de route. Tout cela deviendrait lisible par
+Saramaya — et par n'importe qui — avant même le premier rendez-vous. Le lien de
+démonstration ne vaut pas ce prix.
+
+**La bonne solution : `eas deploy`.** L'hébergement web d'Expo publie la version
+web depuis un code qui reste privé, gratuitement, et sur la même adresse à chaque
+mise à jour. Il demande le même compte Expo que les builds — un seul compte
+débloque le lien public *et* l'application installable.
+
 ### Voie A — la version web publiée
 
 Le build web **réussit** à chaque fois. C'est la publication qui échoue, avec ce

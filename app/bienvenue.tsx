@@ -17,7 +17,6 @@ import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -26,8 +25,9 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bus3D } from '../src/components/Bus3D';
-import { Bouton, Txt } from '../src/components/base';
+import { Bouton, EnTeteRetour, Txt } from '../src/components/base';
 import { CONTACTS_COMPAGNIE } from '../src/data/reseau';
+import { useRetourMateriel } from '../src/lib/retour';
 import { useApp } from '../src/store/useApp';
 import { couleurs, espace, rayon } from '../src/theme';
 
@@ -41,6 +41,10 @@ export default function Bienvenue() {
   const [nom, setNom] = useState('');
   const [telephone, setTelephone] = useState('');
   const [cnib, setCnib] = useState('');
+
+  // Depuis la saisie d'identité, le retour d'Android revient à l'accueil plutôt que
+  // de fermer l'application au tout premier contact avec elle.
+  useRetourMateriel(etape === 'IDENTITE', () => setEtape('ACCUEIL'));
 
   const telOk = telephone.replace(/\D/g, '').length >= 8;
   const complet = prenom.trim().length >= 2 && nom.trim().length >= 2 && telOk;
@@ -92,9 +96,7 @@ export default function Bienvenue() {
             }}
             showsVerticalScrollIndicator={false}
           >
-            <Pressable onPress={() => setEtape('ACCUEIL')} style={styles.retour}>
-              <Ionicons name="chevron-back" size={22} color={couleurs.texte} />
-            </Pressable>
+            <EnTeteRetour onRetour={() => setEtape('ACCUEIL')} />
 
             <View>
               <Txt v="titre">Votre identité</Txt>
@@ -195,16 +197,6 @@ function Sep() {
 const styles = StyleSheet.create({
   fond: { flex: 1, backgroundColor: couleurs.fond },
   accueil: { flex: 1, paddingHorizontal: espace.lg },
-  retour: {
-    width: 40,
-    height: 40,
-    borderRadius: rayon.rond,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: couleurs.surfaceHaute,
-    borderWidth: 1,
-    borderColor: couleurs.bordure,
-  },
   carte: {
     backgroundColor: couleurs.surface,
     borderRadius: rayon.xl,

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, Layout } from 'react-native-reanimated';
 import {
@@ -10,6 +10,7 @@ import {
   Bouton,
   Carte,
   Ecran,
+  EnTeteRetour,
   Section,
   Trait,
   Txt,
@@ -28,6 +29,7 @@ import {
 } from '../../src/data/reseau';
 import { decalerHeure, montant } from '../../src/lib/format';
 import { departsDuJour } from '../../src/lib/departs';
+import { useRetourMateriel } from '../../src/lib/retour';
 import { programmerRappels } from '../../src/lib/notifications';
 import { useStatutService } from '../../src/lib/statutService';
 import { useApp } from '../../src/store/useApp';
@@ -62,6 +64,19 @@ export default function Reserver() {
 
   const ligne = ligneId ? ligneParId(ligneId) : null;
   const indexEtape = ETAPES.findIndex((e) => e.cle === etape);
+
+  /**
+   * Revenir d'une étape. Une seule définition, partagée par la flèche à l'écran et
+   * par le bouton matériel d'Android : les deux doivent faire exactement la même
+   * chose, sinon l'un des deux perd la saisie en cours.
+   */
+  const etapePrecedente = useCallback(() => {
+    const precedente = ETAPES[indexEtape - 1];
+    if (precedente) setEtape(precedente.cle);
+  }, [indexEtape]);
+
+  // Sur Android, le retour matériel remonte d'une étape au lieu de quitter l'onglet.
+  useRetourMateriel(indexEtape > 0, etapePrecedente);
 
   /**
    * Départs réellement proposables : la grille publiée, plus les départs ajoutés
@@ -132,12 +147,26 @@ export default function Reserver() {
 
   return (
     <Ecran>
-      <View>
-        <Txt v="titre">Réserver</Txt>
-        <Txt v="petit" couleur={couleurs.texteFaible}>
-          Choisissez votre place, l'app prépare tout pour la gare.
-        </Txt>
-      </View>
+      {indexEtape > 0 ? (
+        <EnTeteRetour
+          onRetour={etapePrecedente}
+          titre="Réserver"
+          etiquette={
+            <View style={styles.etiquetteEtape}>
+              <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                {indexEtape + 1}/{ETAPES.length}
+              </Txt>
+            </View>
+          }
+        />
+      ) : (
+        <View>
+          <Txt v="titre">Réserver</Txt>
+          <Txt v="petit" couleur={couleurs.texteFaible}>
+            Choisissez votre place, l'app prépare tout pour la gare.
+          </Txt>
+        </View>
+      )}
 
       <FilAriane
         index={indexEtape}
@@ -456,14 +485,25 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
     router.replace(`/billet/${r.id}`);
   };
 
+  /**
+   * Retour depuis la saisie : on revient au scan plutôt que de tout fermer. Les
+   * champs déjà corrigés à la main survivent, et une fausse manœuvre ne coûte pas
+   * un second passage devant la caméra.
+   */
+  const retour = useCallback(() => {
+    if (phase === 'SAISIE') setPhase('SCAN');
+    else onFermer();
+  }, [phase, onFermer]);
+
+  useRetourMateriel(true, retour);
+
   return (
     <Ecran>
-      <View style={styles.entre}>
-        <Txt v="titre">Ajouter un ticket</Txt>
-        <Pressable onPress={onFermer}>
-          <Ionicons name="close" size={24} color={couleurs.texteFaible} />
-        </Pressable>
-      </View>
+      <EnTeteRetour
+        onRetour={retour}
+        titre="Ajouter un ticket"
+        icone={phase === 'SAISIE' ? 'chevron-back' : 'close'}
+      />
 
       {phase === 'SCAN' ? (
         <>
@@ -574,6 +614,14 @@ function SaisieTicket({
 }
 
 const styles = StyleSheet.create({
+  etiquetteEtape: {
+    borderRadius: rayon.rond,
+    borderWidth: 1,
+    borderColor: couleurs.bordure,
+    backgroundColor: couleurs.surfaceHaute,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
   badgeAjoute: {
     borderRadius: rayon.rond,
     borderWidth: 1,

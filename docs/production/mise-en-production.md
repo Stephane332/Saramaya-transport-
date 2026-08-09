@@ -36,7 +36,33 @@ claire de ce qui dépend de la compagnie.
 > (`preview`) et la démonstration par QR ne l'exigent pas — c'est par là qu'on
 > commence.
 
-## Étapes
+## Le chemin le plus court vers l'iPhone
+
+Trois commandes, une fois le compte Expo créé sur expo.dev. Elles se lancent depuis
+le dossier du projet.
+
+```bash
+npm install -g eas-cli
+eas login          # le compte Expo, à créer sur expo.dev — gratuit
+eas init           # inscrit le projectId dans app.json : c'est la seule valeur qui manque
+```
+
+Ensuite, selon ce qu'on veut :
+
+```bash
+# a) Lien web public, sans rendre le dépôt public — gratuit
+eas deploy --prod
+
+# b) Application installée sur l'iPhone — exige le compte Apple Developer (99 $/an)
+eas build --profile preview --platform ios
+```
+
+**Sans compte Apple Developer, la seule façon d'avoir l'application en natif sur un
+iPhone reste Expo Go** : c'est une limite d'Apple, pas du projet. Android n'a pas
+cette contrainte — `eas build --profile preview --platform android` produit un APK
+qui s'installe directement, sans compte payant.
+
+## Étapes détaillées
 
 ### 1. Installer l'outil et se connecter
 

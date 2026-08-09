@@ -17,6 +17,7 @@ import {
   Bouton,
   Carte,
   Ecran,
+  EnTeteRetour,
   Section,
   Trait,
   Txt,
@@ -29,6 +30,7 @@ import {
   gareParId,
 } from '../../src/data/reseau';
 import { montant } from '../../src/lib/format';
+import { useRetourMateriel } from '../../src/lib/retour';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 import type { Colis, MoyenPaiement, TailleColis } from '../../src/types';
@@ -224,14 +226,11 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
     router.push(`/colis/${colis.id}`);
   };
 
+  useRetourMateriel(true, onFermer);
+
   return (
     <Ecran>
-      <View style={styles.entre}>
-        <Txt v="titre">Envoyer un colis</Txt>
-        <Pressable onPress={onFermer}>
-          <Ionicons name="close" size={24} color={couleurs.texteFaible} />
-        </Pressable>
-      </View>
+      <EnTeteRetour onRetour={onFermer} titre="Envoyer un colis" icone="close" />
 
       <Section>Format</Section>
       <View style={styles.formats}>
