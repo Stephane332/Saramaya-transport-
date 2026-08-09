@@ -17,6 +17,17 @@ import {
   identifiant,
   referenceBillet,
 } from '../src/lib/identifiants';
+import { construireQrBillet, verifierQrBillet } from '../src/lib/billetQr';
+import {
+  depuisBase64Url,
+  hmacSha256,
+  sha256,
+  versBase64Url,
+  versHex,
+  versOctets,
+  versTexte,
+} from '../src/lib/sha256';
+import type { Reservation, Voyageur } from '../src/types';
 
 let reussis = 0;
 let echoues = 0;
@@ -126,6 +137,145 @@ verifier(
   joursAvantExpiration('2026-08-01T12:00:00.000Z', new Date('2026-08-09T12:00:00.000Z')),
   -8,
 );
+
+/* ── Signature cryptographique ───────────────────────────────────────────── */
+
+groupe('SHA-256 et HMAC — vecteurs officiels');
+// Une erreur d'un seul bit ici invaliderait toutes les signatures de billets sans
+// que rien d'autre ne le signale. On confronte donc aux vecteurs de référence.
+verifier(
+  'FIPS 180-4 : chaîne vide',
+  versHex(sha256(versOctets(''))),
+  'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+);
+verifier(
+  'FIPS 180-4 : "abc"',
+  versHex(sha256(versOctets('abc'))),
+  'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+);
+verifier(
+  'FIPS 180-4 : message de 448 bits',
+  versHex(sha256(versOctets('abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'))),
+  '248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1',
+);
+verifier(
+  'RFC 4231 cas 1',
+  versHex(hmacSha256(new Uint8Array(20).fill(0x0b), versOctets('Hi There'))),
+  'b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7',
+);
+verifier(
+  'RFC 4231 cas 2',
+  versHex(hmacSha256(versOctets('Jefe'), versOctets('what do ya want for nothing?'))),
+  '5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843',
+);
+verifier(
+  'RFC 4231 cas 6 — clé de 131 octets',
+  versHex(
+    hmacSha256(
+      new Uint8Array(131).fill(0xaa),
+      versOctets('Test Using Larger Than Block-Size Key - Hash Key First'),
+    ),
+  ),
+  '60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54',
+);
+verifier(
+  'UTF-8 : les accents survivent à l\'aller-retour',
+  versTexte(versOctets('Ouahigouya → Ouaga, 3 500 F, café')),
+  'Ouahigouya → Ouaga, 3 500 F, café',
+);
+verifier(
+  'base64url : aller-retour fidèle',
+  versTexte(depuisBase64Url(versBase64Url(versOctets('Bonjour Ange !')))),
+  'Bonjour Ange !',
+);
+
+/* ── Le billet vu par le contrôleur ──────────────────────────────────────── */
+
+groupe('QR du billet — ce que voit le contrôleur à la porte');
+
+const LE_JOUR = new Date('2026-08-09T07:30:00');
+const voyageurTest: Voyageur = {
+  id: 'v-1',
+  nom: 'SAWADOGO',
+  prenom: 'Ange',
+  telephone: '66798031',
+};
+const billetDeBase: Reservation = {
+  id: 'res-1',
+  reference: 'SB-7K2Q4M',
+  voyageurId: 'v-1',
+  ligneId: 'ligne-ouahigouya-ouaga',
+  gareDepartId: 'gare-ouahigouya',
+  date: '2026-08-09',
+  heure: '16:00',
+  convocation: '15:30',
+  classe: 'ORDINAIRE',
+  siege: 93,
+  montant: 3500,
+  statut: 'PAYEE',
+  supports: ['NUMERIQUE'],
+  creeLe: '2026-08-09T06:00:00.000Z',
+  expireLe: '2026-09-08T06:00:00.000Z',
+};
+
+const qrPaye = construireQrBillet(billetDeBase, voyageurTest);
+const controlePaye = verifierQrBillet(qrPaye, LE_JOUR);
+verifier('billet payé du jour : valide', controlePaye.verdict, 'VALIDE');
+verifier('le siège est lisible sans réseau', controlePaye.billet?.s, 93);
+verifier('le nom est lisible sans réseau', controlePaye.billet?.n, 'SAWADOGO Ange');
+verifier('le montant est lisible sans réseau', controlePaye.billet?.m, 3500);
+
+// Le cas décisif : quelqu'un modifie le QR pour se faire passer pour payé.
+const falsifie = (() => {
+  const [v, charge, signature] = qrPaye.split('.') as [string, string, string];
+  const contenu = JSON.parse(versTexte(depuisBase64Url(charge)));
+  contenu.s = 1; // il se donne le siège 1
+  return `${v}.${versBase64Url(versOctets(JSON.stringify(contenu)))}.${signature}`;
+})();
+verifier(
+  'siège modifié : falsification détectée',
+  verifierQrBillet(falsifie, LE_JOUR).verdict,
+  'SIGNATURE_INVALIDE',
+);
+verifier(
+  'signature tronquée : refusée',
+  verifierQrBillet(qrPaye.slice(0, -3), LE_JOUR).verdict,
+  'SIGNATURE_INVALIDE',
+);
+verifier(
+  'code étranger : reconnu comme tel',
+  verifierQrBillet('https://exemple.test/quelque-chose', LE_JOUR).verdict,
+  'ILLISIBLE',
+);
+
+verifier(
+  'billet non payé : signalé, pas rejeté comme faux',
+  verifierQrBillet(construireQrBillet({ ...billetDeBase, statut: 'OPTION' }, voyageurTest), LE_JOUR)
+    .verdict,
+  'NON_PAYE',
+);
+verifier(
+  'réservation annulée : signalée',
+  verifierQrBillet(construireQrBillet({ ...billetDeBase, statut: 'ANNULEE' }, voyageurTest), LE_JOUR)
+    .verdict,
+  'ANNULE',
+);
+verifier(
+  "billet d'un autre jour : signalé",
+  verifierQrBillet(construireQrBillet({ ...billetDeBase, date: '2026-08-12' }, voyageurTest), LE_JOUR)
+    .verdict,
+  'MAUVAIS_JOUR',
+);
+verifier(
+  'billet expiré : signalé',
+  verifierQrBillet(
+    construireQrBillet({ ...billetDeBase, expireLe: '2026-08-01T00:00:00.000Z' }, voyageurTest),
+    LE_JOUR,
+  ).verdict,
+  'EXPIRE',
+);
+// Un QR trop long devient illisible de loin, à bout de bras, par mauvaise lumière.
+verifier('le QR reste court (moins de 300 caractères)', qrPaye.length < 300, true);
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
 process.exit(echoues > 0 ? 1 : 0);

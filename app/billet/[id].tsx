@@ -25,6 +25,7 @@ import { politiqueAnnulation } from '../../src/lib/annulation';
 import { dateHeureDepart, retractationPossible } from '../../src/lib/confirmation';
 import { compteARebours, joursAvantExpiration, montant, telephone } from '../../src/lib/format';
 import { messagePourLaGare } from '../../src/sync/localProvider';
+import { construireQrBillet } from '../../src/lib/billetQr';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
@@ -39,19 +40,10 @@ export default function Billet() {
   const r = reservations.find((x) => x.id === id);
 
   // Tous les hooks avant le moindre retour : l'ordre d'appel doit rester stable.
+  // QR signé : le contrôleur y lit siège, nom, trajet et paiement sans réseau, et
+  // toute retouche du code est détectée à la vérification.
   const contenuQr = useMemo(
-    () =>
-      r && voyageur
-        ? JSON.stringify({
-            c: 'SARAMAYA',
-            ref: r.reference,
-            d: r.date,
-            h: r.heure,
-            s: r.siege,
-            cl: r.classe,
-            n: `${voyageur.nom} ${voyageur.prenom}`,
-          })
-        : '',
+    () => (r && voyageur ? construireQrBillet(r, voyageur) : ''),
     [r, voyageur],
   );
 

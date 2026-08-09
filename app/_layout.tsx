@@ -93,6 +93,7 @@ export default function DispositionRacine() {
           */}
           <Stack.Screen name="gare" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="caisse" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="controle" options={{ animation: 'slide_from_bottom' }} />
         </Stack>
 
         {/* Lancement : superposé au navigateur, jamais substitué à lui. */}
