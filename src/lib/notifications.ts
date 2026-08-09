@@ -129,6 +129,51 @@ export async function programmerRappels(r: Reservation): Promise<string[]> {
   return ids;
 }
 
+/**
+ * Rappels avant l'expiration de la pièce d'identité.
+ *
+ * Une CNIB périmée ne gêne pas seulement à l'entrée de la gare : elle transforme un
+ * contrôle routier de routine en mauvaise soirée. On prévient donc à un mois, à une
+ * semaine, puis la veille — assez tôt pour faire renouveler, assez près pour ne pas
+ * oublier.
+ *
+ * Tout se joue sur l'appareil : la date reste sur le téléphone, la notification est
+ * locale, rien n'est transmis. Et ce service est annoncé au voyageur, jamais caché.
+ */
+export async function programmerRappelsCnib(dateExpiration: string): Promise<string[]> {
+  if (web) return [];
+  await demanderAutorisation();
+
+  const ids: string[] = [];
+  const expiration = new Date(`${dateExpiration}T09:00:00`);
+  const maintenant = Date.now();
+
+  const etapes: { jAvant: number; corps: string }[] = [
+    { jAvant: 30, corps: 'Votre CNIB expire dans un mois. Pensez à la faire renouveler.' },
+    { jAvant: 7, corps: 'Votre CNIB expire dans une semaine.' },
+    { jAvant: 1, corps: 'Votre CNIB expire demain — évitez un souci au prochain contrôle.' },
+  ];
+
+  for (const etape of etapes) {
+    const quand = addDays(expiration, -etape.jAvant);
+    if (quand.getTime() <= maintenant) continue;
+    const id = await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "Pièce d'identité",
+        body: etape.corps,
+        data: { type: 'cnib' },
+        ...(Platform.OS === 'android' ? { channelId: 'rappels' } : {}),
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: quand,
+      },
+    });
+    ids.push(id);
+  }
+  return ids;
+}
+
 /** Annule des notifications programmées (par exemple après annulation ou report). */
 export async function annulerRappels(ids: string[]) {
   if (web) return;

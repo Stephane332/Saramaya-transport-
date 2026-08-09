@@ -91,6 +91,15 @@ export interface Voyageur {
   /** Carte Nationale d'Identité Burkinabè — exigée dès 18 ans à l'entrée de la gare. */
   cnib?: string;
   dateNaissance?: string;
+  /**
+   * Date d'expiration de la CNIB, AAAA-MM-JJ.
+   *
+   * Elle sert au rappel qui prévient avant qu'une carte périmée pose problème à un
+   * contrôle routier. Elle reste sur le téléphone, et le rappel est une notification
+   * locale : ni serveur, ni transmission. Le service est annoncé au voyageur, jamais
+   * caché — voir docs/presentation/donnees-des-voyageurs.md.
+   */
+  cnibExpireLe?: string;
 }
 
 export interface Reservation {

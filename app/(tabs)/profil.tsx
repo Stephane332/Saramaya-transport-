@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Bouton, Carte, Ecran, Section, Trait, Txt } from '../../src/components/base';
 import { initiales, telephone } from '../../src/lib/format';
@@ -8,6 +9,7 @@ import { useApp, voyagesEffectues } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
 export default function Profil() {
+  const router = useRouter();
   const voyageur = useApp((e) => e.voyageur);
   const reservations = useApp((e) => e.reservations);
   const supprimerCompte = useApp((e) => e.supprimerCompte);
@@ -101,6 +103,19 @@ export default function Profil() {
           </Txt>
         </View>
       </Carte>
+
+      <Section>Pièce d'identité</Section>
+      <Bouton
+        titre={voyageur.cnib ? 'Ma CNIB' : 'Renseigner ma CNIB'}
+        sousTitre={
+          voyageur.cnibExpireLe
+            ? `Expire le ${voyageur.cnibExpireLe} · rappel programmé`
+            : 'Exigée dès 18 ans à la gare — reste sur ce téléphone'
+        }
+        variante="secondaire"
+        icone={<Ionicons name="card-outline" size={18} color={couleurs.texteDoux} />}
+        onPress={() => router.push('/cnib')}
+      />
 
       <Section>Compte</Section>
       <Bouton

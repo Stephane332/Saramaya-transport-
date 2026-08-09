@@ -18,6 +18,7 @@ import {
   referenceBillet,
 } from '../src/lib/identifiants';
 import { construireQrBillet, verifierQrBillet } from '../src/lib/billetQr';
+import { cleControle, joursAvantExpirationCnib, lireBandeTD1 } from '../src/lib/cnib';
 import {
   depuisBase64Url,
   hmacSha256,
@@ -276,6 +277,65 @@ verifier(
 );
 // Un QR trop long devient illisible de loin, à bout de bras, par mauvaise lumière.
 verifier('le QR reste court (moins de 300 caractères)', qrPaye.length < 300, true);
+
+
+/* ── Pièce d'identité ────────────────────────────────────────────────────── */
+
+groupe("CNIB — lecture de la bande au dos (format TD1)");
+
+// Spécimen officiel de l'OACI (Doc 9303, partie 5), clés de contrôle publiées.
+const SPECIMEN_OACI = [
+  'I<UTOD231458907<<<<<<<<<<<<<<<',
+  '7408122F1204159UTO<<<<<<<<<<<6',
+  'ERIKSSON<<ANNA<MARIA<<<<<<<<<<',
+].join('\n');
+
+const lecture = lireBandeTD1(SPECIMEN_OACI, LE_JOUR);
+verifier('spécimen officiel décodé', lecture.ok, true);
+if (lecture.ok) {
+  verifier('numéro de la carte', lecture.identite.numero, 'D23145890');
+  verifier('nom', lecture.identite.nom, 'ERIKSSON');
+  verifier('prénoms', lecture.identite.prenoms, 'ANNA MARIA');
+  verifier('date de naissance', lecture.identite.dateNaissance, '1974-08-12');
+  // Ce spécimen est une carte expirée : elle doit le rester, et non basculer en 2112.
+  verifier("date d'expiration d'une carte ancienne", lecture.identite.dateExpiration, '2012-04-15');
+  verifier('sexe', lecture.identite.sexe, 'F');
+  verifier('aucun avertissement quand les clés concordent', lecture.avertissements, []);
+}
+
+verifier('clé de contrôle du numéro', cleControle('D23145890'), 7);
+verifier('clé de contrôle de la naissance', cleControle('740812'), 2);
+verifier('clé de contrôle de l\'expiration', cleControle('120415'), 9);
+
+// Une lecture fautive doit être signalée, jamais enregistrée en silence.
+const abimee = lireBandeTD1(SPECIMEN_OACI.replace('7408122F', '7408123F'), LE_JOUR);
+verifier(
+  'chiffre de contrôle faux : averti, pas avalé',
+  abimee.ok && abimee.avertissements.length > 0,
+  true,
+);
+verifier('deux lignes au lieu de trois : refusé', lireBandeTD1('AAA\nBBB', LE_JOUR).ok, false);
+verifier(
+  'lignes trop courtes : refusées',
+  lireBandeTD1('I<UTO\n7408122F\nERIKSSON', LE_JOUR).ok,
+  false,
+);
+
+const carteRecente = lireBandeTD1(
+  [
+    'I<BFAD231458907<<<<<<<<<<<<<<<',
+    '9001011M3012315BFA<<<<<<<<<<<4',
+    'SAWADOGO<<ANGE<<<<<<<<<<<<<<<<',
+  ].join('\n'),
+  LE_JOUR,
+);
+if (carteRecente.ok) {
+  verifier('naissance « 90 » comprise comme 1990', carteRecente.identite.dateNaissance, '1990-01-01');
+  verifier('expiration « 30 » comprise comme 2030', carteRecente.identite.dateExpiration, '2030-12-31');
+}
+
+verifier('CNIB expirant dans sept jours', joursAvantExpirationCnib('2026-08-16', LE_JOUR), 7);
+verifier('CNIB déjà expirée', joursAvantExpirationCnib('2026-08-01', LE_JOUR), -8);
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
 process.exit(echoues > 0 ? 1 : 0);
