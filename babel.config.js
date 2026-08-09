@@ -1,32 +1,39 @@
-/*
- * Champs privés de classe (`#champ`) et moteur Hermes d'Expo Go.
+/**
+ * `import.meta` dans les dépendances.
  *
- * Le Hermes embarqué dans Expo Go refuse cette syntaxe : la compilation s'arrête
- * sur « private properties are not supported » et l'application ne démarre pas du
- * tout sur l'appareil. React Native s'en sert dans ses propres classes internes
- * (react-native/src/private/webapis/geometry/DOMRectReadOnly.js), il ne suffit donc
- * pas de l'éviter dans notre code : il faut la traduire à la construction.
+ * Zustand embarque un module de débogage qui interroge `import.meta.env.MODE` pour
+ * savoir s'il tourne en développement. Nous ne nous en servons pas — seul `persist`
+ * est utilisé — mais il arrive quand même dans le paquet, et `import.meta` n'est
+ * valide que dans un module ES. Servi en script classique, le navigateur s'arrête
+ * sur « Cannot use 'import.meta' outside a module » et l'écran reste vide ; côté
+ * appareil, Hermes ne le comprend pas davantage.
  *
- * Les transformations sont placées dans un préréglage, et non dans `plugins` :
- * Babel exécute tous les greffons avant tous les préréglages, si bien qu'un greffon
- * de premier niveau verrait le TypeScript et le Flow avant qu'ils soient retirés, et
- * échouerait sur `declare class`. Les préréglages, eux, s'appliquent en ordre
- * inverse — celui-ci vient donc après `babel-preset-expo`, sur du JavaScript déjà
- * débarrassé de ses annotations de types.
+ * On remplace donc l'expression, à la construction, par la seule information qu'elle
+ * cherchait : le mode courant. Le module de débogage voit ce qu'il attend, et plus
+ * rien d'invalide ne subsiste dans le paquet.
+ *
+ * Ce greffon est écrit ici plutôt qu'ajouté en dépendance : il tient en cinq lignes,
+ * et une dépendance de plus serait une chose de plus à garder alignée sur le SDK —
+ * précisément le genre d'écart qui a déjà coûté cher sur ce projet.
  */
-const traduireChampsPrives = () => ({
-  plugins: [
-    ['@babel/plugin-transform-class-properties', { loose: true }],
-    ['@babel/plugin-transform-private-methods', { loose: true }],
-    ['@babel/plugin-transform-private-property-in-object', { loose: true }],
-  ],
+const remplacerImportMeta = () => ({
+  visitor: {
+    MetaProperty(chemin) {
+      // `MetaProperty` couvre aussi `new.target` : on ne touche qu'à `import.meta`.
+      if (chemin.node.meta?.name !== 'import') return;
+      chemin.replaceWithSourceString('({ env: { MODE: process.env.NODE_ENV } })');
+    },
+  },
 });
 
 module.exports = function (api) {
   api.cache(true);
   return {
-    presets: [traduireChampsPrives, 'babel-preset-expo'],
-    // Doit rester en dernier : Reanimated 4 s'appuie sur react-native-worklets.
-    plugins: ['react-native-worklets/plugin'],
+    presets: ['babel-preset-expo'],
+    plugins: [
+      remplacerImportMeta,
+      // Doit rester en dernier : Reanimated 4 s'appuie sur react-native-worklets.
+      'react-native-worklets/plugin',
+    ],
   };
 };

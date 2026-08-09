@@ -38,8 +38,8 @@
   "devDependencies": {
     "@types/react": "~19.1.0",
     "@types/three": "^0.185.4",
-    "babel-preset-expo": "^57.0.6",
-    "typescript": "~6.0.3"
+    "babel-preset-expo": "~54.0.12",
+    "typescript": "~5.9.2"
   },
   "scripts": {
     "start": "expo start",
@@ -48,7 +48,7 @@
     "web": "expo start --web",
     "export:web": "expo export --platform web",
     "test": "node --experimental-strip-types --no-warnings --import ./tests/hook.mjs tests/verification.ts",
-    "verifier": "npx tsc --noEmit && npm test",
+    "verifier": "node scripts/verifier-versions.mjs && npx tsc --noEmit && npm test",
     "web:construire": "expo export --platform web && node scripts/preparer-pages.mjs dist",
     "web:publier": "npm run verifier && npm run web:construire && npx eas-cli@latest deploy --prod",
     "apk": "npx eas-cli@latest build -p android --profile preview",
