@@ -41,6 +41,11 @@ jobs:
       - name: Vérifier les types
         run: npx tsc --noEmit
 
+      - name: Vérifier les règles de calcul
+        # Heures de convocation, départs atteignables, unicité des références :
+        # une erreur ici coûte une place à un voyageur. On ne publie pas sans.
+        run: npm test
+
       - name: Construire la version web
         # Le site est servi depuis un sous-dossier : sans ce préfixe, tous les
         # chemins vers /_expo/... pointeraient à la racine du domaine.
@@ -67,3 +72,15 @@ jobs:
     steps:
       - id: deploiement
         uses: actions/deploy-pages@v4
+
+      - name: Que faire si la publication a échoué
+        # Cette étape ne s'exécute que sur échec. Le cas de loin le plus fréquent
+        # est une erreur 404 : la construction a réussi, mais GitHub Pages n'a
+        # jamais été activé sur le dépôt. Autant le dire ici plutôt que de laisser
+        # chercher dans les journaux.
+        if: failure()
+        run: |
+          echo "::error::Publication impossible. Si le message ci-dessus est une erreur 404,"
+          echo "::error::activez GitHub Pages : Settings -> Pages -> Source : « GitHub Actions »,"
+          echo "::error::puis relancez ce workflow. La construction, elle, a réussi."
+          exit 1
