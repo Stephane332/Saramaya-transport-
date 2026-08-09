@@ -13,6 +13,7 @@
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { Shape, type Group } from 'three';
+import type { Inclinaison } from '../lib/parallaxe';
 
 const ROUGE = '#D81F26';
 const ROUGE_SOMBRE = '#9E1218';
@@ -94,7 +95,13 @@ function CourbeLaterale({ z }: { z: number }) {
   );
 }
 
-export function ScèneBus({ vitesse = 0.26 }: { vitesse?: number }) {
+export function ScèneBus({
+  vitesse = 0.26,
+  inclinaison,
+}: {
+  vitesse?: number;
+  inclinaison?: Inclinaison;
+}) {
   const bus = useRef<Group>(null);
 
   useFrame((state, delta) => {
@@ -102,6 +109,14 @@ export function ScèneBus({ vitesse = 0.26 }: { vitesse?: number }) {
     bus.current.rotation.y += delta * vitesse;
     // Léger tangage, pour que l'objet respire au lieu de tourner mécaniquement.
     bus.current.position.y = Math.sin(state.clock.elapsedTime * 0.9) * 0.04;
+
+    // Effet spatial : le bus s'incline vers le geste, en douceur.
+    if (inclinaison) {
+      const cibleX = -inclinaison.y.value * 0.28;
+      const cibleZ = inclinaison.x.value * 0.28;
+      bus.current.rotation.x += (cibleX - bus.current.rotation.x) * 0.1;
+      bus.current.rotation.z += (cibleZ - bus.current.rotation.z) * 0.1;
+    }
   });
 
   return (

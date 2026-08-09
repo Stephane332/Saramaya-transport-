@@ -7,6 +7,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Bus3D } from '../../src/components/Bus3D';
+import { CarteSpatiale } from '../../src/components/CarteSpatiale';
 import { LogoSaramaya } from '../../src/components/LogoSaramaya';
 import {
   BadgeClasse,
@@ -159,8 +160,9 @@ function CarteProchainVoyage({
   return (
     <Animated.View entering={FadeInDown.delay(220).springify().damping(18)}>
       <Pressable onPress={() => router.push(`/billet/${reservation.id}`)}>
+       <CarteSpatiale intensite={7} style={styles.enveloppeSpatiale}>
         <LinearGradient
-          colors={['rgba(214,33,111,0.28)', 'rgba(142,17,73,0.10)']}
+          colors={['rgba(216,31,38,0.28)', 'rgba(142,16,23,0.10)']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.carteVoyage}
@@ -241,6 +243,7 @@ function CarteProchainVoyage({
             </Pressable>
           ) : null}
         </LinearGradient>
+       </CarteSpatiale>
       </Pressable>
     </Animated.View>
   );
@@ -314,6 +317,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: couleurs.bordure,
   },
+  enveloppeSpatiale: { borderRadius: rayon.xl, overflow: 'hidden' },
   carteVoyage: {
     borderRadius: rayon.xl,
     borderWidth: 1,

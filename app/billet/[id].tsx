@@ -8,6 +8,7 @@ import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import QRCode from 'react-native-qrcode-svg';
 import { CodeBarres } from '../../src/components/CodeBarres';
+import { CarteSpatiale } from '../../src/components/CarteSpatiale';
 import { LogoSaramaya } from '../../src/components/LogoSaramaya';
 import {
   BadgeClasse,
@@ -89,8 +90,9 @@ export default function Billet() {
         <BadgeStatut statut={r.statut} />
       </View>
 
-      {/* Le billet, dessiné comme le ticket papier. */}
-      <Animated.View entering={FadeInDown.springify().damping(18)} style={styles.billet}>
+      {/* Le billet, dessiné comme le ticket papier. Il prend du relief à l'inclinaison. */}
+      <Animated.View entering={FadeInDown.springify().damping(18)}>
+       <CarteSpatiale intensite={8} style={styles.billet}>
         <LinearGradient colors={degrades.ticket} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.souche}>
           <View style={{ gap: 8, flex: 1 }}>
             <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
@@ -233,6 +235,7 @@ export default function Billet() {
             </Txt>
           </View>
         </View>
+       </CarteSpatiale>
       </Animated.View>
 
       {/* Expiration : la mention « valide 30 jours » du ticket papier, rendue vivante. */}
