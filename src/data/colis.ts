@@ -13,6 +13,13 @@
 
 import type { TailleColis } from '../types';
 
+/**
+ * Seuil de déclaration obligatoire, repris des conditions imprimées au dos du
+ * ticket : « Tout bagage dont la valeur excède 50 000 F doit faire l'objet d'une
+ * déclaration ».
+ */
+export const SEUIL_DECLARATION = 50000;
+
 export interface FormatColis {
   taille: TailleColis;
   libelle: string;
@@ -53,18 +60,36 @@ export const FORMATS_COLIS: Record<TailleColis, FormatColis> = {
   },
 };
 
-/** Le tarif suit la distance, par paliers. */
-export function tarifColis(taille: TailleColis, distanceKm: number): number {
-  const coefficient = distanceKm <= 150 ? 1 : distanceKm <= 250 ? 1.3 : 1.7;
-  return Math.round((FORMATS_COLIS[taille].base * coefficient) / 500) * 500;
-}
+/**
+ * Part du tarif calculée sur la valeur déclarée.
+ *
+ * Règle indiquée par la compagnie : au-delà de 50 000 F de valeur, le transport
+ * revient à **10 % de cette valeur** — 5 000 F pour 50 000 F, 10 000 F pour
+ * 100 000 F. En dessous de ce seuil, ce sont le format et la distance qui priment.
+ *
+ * À reconfirmer au guichet : c'est la dernière donnée tarifaire non vérifiée
+ * publiquement.
+ */
+export const TAUX_VALEUR = 0.1;
 
 /**
- * Seuil de déclaration obligatoire, repris des conditions imprimées au dos du
- * ticket : « Tout bagage dont la valeur excède 50 000 F doit faire l'objet d'une
- * déclaration ».
+ * Tarif d'un colis : le plus élevé entre le tarif « format × distance » (pour un
+ * petit colis sans grande valeur) et 10 % de la valeur déclarée (pour un colis de
+ * valeur, où c'est l'assurance du transport qui compte).
  */
-export const SEUIL_DECLARATION = 50000;
+export function tarifColis(
+  taille: TailleColis,
+  distanceKm: number,
+  valeurDeclaree = 0,
+): number {
+  const coefficient = distanceKm <= 150 ? 1 : distanceKm <= 250 ? 1.3 : 1.7;
+  const parFormat = FORMATS_COLIS[taille].base * coefficient;
+
+  // La part sur la valeur ne s'applique qu'au-delà du seuil de déclaration.
+  const parValeur = valeurDeclaree > SEUIL_DECLARATION ? valeurDeclaree * TAUX_VALEUR : 0;
+
+  return Math.round(Math.max(parFormat, parValeur) / 500) * 500;
+}
 
 /**
  * Ce que la compagnie n'accepte pas, d'après ses propres conditions :

@@ -8,8 +8,6 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -194,8 +192,8 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
     return a?.ville === b?.ville ? 0 : a?.ville === 'Ouagadougou' || b?.ville === 'Ouagadougou' ? 200 : 360;
   }, [gareDepartId, gareArriveeId]);
 
-  const prix = tarifColis(taille, distance);
   const valeurNombre = Number(valeur.replace(/\D/g, '')) || 0;
+  const prix = tarifColis(taille, distance, valeurNombre);
   const declarationRequise = valeurNombre > SEUIL_DECLARATION;
   const complet =
     nom.trim().length > 1 && tel.replace(/\D/g, '').length >= 8 && gareDepartId !== gareArriveeId;
