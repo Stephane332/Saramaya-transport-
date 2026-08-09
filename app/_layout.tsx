@@ -1,11 +1,12 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { couleurs, espace, rayon, typo } from '../src/theme';
 import { useApp } from '../src/store/useApp';
+import { EcranLancement } from '../src/components/EcranLancement';
 import { initialiserNotifications } from '../src/lib/notifications';
 
 /**
@@ -44,6 +45,12 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
 
 export default function DispositionRacine() {
   const charge = useApp((e) => e.charge);
+  /**
+   * L'animation de lancement et la relecture des données avancent en parallèle.
+   * On ne découvre l'application que lorsque les deux sont terminées : ni un écran
+   * vide pendant l'animation, ni une animation tronquée par une relecture rapide.
+   */
+  const [lancementTermine, setLancementTermine] = useState(false);
 
   /*
    * L'aiguillage vers l'ouverture de compte ne se fait pas ici.
@@ -88,11 +95,9 @@ export default function DispositionRacine() {
           <Stack.Screen name="caisse" options={{ animation: 'slide_from_bottom' }} />
         </Stack>
 
-        {/* Voile de chargement : superposé, jamais substitué au navigateur. */}
-        {!charge ? (
-          <View style={[StyleSheet.absoluteFill, styles.chargement]} pointerEvents="auto">
-            <ActivityIndicator color={couleurs.marqueVif} />
-          </View>
+        {/* Lancement : superposé au navigateur, jamais substitué à lui. */}
+        {!lancementTermine ? (
+          <EcranLancement peutPartir={charge} onTermine={() => setLancementTermine(true)} />
         ) : null}
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -100,11 +105,6 @@ export default function DispositionRacine() {
 }
 
 const styles = StyleSheet.create({
-  chargement: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: couleurs.fond,
-  },
   erreurFond: { flex: 1, backgroundColor: couleurs.fond },
   erreurContenu: {
     flexGrow: 1,

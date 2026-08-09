@@ -18,12 +18,17 @@
       "bundleIdentifier": "com.siraba.app",
       "infoPlist": {
         "NSCameraUsageDescription": "La caméra sert à scanner le code-barres de vos tickets papier pour les ajouter à vos voyages."
+      },
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-sombre.png"
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#D81F26"
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#FFFFFF"
       },
       "package": "com.siraba.app",
       "edgeToEdgeEnabled": true,

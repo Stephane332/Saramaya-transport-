@@ -19,9 +19,10 @@ from PIL import Image
 
 SOURCE = "assets/marque/saramaya-logo.png"
 
-ROUGE = (216, 31, 38)       # couleurs.marque
+ROUGE = (216, 31, 38)       # couleurs.marque — celui du logo officiel
 ROUGE_VIF = (240, 54, 47)   # couleurs.marqueVif
 BLANC = (255, 255, 255)
+NOIR = (10, 7, 14)          # couleurs.fond, pour la variante sombre
 
 # Boîte englobante du kangourou dans le logo (mesurée par projection des rouges).
 BBOX = (126, 72, 253, 175)
@@ -91,29 +92,45 @@ def png(img, chemin):
 
 
 def main():
+    """
+    Le logo officiel est un kangourou **rouge sur fond blanc** : c'est cette
+    disposition qui est reprise partout, et non l'inverse.
+
+    Deux variantes de fond, parce qu'une icône blanche posée sur un écran d'accueil
+    sombre fait une tache lumineuse : le blanc pour l'apparence claire, le noir
+    profond du thème pour l'apparence sombre. Dans les deux cas, le kangourou reste
+    rouge — c'est lui, la marque.
+    """
+    rouge = silhouette(ROUGE)
     blanc = silhouette(BLANC)
-    rouge = silhouette(ROUGE_VIF)
-    fond_rouge = ROUGE + (255,)
+    fond_blanc = BLANC + (255,)
+    fond_noir = NOIR + (255,)
 
-    # iOS + icône générale : kangourou blanc sur rouge.
-    png(composer(blanc, 1024, 0.13, fond_rouge), "assets/icon.png")
+    # iOS et icône générale : kangourou rouge sur blanc.
+    png(composer(rouge, 1024, 0.13, fond_blanc), "assets/icon.png")
+    # Variante sombre iOS : même kangourou rouge, fond noir profond.
+    png(composer(rouge, 1024, 0.13, fond_noir), "assets/icon-sombre.png")
 
-    # Android adaptatif : premier plan blanc transparent (le rouge vient de app.json),
-    # rentré dans la zone de sécurité centrale.
-    png(composer(blanc, 1024, 0.20, None), "assets/adaptive-icon.png")
-    png(composer(blanc, 1024, 0.20, None), "assets/android-icon-foreground.png")
+    # Android adaptatif : premier plan rouge sur fond transparent (le blanc vient
+    # de app.json), rentré dans la zone de sécurité centrale.
+    png(composer(rouge, 1024, 0.20, None), "assets/adaptive-icon.png")
+    png(composer(rouge, 1024, 0.20, None), "assets/android-icon-foreground.png")
+    # Icône monochrome (thème Android) : la forme seule, le système la recolore.
     png(composer(blanc, 1024, 0.20, None), "assets/android-icon-monochrome.png")
 
-    # Splash sombre (#0A070E) : kangourou rouge de marque, centré et aéré.
-    png(composer(rouge, 1024, 0.32, None), "assets/splash-icon.png")
+    # Écran de démarrage : kangourou rouge sur fond transparent, pour se poser
+    # aussi bien sur le blanc que sur le noir.
+    png(composer(rouge, 1024, 0.30, None), "assets/splash-icon.png")
 
-    # Favicon.
-    png(composer(blanc, 64, 0.10, fond_rouge), "assets/favicon.png")
+    # Silhouette pour l'animation de lancement, recolorée à l'exécution par
+    # `tintColor` : opaque en blanc, seule la transparence compte.
+    png(composer(blanc, 1024, 0.02, None), "assets/marque/kangourou.png")
 
-    # Web / PWA.
-    png(composer(blanc, 180, 0.13, fond_rouge), "public/apple-touch-icon.png")
-    png(composer(blanc, 192, 0.13, fond_rouge), "public/icone-192.png")
-    png(composer(blanc, 512, 0.13, fond_rouge), "public/icone-512.png")
+    # Favicon et web.
+    png(composer(rouge, 64, 0.10, fond_blanc), "assets/favicon.png")
+    png(composer(rouge, 180, 0.13, fond_blanc), "public/apple-touch-icon.png")
+    png(composer(rouge, 192, 0.13, fond_blanc), "public/icone-192.png")
+    png(composer(rouge, 512, 0.13, fond_blanc), "public/icone-512.png")
 
 
 if __name__ == "__main__":
