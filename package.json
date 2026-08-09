@@ -48,7 +48,9 @@
     "web": "expo start --web",
     "export:web": "expo export --platform web",
     "test": "node --experimental-strip-types --no-warnings --import ./tests/hook.mjs tests/verification.ts",
-    "verifier": "npx tsc --noEmit && npm test"
+    "verifier": "npx tsc --noEmit && npm test",
+    "web:construire": "expo export --platform web && node scripts/preparer-pages.mjs dist",
+    "web:publier": "npm run verifier && npm run web:construire && eas deploy --prod"
   },
   "private": true
 }

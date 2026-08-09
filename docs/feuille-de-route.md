@@ -142,3 +142,53 @@ exige un abonnement payant. **Le rendre public n'est pas une option** : il conti
 l'argumentaire de vente, l'analyse de la concurrence et la note sur leurs failles.
 Tout deviendrait lisible par Saramaya avant le premier rendez-vous. `eas deploy`
 publie depuis un code qui reste privé — c'est la voie propre.
+
+---
+
+## 9. Faire tester par des amis
+
+Un ami n'a pas besoin du code : il lui faut **un lien**. Rendre le dépôt public ne
+lui donnerait que le code source — et exposerait au passage tout l'historique du
+projet (voir l'avertissement ci-dessous).
+
+### La bonne façon : `eas deploy`
+
+```bash
+npm run web:publier
+```
+
+Ce raccourci enchaîne : vérification des types, tests, export web **préparé pour
+l'installation sur l'écran d'accueil** (icône kangourou, plein écran, mode
+autonome), puis publication chez Expo. Résultat : une adresse à envoyer par
+WhatsApp. L'ami l'ouvre, fait « Sur l'écran d'accueil », et l'application s'installe
+avec son icône — sans App Store, sans compte, sans rien installer.
+
+Gratuit, et **le dépôt reste privé**.
+
+### Pour ceux qui ont un Android
+
+```bash
+eas build -p android --profile preview
+```
+
+Donne un APK à envoyer directement. Application native complète : caméra, scan,
+notifications.
+
+### Avertissement — ne pas rendre ce dépôt public tel quel
+
+Rendre le dépôt public expose **tout l'historique des commits**, pas seulement les
+fichiers actuels. Supprimer un fichier aujourd'hui ne l'efface pas du passé.
+Deviendraient donc lisibles par n'importe qui, Saramaya comprise :
+
+- `docs/presentation/securite-et-ethique.md` — l'analyse de leurs failles
+- `docs/presentation/argumentaire.md` — l'argumentaire bâti sur leurs pertes
+- `docs/presentation/concurrence.md`, `chiffres-a-collecter.md`
+- `docs/feuille-de-route.md` — toute la stratégie
+
+Publier l'analyse des failles d'une entreprise sous son nom, avant de l'avoir
+rencontrée, est le scénario qui condamne le projet.
+
+**Si un dépôt public est vraiment souhaité**, la façon propre est d'en créer un
+**second**, ne contenant que l'application — sans le dossier `docs/presentation`,
+sans `docs/feuille-de-route.md`, et avec un historique neuf. Le dépôt actuel reste
+privé et garde la stratégie.
