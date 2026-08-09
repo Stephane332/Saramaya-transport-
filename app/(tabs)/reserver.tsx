@@ -24,8 +24,9 @@ import {
   identifiantDepart,
   ligneParId,
 } from '../../src/data/reseau';
-import { decalerHeure, montant } from '../../src/lib/format';
+import { decalerHeure, departsAVenir, montant } from '../../src/lib/format';
 import { programmerRappels } from '../../src/lib/notifications';
+import { useStatutService } from '../../src/lib/statutService';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, espace, rayon } from '../../src/theme';
 import type { Classe } from '../../src/types';
@@ -45,6 +46,7 @@ export default function Reserver() {
   const params = useLocalSearchParams<{ scan?: string }>();
   const creer = useApp((e) => e.creer);
   const voyageur = useApp((e) => e.voyageur);
+  const statut = useStatutService();
 
   const [enCours, setEnCours] = useState(false);
   const [etape, setEtape] = useState<Etape>('LIGNE');
@@ -85,6 +87,32 @@ export default function Reserver() {
 
   if (params.scan) {
     return <PanneauScan onFermer={() => router.setParams({ scan: undefined })} />;
+  }
+
+  // La compagnie a suspendu les réservations : on n'en propose plus, on informe.
+  if (!statut.ouvert) {
+    return (
+      <Ecran>
+        <Txt v="titre">Réservations suspendues</Txt>
+        <Animated.View entering={FadeInDown.springify().damping(18)}>
+          <Carte style={{ borderColor: 'rgba(245,165,36,0.4)', gap: espace.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.sm }}>
+              <Ionicons name="pause-circle" size={22} color={couleurs.attention} />
+              <Txt v="corpsFort" couleur={couleurs.attention}>
+                Service temporairement fermé
+              </Txt>
+            </View>
+            <Txt v="corps" couleur={couleurs.texteDoux}>
+              {statut.message ??
+                'Saramaya Transport a suspendu les réservations en ligne pour le moment. Réessayez plus tard — vous pouvez toujours vous présenter à la gare.'}
+            </Txt>
+          </Carte>
+        </Animated.View>
+        <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
+          CETTE PAGE SE RÉACTIVERA DÈS LA RÉOUVERTURE
+        </Txt>
+      </Ecran>
+    );
   }
 
   return (
@@ -169,7 +197,17 @@ export default function Reserver() {
             VIP 1re classe et VIP directe à des horaires différents.
           </Txt>
 
-          {ligne.departs.map((d, i) => (
+          {departsAVenir(ligne.departs, date).length === 0 ? (
+            <Carte>
+              <Txt v="corpsFort">Plus de départ aujourd'hui</Txt>
+              <Txt v="petit" couleur={couleurs.texteFaible}>
+                Tous les départs de la journée sont passés. Choisissez une autre date.
+              </Txt>
+              <Bouton titre="Changer de date" variante="secondaire" onPress={() => setEtape('DATE')} />
+            </Carte>
+          ) : null}
+
+          {departsAVenir(ligne.departs, date).map((d, i) => (
             <Pressable
               key={d.heure}
               onPress={() => {

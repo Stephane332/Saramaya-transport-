@@ -23,7 +23,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A070E"
+        "backgroundColor": "#D81F26"
       },
       "package": "com.siraba.app",
       "edgeToEdgeEnabled": true,

@@ -210,3 +210,18 @@ export interface Colis {
   codePartage: boolean;
   moyenPaiement?: MoyenPaiement;
 }
+
+
+/**
+ * Une caisse (guichet) et son compte Orange Money de réception.
+ *
+ * Chaque caissière a son propre numéro : c'est là que les paiements d'une
+ * réservation doivent arriver. L'agent le configure sur son poste ; il alimentera
+ * les instructions de paiement du voyageur une fois le système partagé en place.
+ */
+export interface Caisse {
+  nom: string;
+  gareId: string;
+  numeroOrangeMoney: string;
+  codePaiement?: string;
+}

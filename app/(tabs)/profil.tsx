@@ -104,12 +104,19 @@ export default function Profil() {
         </View>
       </Carte>
 
-      <Section>Aperçu côté gare</Section>
+      <Section>Côté gare</Section>
       <Bouton
         titre="Voir l'écran des agents"
         sousTitre="Ce que la gare verra une fois connectée"
         variante="secondaire"
         onPress={() => router.push('/gare')}
+      />
+      <Bouton
+        titre="Configurer ma caisse"
+        sousTitre="Numéro Orange Money du guichet (agent)"
+        variante="fantome"
+        icone={<Ionicons name="cash-outline" size={18} color={couleurs.texteDoux} />}
+        onPress={() => router.push('/caisse')}
       />
 
       <Section>Compte</Section>

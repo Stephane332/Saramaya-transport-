@@ -18,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { BadgeClasse, Carte, Ecran, Section, Trait, Txt } from '../src/components/base';
+import { BadgeClasse, Bouton, Carte, Ecran, Section, Txt } from '../src/components/base';
 import { MINUTES_LIBERATION_PLACE, ligneParId } from '../src/data/reseau';
 import { montant, telephone } from '../src/lib/format';
 import { prochainVoyage, useApp } from '../src/store/useApp';
@@ -49,6 +49,7 @@ export default function EcranGare() {
   const router = useRouter();
   const reservations = useApp((e) => e.reservations);
   const voyageur = useApp((e) => e.voyageur);
+  const caisse = useApp((e) => e.caisse);
 
   // On regroupe autour du prochain départ réel du voyageur, s'il y en a un.
   const prochain = useMemo(() => prochainVoyage(reservations), [reservations]);
@@ -146,6 +147,19 @@ export default function EcranGare() {
           ))}
         </>
       )}
+
+      <Section>Encaissement</Section>
+      <Bouton
+        titre={caisse ? `Ma caisse · ${caisse.nom}` : 'Configurer ma caisse'}
+        sousTitre={
+          caisse
+            ? `Orange Money ${telephone(caisse.numeroOrangeMoney)}`
+            : 'Numéro Orange Money du guichet'
+        }
+        variante="secondaire"
+        icone={<Ionicons name="cash-outline" size={18} color={couleurs.texteDoux} />}
+        onPress={() => router.push('/caisse')}
+      />
     </Ecran>
   );
 }

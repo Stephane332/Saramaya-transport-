@@ -46,6 +46,7 @@ export default function DispositionRacine() {
             options={{ animation: 'fade', presentation: 'fullScreenModal' }}
           />
           <Stack.Screen name="gare" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="caisse" options={{ animation: 'slide_from_bottom' }} />
         </Stack>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -60,3 +60,24 @@ export function decalerHeure(heure: string, minutes: number): string {
     .toString()
     .padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
 }
+
+
+/** Vrai si la date ISO (AAAA-MM-JJ) est aujourd'hui. */
+export function estAujourdhui(dateIso: string, maintenant = new Date()): boolean {
+  return dateIso === format(maintenant, 'yyyy-MM-dd');
+}
+
+/**
+ * Filtre les départs encore atteignables : pour aujourd'hui, on retire ceux dont
+ * l'heure est déjà passée. C'est le temps réel de base — inutile de proposer un
+ * bus de 8 h quand il est 9 h.
+ */
+export function departsAVenir<T extends { heure: string }>(
+  departs: T[],
+  dateIso: string,
+  maintenant = new Date(),
+): T[] {
+  if (!estAujourdhui(dateIso, maintenant)) return departs;
+  const hhmm = format(maintenant, 'HH:mm');
+  return departs.filter((d) => d.heure > hhmm);
+}

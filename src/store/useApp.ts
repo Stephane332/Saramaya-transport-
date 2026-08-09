@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { LocalProvider } from '../sync/localProvider';
 import type { DemandeReservation, TicketScanne } from '../sync/types';
 import { genererCodeRetrait } from '../lib/colis';
-import type { Colis, Reservation, TailleColis, Voyageur } from '../types';
+import type { Caisse, Colis, Reservation, TailleColis, Voyageur } from '../types';
 
 /**
  * État de l'application.
@@ -32,6 +32,8 @@ interface EtatApp {
   colis: Colis[];
   /** Rappels déjà programmés, par réservation — pour ne pas les reprogrammer en double. */
   rappelsProgrammes: Record<string, string[]>;
+  /** Configuration de la caisse, côté agent. Null pour un voyageur ordinaire. */
+  caisse: Caisse | null;
 
   creerCompte: (v: Omit<Voyageur, 'id'>) => void;
   mettreAJourProfil: (champs: Partial<Voyageur>) => void;
@@ -49,6 +51,9 @@ interface EtatApp {
   marquerCodePartage: (id: string) => void;
 
   marquerRappelProgramme: (id: string, etapeId: string) => void;
+
+  definirCaisse: (c: Caisse) => void;
+  effacerCaisse: () => void;
 }
 
 function provider(get: () => EtatApp, set: (p: Partial<EtatApp>) => void) {
@@ -62,6 +67,7 @@ export const useApp = create<EtatApp>()(
       reservations: [],
       colis: [],
       rappelsProgrammes: {},
+      caisse: null,
 
       creerCompte: (v) => {
         set({ voyageur: { ...v, id: `v-${Date.now()}` } });
@@ -152,6 +158,9 @@ export const useApp = create<EtatApp>()(
         if (actuels.includes(etapeId)) return;
         set({ rappelsProgrammes: { ...get().rappelsProgrammes, [id]: [...actuels, etapeId] } });
       },
+
+      definirCaisse: (c) => set({ caisse: c }),
+      effacerCaisse: () => set({ caisse: null }),
     }),
     {
       name: 'saramaya-v1',
@@ -161,6 +170,7 @@ export const useApp = create<EtatApp>()(
         reservations: s.reservations,
         colis: s.colis,
         rappelsProgrammes: s.rappelsProgrammes,
+        caisse: s.caisse,
       }),
     },
   ),
