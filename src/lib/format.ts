@@ -52,10 +52,21 @@ export function dureeTrajet(minutes: number): string {
   return m === 0 ? `${h} h` : `${h} h ${m.toString().padStart(2, '0')}`;
 }
 
-/** Décale une heure « HH:mm » d'un nombre de minutes. */
+/**
+ * Décale une heure « HH:mm » d'un nombre de minutes.
+ *
+ * Une heure mal formée n'a rien d'hypothétique : elle peut venir d'un ticket
+ * papier scanné de travers ou d'un champ corrigé à la main. Plutôt que de
+ * produire « NaN:NaN » sur le billet d'un voyageur, on renvoie l'heure d'origine
+ * telle quelle — visiblement inchangée, donc repérable, mais jamais absurde.
+ */
 export function decalerHeure(heure: string, minutes: number): string {
-  const [h, m] = heure.split(':').map(Number);
-  const total = (h * 60 + m + minutes + 24 * 60) % (24 * 60);
+  const [hTexte, mTexte] = heure.split(':');
+  const h = Number(hTexte);
+  const m = Number(mTexte);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return heure;
+
+  const total = (((h * 60 + m + minutes) % (24 * 60)) + 24 * 60) % (24 * 60);
   return `${Math.floor(total / 60)
     .toString()
     .padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;

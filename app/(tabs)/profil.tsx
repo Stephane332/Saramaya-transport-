@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Bouton, Carte, Ecran, Section, Trait, Txt } from '../../src/components/base';
 import { initiales, telephone } from '../../src/lib/format';
@@ -9,7 +8,6 @@ import { useApp, voyagesEffectues } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
 export default function Profil() {
-  const router = useRouter();
   const voyageur = useApp((e) => e.voyageur);
   const reservations = useApp((e) => e.reservations);
   const supprimerCompte = useApp((e) => e.supprimerCompte);
@@ -103,21 +101,6 @@ export default function Profil() {
           </Txt>
         </View>
       </Carte>
-
-      <Section>Côté gare</Section>
-      <Bouton
-        titre="Voir l'écran des agents"
-        sousTitre="Ce que la gare verra une fois connectée"
-        variante="secondaire"
-        onPress={() => router.push('/gare')}
-      />
-      <Bouton
-        titre="Configurer ma caisse"
-        sousTitre="Numéro Orange Money du guichet (agent)"
-        variante="fantome"
-        icone={<Ionicons name="cash-outline" size={18} color={couleurs.texteDoux} />}
-        onPress={() => router.push('/caisse')}
-      />
 
       <Section>Compte</Section>
       <Bouton

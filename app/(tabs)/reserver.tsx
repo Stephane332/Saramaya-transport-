@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, Layout } from 'react-native-reanimated';
 import {
   BadgeClasse,
@@ -19,12 +19,15 @@ import { ScannerCamera } from '../../src/components/ScannerCamera';
 import {
   GARES,
   LIGNES,
+  LIGNE_DEFAUT,
   PLANS_BUS,
+  TELEPHONES_RESERVATION,
   garesDeLaVille,
   identifiantDepart,
   ligneParId,
 } from '../../src/data/reseau';
-import { decalerHeure, departsAVenir, montant } from '../../src/lib/format';
+import { decalerHeure, montant } from '../../src/lib/format';
+import { departsDuJour } from '../../src/lib/departs';
 import { programmerRappels } from '../../src/lib/notifications';
 import { useStatutService } from '../../src/lib/statutService';
 import { useApp } from '../../src/store/useApp';
@@ -59,6 +62,18 @@ export default function Reserver() {
 
   const ligne = ligneId ? ligneParId(ligneId) : null;
   const indexEtape = ETAPES.findIndex((e) => e.cle === etape);
+
+  /**
+   * Départs réellement proposables : la grille publiée, plus les départs ajoutés
+   * par la compagnie pour ce jour-là, moins ceux dont l'heure est déjà passée.
+   */
+  const departs = useMemo(
+    () =>
+      ligne && ligneId
+        ? departsDuJour(ligne.departs, ligneId, date, statut.departsSupplementaires)
+        : [],
+    [ligne, ligneId, date, statut.departsSupplementaires],
+  );
 
   /**
    * Crée la réservation. Elle naît « à payer » : le paiement se fait ensuite par
@@ -124,7 +139,13 @@ export default function Reserver() {
         </Txt>
       </View>
 
-      <FilAriane index={indexEtape} onAller={(i) => i < indexEtape && setEtape(ETAPES[i].cle)} />
+      <FilAriane
+        index={indexEtape}
+        onAller={(i) => {
+          const cible = ETAPES[i];
+          if (cible && i < indexEtape) setEtape(cible.cle);
+        }}
+      />
 
       {etape === 'LIGNE' ? (
         <Animated.View entering={FadeIn} exiting={FadeOut} layout={Layout} style={{ gap: espace.md }}>
@@ -197,7 +218,7 @@ export default function Reserver() {
             VIP 1re classe et VIP directe à des horaires différents.
           </Txt>
 
-          {departsAVenir(ligne.departs, date).length === 0 ? (
+          {departs.length === 0 ? (
             <Carte>
               <Txt v="corpsFort">Plus de départ aujourd'hui</Txt>
               <Txt v="petit" couleur={couleurs.texteFaible}>
@@ -207,7 +228,7 @@ export default function Reserver() {
             </Carte>
           ) : null}
 
-          {departsAVenir(ligne.departs, date).map((d, i) => (
+          {departs.map((d, i) => (
             <Pressable
               key={d.heure}
               onPress={() => {
@@ -222,6 +243,13 @@ export default function Reserver() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.md }}>
                     <Txt v="sousTitre">{d.heure}</Txt>
                     <BadgeClasse classe={d.classe} petit />
+                    {d.ajoute ? (
+                      <View style={styles.badgeAjoute}>
+                        <Txt v="minuscule" couleur={couleurs.succes}>
+                          AJOUTÉ
+                        </Txt>
+                      </View>
+                    ) : null}
                   </View>
                   <Txt v="corpsFort" couleur={couleurs.marqueVif}>
                     {montant(ligne.tarifs[d.classe])}
@@ -232,12 +260,14 @@ export default function Reserver() {
                     CONVOCATION {decalerHeure(d.heure, -30)}
                   </Txt>
                   <Txt v="minuscule" couleur={couleurs.texteFaible}>
-                    {PLANS_BUS[d.classe].equipements[0].toUpperCase()}
+                    {(PLANS_BUS[d.classe].equipements[0] ?? 'Climatisation').toUpperCase()}
                   </Txt>
                 </View>
               </Carte>
             </Pressable>
           ))}
+
+          <NoteDepartsAjoutes ligneId={ligneId} />
         </Animated.View>
       ) : null}
 
@@ -314,6 +344,43 @@ export default function Reserver() {
   );
 }
 
+/**
+ * La grille publiée n'est pas exhaustive, et le dire vaut mieux que de le cacher.
+ *
+ * En période de forte affluence, la compagnie ajoute des départs qu'elle n'annonce
+ * nulle part. Tant qu'elle ne les déclare pas dans son fichier d'état, la seule
+ * façon de les connaître reste d'appeler la gare — alors on propose l'appel, avec
+ * le vrai numéro de réservation de la ligne concernée.
+ */
+function NoteDepartsAjoutes({ ligneId }: { ligneId: string | null }) {
+  const numeros = ligneId ? (TELEPHONES_RESERVATION[ligneId] ?? []) : [];
+  const numero = numeros[0];
+
+  return (
+    <Carte style={{ gap: espace.sm }}>
+      <View style={{ flexDirection: 'row', gap: espace.sm }}>
+        <Ionicons name="information-circle-outline" size={18} color={couleurs.texteFaible} />
+        <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
+          Aux périodes chargées, Saramaya ajoute des départs qui ne figurent pas dans la
+          grille publiée. Ceux que la compagnie signale apparaissent ici marqués{' '}
+          <Txt v="minuscule" couleur={couleurs.succes}>
+            AJOUTÉ
+          </Txt>
+          . Pour les autres, la gare reste la source sûre.
+        </Txt>
+      </View>
+      {numero ? (
+        <Bouton
+          titre={`Appeler la gare · ${numero}`}
+          variante="secondaire"
+          icone={<Ionicons name="call-outline" size={18} color={couleurs.texteDoux} />}
+          onPress={() => Linking.openURL(`tel:${numero.replace(/\s/g, '')}`)}
+        />
+      ) : null}
+    </Carte>
+  );
+}
+
 function FilAriane({ index, onAller }: { index: number; onAller: (i: number) => void }) {
   return (
     <View style={styles.fil}>
@@ -363,7 +430,7 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
   const router = useRouter();
   const [phase, setPhase] = useState<'SCAN' | 'SAISIE'>('SCAN');
   const [reference, setReference] = useState('');
-  const [ligneId, setLigneId] = useState(LIGNES[0].id);
+  const [ligneId, setLigneId] = useState(LIGNE_DEFAUT);
   const [dateTicket, setDateTicket] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [heureTicket, setHeureTicket] = useState('16:00');
   const [classeTicket, setClasseTicket] = useState<Classe>('ORDINAIRE');
@@ -507,6 +574,14 @@ function SaisieTicket({
 }
 
 const styles = StyleSheet.create({
+  badgeAjoute: {
+    borderRadius: rayon.rond,
+    borderWidth: 1,
+    borderColor: 'rgba(46,204,143,0.45)',
+    backgroundColor: 'rgba(46,204,143,0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
   entre: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   saisieTicket: { color: '#F7F2FA', fontSize: 16, fontWeight: '600', paddingVertical: 6 },
   optionLigne: {

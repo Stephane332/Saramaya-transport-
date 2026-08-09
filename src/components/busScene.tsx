@@ -16,7 +16,6 @@ import { Shape, type Group } from 'three';
 import type { Inclinaison } from '../lib/parallaxe';
 
 const ROUGE = '#D81F26';
-const ROUGE_SOMBRE = '#9E1218';
 const CARROSSERIE = '#FBF8F9';
 const CARROSSERIE_OMBRE = '#DCD4D7';
 const VITRE = '#0E1116';

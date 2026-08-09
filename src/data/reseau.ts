@@ -16,7 +16,7 @@
  * kilomètres parcourus affiché au voyageur.
  */
 
-import type { Classe, Gare, Ligne, TailleColis, Ville } from '../types';
+import type { Classe, Gare, Ligne, Ville } from '../types';
 
 export const VILLES: Ville[] = [
   'Ouagadougou',
@@ -194,6 +194,15 @@ export const LIGNES: Ligne[] = [
     ],
   },
 ];
+
+/**
+ * Valeurs initiales des formulaires, désignées par leur identifiant plutôt que par
+ * une position dans un tableau : réordonner les listes ne doit pas changer
+ * silencieusement le trajet proposé par défaut à un voyageur.
+ */
+export const LIGNE_DEFAUT = 'ligne-ouahigouya-ouaga';
+export const GARE_DEPART_DEFAUT = 'gare-ouaga-tampouy';
+export const GARE_ARRIVEE_DEFAUT = 'gare-bobo-tounouma';
 
 export function ligneParId(id: string): Ligne | undefined {
   return LIGNES.find((l) => l.id === id);

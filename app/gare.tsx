@@ -11,7 +11,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -22,7 +22,7 @@ import { BadgeClasse, Bouton, Carte, Ecran, Section, Txt } from '../src/componen
 import { MINUTES_LIBERATION_PLACE, ligneParId } from '../src/data/reseau';
 import { montant, telephone } from '../src/lib/format';
 import { prochainVoyage, useApp } from '../src/store/useApp';
-import { couleurs, degrades, espace, rayon } from '../src/theme';
+import { couleurs, espace, rayon } from '../src/theme';
 import type { Reservation } from '../src/types';
 
 /** Traduit le statut d'une réservation en ce que l'agent doit en faire. */

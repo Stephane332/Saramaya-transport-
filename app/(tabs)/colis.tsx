@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import {
   Bouton,
   Carte,
@@ -22,8 +22,13 @@ import {
   Txt,
 } from '../../src/components/base';
 import { FORMATS_COLIS, REFUSES, SEUIL_DECLARATION, tarifColis } from '../../src/data/colis';
-import { GARES, gareParId } from '../../src/data/reseau';
-import { montant, telephone } from '../../src/lib/format';
+import {
+  GARES,
+  GARE_ARRIVEE_DEFAUT,
+  GARE_DEPART_DEFAUT,
+  gareParId,
+} from '../../src/data/reseau';
+import { montant } from '../../src/lib/format';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 import type { Colis, MoyenPaiement, TailleColis } from '../../src/types';
@@ -176,8 +181,8 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
   const router = useRouter();
   const envoyerColis = useApp((e) => e.envoyerColis);
 
-  const [gareDepartId, setGareDepartId] = useState(GARES[0].id);
-  const [gareArriveeId, setGareArriveeId] = useState(GARES[3].id);
+  const [gareDepartId, setGareDepartId] = useState(GARE_DEPART_DEFAUT);
+  const [gareArriveeId, setGareArriveeId] = useState(GARE_ARRIVEE_DEFAUT);
   const [taille, setTaille] = useState<TailleColis>('PETIT');
   const [nom, setNom] = useState('');
   const [tel, setTel] = useState('');

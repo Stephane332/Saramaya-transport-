@@ -15,7 +15,6 @@ import {
   Bouton,
   Carte,
   Ecran,
-  Jauge,
   Section,
   Trait,
   Txt,
@@ -24,7 +23,7 @@ import { LIGNES, ligneParId } from '../../src/data/reseau';
 import { dateHeureConvocation, dateHeureDepart, evaluerReservation } from '../../src/lib/confirmation';
 import { compteARebours, jourCourt, montant } from '../../src/lib/format';
 import { prochainVoyage, useApp, voyagesEffectues } from '../../src/store/useApp';
-import { couleurs, degrades, espace, rayon, typo } from '../../src/theme';
+import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
 export default function Accueil() {
   const router = useRouter();

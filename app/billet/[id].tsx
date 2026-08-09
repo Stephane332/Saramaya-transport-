@@ -309,7 +309,7 @@ export default function Billet() {
                   </View>
                   <Trait />
                   <Rangee gauche="Numéros" droite={paiement.numeros.join('  ·  ')} />
-                  <Rangee gauche="Code paiement" droite={paiement.codes[0]} />
+                  <Rangee gauche="Code paiement" droite={paiement.codes[0] ?? "—"} />
                   <Txt v="minuscule" couleur={couleurs.texteFaible}>
                     APPELEZ LE NUMÉRO, SUIVEZ LES INSTRUCTIONS, PUIS ENTREZ LE CODE ET LE MONTANT.
                   </Txt>

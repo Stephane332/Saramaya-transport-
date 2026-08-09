@@ -10,7 +10,7 @@
  */
 
 import { Image, View, type StyleProp, type ViewStyle } from 'react-native';
-import { couleurs, typo } from '../theme';
+import { couleurs } from '../theme';
 import { Txt } from './base';
 
 const CLAIR = require('../../assets/marque/saramaya-logo-clair.png');

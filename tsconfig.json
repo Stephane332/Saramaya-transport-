@@ -1,6 +1,17 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    /* Le code mort passe inaperçu et finit par mentir sur ce que fait l'application :
+       une variable oubliée, un import qui traîne après un écran retiré. On les refuse. */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    /* Un `case` qui déborde sur le suivant est presque toujours un oubli de `break`. */
+    "noFallthroughCasesInSwitch": true,
+    /* Lire une case de tableau peut renvoyer `undefined` : le typage doit le dire,
+       sinon on plante à l'exécution sur une liste plus courte que prévu. */
+    "noUncheckedIndexedAccess": true,
+    /* Interdit d'oublier un `return` dans une branche d'une fonction qui en promet un. */
+    "noImplicitReturns": true
   }
 }

@@ -30,7 +30,7 @@ import Animated, {
 import { BadgeClasse, Bouton, Carte, Ecran, Section, Trait, Txt } from '../../src/components/base';
 import { ligneParId } from '../../src/data/reseau';
 import { politiqueAnnulation } from '../../src/lib/annulation';
-import { dateHeureConvocation, dateHeureDepart, estProtegee } from '../../src/lib/confirmation';
+import { dateHeureConvocation, estProtegee } from '../../src/lib/confirmation';
 import { compteARebours, montant } from '../../src/lib/format';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';

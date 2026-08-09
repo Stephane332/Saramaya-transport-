@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { LocalProvider } from '../sync/localProvider';
 import type { DemandeReservation, TicketScanne } from '../sync/types';
 import { genererCodeRetrait } from '../lib/colis';
+import { identifiant, referenceBillet } from '../lib/identifiants';
 import type { Caisse, Colis, Reservation, TailleColis, Voyageur } from '../types';
 
 /**
@@ -13,6 +14,37 @@ import type { Caisse, Colis, Reservation, TailleColis, Voyageur } from '../types
  * son compte, puis construit son historique en s'en servant vraiment — en scannant
  * ses tickets papier et en réservant. Aucune donnée fictive.
  */
+
+/**
+ * Version de la forme des données enregistrées.
+ *
+ * 1 — forme d'origine (voyageur, réservations, colis, rappels).
+ * 2 — ajout de la caisse ; les références produites par l'application passent au
+ *     préfixe « SB- » pour ne plus ressembler aux numéros de la billetterie.
+ */
+const SCHEMA_VERSION = 2;
+
+/**
+ * Convertit un contenu enregistré par une version antérieure.
+ *
+ * Règle absolue : on ne supprime jamais de données qu'on ne sait pas convertir.
+ * Ce qui est inconnu est laissé tel quel — un voyage de trop vaut mieux qu'un
+ * historique amputé.
+ */
+function migrerEtat(enregistre: unknown, versionPrecedente: number): Partial<EtatApp> {
+  const etat = (enregistre ?? {}) as Partial<EtatApp>;
+
+  if (versionPrecedente < 2) {
+    return {
+      ...etat,
+      reservations: Array.isArray(etat.reservations) ? etat.reservations : [],
+      colis: Array.isArray(etat.colis) ? etat.colis : [],
+      caisse: etat.caisse ?? null,
+    };
+  }
+
+  return etat;
+}
 
 export interface DemandeColis {
   destinataireNom: string;
@@ -34,6 +66,18 @@ interface EtatApp {
   rappelsProgrammes: Record<string, string[]>;
   /** Configuration de la caisse, côté agent. Null pour un voyageur ordinaire. */
   caisse: Caisse | null;
+
+  /**
+   * Faux tant que le contenu enregistré n'a pas été relu depuis le téléphone.
+   *
+   * Sans ce drapeau, l'application voit `voyageur: null` pendant la fraction de
+   * seconde que dure la relecture, et renvoie un client déjà inscrit vers
+   * l'ouverture de compte — où il recréerait un compte par-dessus le sien. Rien
+   * ne doit être décidé sur l'état du compte avant que ceci soit vrai.
+   */
+  charge: boolean;
+  /** Renseigné si la relecture a échoué : on prévient au lieu de faire comme si c'était vide. */
+  erreurChargement: string | null;
 
   creerCompte: (v: Omit<Voyageur, 'id'>) => void;
   mettreAJourProfil: (champs: Partial<Voyageur>) => void;
@@ -68,9 +112,13 @@ export const useApp = create<EtatApp>()(
       colis: [],
       rappelsProgrammes: {},
       caisse: null,
+      charge: false,
+      erreurChargement: null,
 
       creerCompte: (v) => {
-        set({ voyageur: { ...v, id: `v-${Date.now()}` } });
+        // Garde-fou : on ne recouvre jamais un compte existant par inadvertance.
+        if (get().voyageur) return;
+        set({ voyageur: { ...v, id: identifiant('v') } });
       },
 
       mettreAJourProfil: (champs) => {
@@ -134,8 +182,8 @@ export const useApp = create<EtatApp>()(
         if (!voyageur) throw new Error('Aucun compte.');
         const maintenant = new Date();
         const colis: Colis = {
-          id: `colis-${Date.now()}`,
-          reference: `C-${Date.now().toString().slice(-6)}`,
+          id: identifiant('colis'),
+          reference: referenceBillet(),
           codeRetrait: genererCodeRetrait(),
           expediteurId: voyageur.id,
           ...d,
@@ -165,6 +213,16 @@ export const useApp = create<EtatApp>()(
     {
       name: 'saramaya-v1',
       storage: createJSONStorage(() => AsyncStorage),
+
+      /**
+       * Version du contenu enregistré. À incrémenter dès que la forme des données
+       * change, en ajoutant la conversion correspondante dans `migrate`. C'est ce
+       * qui garantit qu'une mise à jour de l'application ne fait perdre à personne
+       * ses voyages : on convertit l'ancien contenu, on ne le jette pas.
+       */
+      version: SCHEMA_VERSION,
+      migrate: migrerEtat,
+
       partialize: (s) => ({
         voyageur: s.voyageur,
         reservations: s.reservations,
@@ -172,6 +230,42 @@ export const useApp = create<EtatApp>()(
         rappelsProgrammes: s.rappelsProgrammes,
         caisse: s.caisse,
       }),
+
+      /**
+       * Fusion explicite. La fusion par défaut de zustand est superficielle : un
+       * champ absent de l'enregistrement écraserait sa valeur par défaut par
+       * `undefined`. On reconstruit donc l'état à la main, en se rabattant sur les
+       * valeurs par défaut pour tout ce qui manque, et en refusant les types
+       * inattendus — un fichier tronqué ne doit pas faire planter le démarrage.
+       */
+      merge: (enregistre, actuel) => {
+        const e = (enregistre ?? {}) as Partial<EtatApp>;
+        return {
+          ...actuel,
+          voyageur: e.voyageur ?? null,
+          reservations: Array.isArray(e.reservations) ? e.reservations : [],
+          colis: Array.isArray(e.colis) ? e.colis : [],
+          rappelsProgrammes:
+            e.rappelsProgrammes && typeof e.rappelsProgrammes === 'object'
+              ? e.rappelsProgrammes
+              : {},
+          caisse: e.caisse ?? null,
+        };
+      },
+
+      /**
+       * Fin de relecture. Deux cas, et aucun ne doit ressembler à « compte vide » :
+       * si la lecture échoue, on le dit ; si elle réussit, on lève le drapeau qui
+       * autorise enfin l'application à décider où envoyer le client.
+       */
+      onRehydrateStorage: () => (_etat, erreur) => {
+        useApp.setState({
+          charge: true,
+          erreurChargement: erreur
+            ? "Vos données enregistrées n'ont pas pu être relues. Ne recréez pas de compte : redémarrez l'application, elles sont probablement intactes."
+            : null,
+        });
+      },
     },
   ),
 );

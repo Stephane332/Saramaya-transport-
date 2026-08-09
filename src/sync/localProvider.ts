@@ -16,6 +16,7 @@ import {
   nombreDeSieges,
 } from '../data/reseau';
 import { decalerHeure } from '../lib/format';
+import { identifiant, referenceBillet } from '../lib/identifiants';
 import type { Classe, Reservation, Voyageur } from '../types';
 import type {
   DemandeReservation,
@@ -102,8 +103,8 @@ export class LocalProvider implements SyncProvider {
   async creerReservation(d: DemandeReservation): Promise<ResultatSynchro> {
     const maintenant = new Date();
     const reservation: Reservation = {
-      id: `res-${Date.now()}`,
-      reference: String(66900 + (this.reservations.length + 7) * 13).slice(0, 5),
+      id: identifiant('res'),
+      reference: referenceBillet(),
       voyageurId: d.voyageurId,
       ligneId: d.ligneId,
       gareDepartId: d.gareDepartId,
@@ -169,7 +170,8 @@ export class LocalProvider implements SyncProvider {
     const date = t.date ?? format(maintenant, 'yyyy-MM-dd');
     const heure = t.heure ?? '16:00';
     const reservation: Reservation = {
-      id: `res-papier-${Date.now()}`,
+      id: identifiant('res-papier'),
+      // Ticket papier : on garde la référence imprimée par la compagnie, telle quelle.
       reference: t.reference,
       voyageurId: voyageur.id,
       ligneId: t.ligneId ?? 'ligne-ouahigouya-ouaga',
