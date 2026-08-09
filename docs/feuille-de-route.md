@@ -98,85 +98,47 @@ n'est écarté sans une raison écrite. Trois états :
 | 53 | Mise en production | **Fait** | `eas.json` + `docs/production/mise-en-production.md` |
 | 54 | Effet de démonstration à la caisse | **Principe retenu** | L'app doit être compréhensible en 10 secondes par un voyageur qui regarde par-dessus l'épaule |
 
-## 8. Ce qui bloque le test sur iPhone, et pourquoi
+## 8. Tester sur iPhone
 
-### Voie immédiate — Safari sur le même réseau, tout de suite
+### Le projet est sur le SDK 54, et c'est un choix délibéré
 
-Rien à installer, rien à activer, rien à attendre. Quand `npx expo start` tourne
-sur l'ordinateur, il sert **aussi** la version web, et il l'expose sur le réseau
-local — la même adresse que celle affichée pour Expo Go, mais sur le port web.
-
-Le terminal affiche par exemple :
+Vérifié auprès de l'App Store lui-même (API iTunes, identifiant 982107779) :
 
 ```
-› Metro: exp://172.20.10.2:8081
+Expo Go — version 54.0.2 — publiée le 23 septembre 2025
 ```
 
-Sur l'iPhone, connecté au **même réseau** (le partage de connexion compte), ouvrir
-dans Safari :
+Expo n'a pas livré de nouvelle version d'Expo Go sur l'App Store depuis. Expo Go ne
+gère qu'un seul SDK à la fois : sur iPhone, **c'est donc le SDK 54, et rien d'autre**.
+Aucune mise à jour n'y changera quoi que ce soit — ce n'était pas un défaut de
+l'appareil.
 
+Le projet a donc été ramené du SDK 57 au **SDK 54**. Ce n'est pas une régression :
+le SDK 54 reste activement maintenu (54.0.36 au 6 août 2026) et convient
+parfaitement à la production. En échange, l'application devient testable
+immédiatement sur iPhone, avec la caméra et les notifications — ce que la version
+web ne permet pas.
+
+**Pour tester :**
+
+```bash
+npx expo start
 ```
-http://172.20.10.2:8081
-```
 
-en remplaçant l'adresse par celle qu'affiche votre terminal. L'application se
-charge. **Partager → Sur l'écran d'accueil** l'installe avec l'icône du kangourou.
+puis scanner le QR code avec Expo Go. C'est tout.
 
-C'est la voie à utiliser ce soir. Les trois autres ci-dessous servent à la
-démonstration devant la compagnie.
+### Ce qui reste conditionné à un compte
 
----
+| Objectif | Commande | Ce qu'il faut |
+|---|---|---|
+| Lien web public, dépôt privé | `eas deploy --prod` | Compte Expo (gratuit) |
+| APK Android installable | `eas build -p android --profile preview` | Compte Expo (gratuit) |
+| App iPhone hors Expo Go | `eas build -p ios --profile preview` | Compte Apple Developer (99 $/an) |
 
-Trois voies, chacune bloquée par **un réglage extérieur au code** :
+### Pourquoi pas GitHub Pages
 
-### Attention — le dépôt est privé, et cela change tout pour Pages
-
-Vérifié par l'API GitHub : `"private": true`, `"has_pages": false`.
-
-**GitHub Pages sur un dépôt privé exige un abonnement payant** (Pro, Team ou
-Enterprise). Sur un compte gratuit, activer Pages ne suffira pas.
-
-Et **il ne faut pas rendre ce dépôt public pour contourner le problème** : il
-contient l'argumentaire de vente, l'analyse de la concurrence, la note sur leurs
-failles de sécurité et cette feuille de route. Tout cela deviendrait lisible par
-Saramaya — et par n'importe qui — avant même le premier rendez-vous. Le lien de
-démonstration ne vaut pas ce prix.
-
-**La bonne solution : `eas deploy`.** L'hébergement web d'Expo publie la version
-web depuis un code qui reste privé, gratuitement, et sur la même adresse à chaque
-mise à jour. Il demande le même compte Expo que les builds — un seul compte
-débloque le lien public *et* l'application installable.
-
-### Voie A — la version web publiée
-
-Le build web **réussit** à chaque fois. C'est la publication qui échoue, avec ce
-message dans les journaux GitHub :
-
-> `Failed to create deployment (status: 404) … Ensure GitHub Pages has been enabled`
-
-**Action, une seule fois :** dépôt → **Settings** → **Pages** → *Source* : **GitHub
-Actions** → enregistrer, puis relancer le workflow (onglet Actions → « Publier la
-version web » → *Run workflow*).
-
-Adresse une fois activé : `https://stephane332.github.io/Saramaya-transport-/`
-Ouvrir dans Safari, puis **Partager → Sur l'écran d'accueil** : l'app s'installe
-comme une vraie application, avec l'icône du kangourou.
-
-*Limite honnête :* le web n'a ni caméra de scan fiable, ni notifications
-programmées. Tout le reste se voit.
-
-### Voie B — Expo Go
-
-Le projet est sur **SDK 57**, qui est la version **stable actuelle** (`latest` sur
-npm). Expo Go ne gère qu'un seul SDK à la fois : celui de sa dernière version.
-
-**Action :** App Store → Expo Go → **Mettre à jour**. Si aucune mise à jour n'est
-proposée, c'est que la version iOS de l'iPhone ne permet pas d'installer l'Expo Go
-courant — dans ce cas, seule la voie C fonctionne.
-
-### Voie C — le vrai build (celle de la démonstration)
-
-`eas build --profile preview --platform ios` produit une application installée pour
-de bon, sans Expo Go. Elle exige un compte Apple Developer. **C'est celle-là qu'il
-faut avoir en main devant la caissière** : une application installée, pas un QR code
-de développeur. Détail dans `docs/production/mise-en-production.md`.
+Le dépôt est privé (`"private": true`, vérifié par l'API), et Pages sur dépôt privé
+exige un abonnement payant. **Le rendre public n'est pas une option** : il contient
+l'argumentaire de vente, l'analyse de la concurrence et la note sur leurs failles.
+Tout deviendrait lisible par Saramaya avant le premier rendez-vous. `eas deploy`
+publie depuis un code qui reste privé — c'est la voie propre.

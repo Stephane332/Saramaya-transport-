@@ -14,13 +14,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { BadgeClasse, Bouton, Carte, Ecran, Section, Txt } from '../src/components/base';
 import { MINUTES_LIBERATION_PLACE, ligneParId } from '../src/data/reseau';
 import { montant, telephone } from '../src/lib/format';
+import { MODE_AGENT } from '../src/lib/modeAgent';
 import { prochainVoyage, useApp } from '../src/store/useApp';
 import { couleurs, espace, rayon } from '../src/theme';
 import type { Reservation } from '../src/types';
@@ -66,6 +67,10 @@ export default function EcranGare() {
   const ligne = prochain ? ligneParId(prochain.ligneId) : null;
   const aTraiter = duMemeDepart.filter((r) => etatAgent(r).appel).length;
   const confirmes = duMemeDepart.filter((r) => ['CONFIRMEE', 'PAYEE'].includes(r.statut)).length;
+
+  // Réservé au personnel. La garde vient après les crochets : leur nombre doit
+  // rester constant d'un rendu à l'autre, c'est la règle de React.
+  if (!MODE_AGENT) return <Redirect href="/" />;
 
   return (
     <Ecran>

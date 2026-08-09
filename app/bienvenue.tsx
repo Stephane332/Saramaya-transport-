@@ -12,7 +12,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -35,6 +35,7 @@ export default function Bienvenue() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const creerCompte = useApp((e) => e.creerCompte);
+  const voyageurExistant = useApp((e) => e.voyageur);
 
   const [etape, setEtape] = useState<'ACCUEIL' | 'IDENTITE'>('ACCUEIL');
   const [prenom, setPrenom] = useState('');
@@ -45,6 +46,9 @@ export default function Bienvenue() {
   // Depuis la saisie d'identité, le retour d'Android revient à l'accueil plutôt que
   // de fermer l'application au tout premier contact avec elle.
   useRetourMateriel(etape === 'IDENTITE', () => setEtape('ACCUEIL'));
+
+  // Compte déjà créé : cet écran n'a plus lieu d'être.
+  if (voyageurExistant) return <Redirect href="/" />;
 
   const telOk = telephone.replace(/\D/g, '').length >= 8;
   const complet = prenom.trim().length >= 2 && nom.trim().length >= 2 && telOk;

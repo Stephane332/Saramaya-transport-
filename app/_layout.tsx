@@ -1,4 +1,4 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,7 +7,6 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { couleurs, espace, rayon, typo } from '../src/theme';
 import { useApp } from '../src/store/useApp';
 import { initialiserNotifications } from '../src/lib/notifications';
-import { MODE_AGENT } from '../src/lib/modeAgent';
 
 /**
  * Filet de sécurité : expo-router affiche ce composant au lieu d'un écran blanc
@@ -44,28 +43,17 @@ export function ErrorBoundary({ error, retry }: { error: Error; retry: () => Pro
 }
 
 export default function DispositionRacine() {
-  const voyageur = useApp((e) => e.voyageur);
   const charge = useApp((e) => e.charge);
-  const segments = useSegments();
-  const router = useRouter();
 
-  /**
-   * Aiguillage vers l'ouverture de compte.
+  /*
+   * L'aiguillage vers l'ouverture de compte ne se fait pas ici.
    *
-   * `charge` est indispensable : la relecture du contenu enregistré est
-   * asynchrone, et pendant ce court instant `voyageur` vaut null même pour un
-   * client inscrit depuis des mois. Rediriger avant la fin de la relecture
-   * l'enverrait recréer un compte par-dessus le sien.
+   * Naviguer impérativement depuis la disposition racine échoue : au premier rendu,
+   * le navigateur n'est pas encore monté, et expo-router refuse le déplacement.
+   * L'aiguillage est donc déclaratif, dans les écrans concernés — les onglets
+   * renvoient vers l'accueil s'il n'y a pas de compte, et l'accueil renvoie vers
+   * l'application dès qu'il y en a un. Chacun décide au bon moment, une fois monté.
    */
-  useEffect(() => {
-    if (!charge) return;
-    const surBienvenue = segments[0] === 'bienvenue';
-    if (!voyageur && !surBienvenue) {
-      router.replace('/bienvenue');
-    } else if (voyageur && surBienvenue) {
-      router.replace('/');
-    }
-  }, [charge, voyageur, segments, router]);
 
   useEffect(() => {
     initialiserNotifications();
@@ -75,50 +63,48 @@ export default function DispositionRacine() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: couleurs.fond }}>
       <SafeAreaProvider>
         <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: couleurs.fond },
+            animation: 'slide_from_right',
+          }}
+        >
+          <Stack.Screen name="bienvenue" options={{ animation: 'fade' }} />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="billet/[id]" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="colis/[id]" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen
+            name="confirmation/[id]"
+            options={{ animation: 'fade', presentation: 'fullScreenModal' }}
+          />
+          {/*
+            Écrans du personnel. Le verrou n'est pas ici mais dans les écrans
+            eux-mêmes : hors mode agent, chacun renvoie immédiatement à l'accueil.
+            Un `redirect` posé sur la déclaration de route se déclenche avant que le
+            navigateur soit monté et fait tomber l'application à son lancement.
+          */}
+          <Stack.Screen name="gare" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="caisse" options={{ animation: 'slide_from_bottom' }} />
+        </Stack>
+
+        {/* Voile de chargement : superposé, jamais substitué au navigateur. */}
         {!charge ? (
-          <View style={styles.chargement}>
+          <View style={[StyleSheet.absoluteFill, styles.chargement]} pointerEvents="auto">
             <ActivityIndicator color={couleurs.marqueVif} />
           </View>
-        ) : (
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: couleurs.fond },
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen name="bienvenue" options={{ animation: 'fade' }} />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="billet/[id]" options={{ animation: 'slide_from_bottom' }} />
-            <Stack.Screen name="colis/[id]" options={{ animation: 'slide_from_bottom' }} />
-            <Stack.Screen
-              name="confirmation/[id]"
-              options={{ animation: 'fade', presentation: 'fullScreenModal' }}
-            />
-            {/* Écrans du personnel : absents de l'application des voyageurs. */}
-            <Stack.Screen
-              name="gare"
-              options={{
-                animation: 'slide_from_bottom',
-                // `href: null` retire aussi l'écran du plan de navigation.
-                ...(MODE_AGENT ? {} : { href: null }),
-              }}
-              redirect={!MODE_AGENT}
-            />
-            <Stack.Screen
-              name="caisse"
-              options={{ animation: 'slide_from_bottom', ...(MODE_AGENT ? {} : { href: null }) }}
-              redirect={!MODE_AGENT}
-            />
-          </Stack>
-        )}
+        ) : null}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  chargement: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  chargement: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: couleurs.fond,
+  },
   erreurFond: { flex: 1, backgroundColor: couleurs.fond },
   erreurContenu: {
     flexGrow: 1,

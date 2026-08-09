@@ -17,7 +17,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bouton, Carte, Section, Txt } from '../src/components/base';
 import { GARES, gareParId, paiementPourVille } from '../src/data/reseau';
 import { telephone } from '../src/lib/format';
+import { MODE_AGENT } from '../src/lib/modeAgent';
 import { useApp } from '../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../src/theme';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -57,6 +58,10 @@ export default function EcranCaisse() {
   // Comptes Orange Money connus de l'agence de la gare choisie — de vrais numéros
   // que l'agent peut toucher si c'est le sien, plutôt que de le retaper.
   const agence = gare ? paiementPourVille(gare.ville) : undefined;
+
+  // Réservé au personnel. La garde vient après les crochets : leur nombre doit
+  // rester constant d'un rendu à l'autre, c'est la règle de React.
+  if (!MODE_AGENT) return <Redirect href="/" />;
 
   const enregistrer = () => {
     if (!complet) return;

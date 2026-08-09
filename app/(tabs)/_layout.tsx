@@ -1,10 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { Platform, StyleSheet } from 'react-native';
+import { useApp } from '../../src/store/useApp';
 import { couleurs } from '../../src/theme';
 
 export default function DispositionOnglets() {
+  const voyageur = useApp((e) => e.voyageur);
+  const charge = useApp((e) => e.charge);
+
+  // Tant que le contenu enregistré n'est pas relu, on ne conclut rien : un client
+  // inscrit depuis des mois ne doit jamais être renvoyé vers l'ouverture de compte.
+  if (charge && !voyageur) return <Redirect href="/bienvenue" />;
+
   return (
     <Tabs
       screenOptions={{
