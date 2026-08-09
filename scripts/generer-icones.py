@@ -114,7 +114,6 @@ def main():
     # Android adaptatif : premier plan rouge sur fond transparent (le blanc vient
     # de app.json), rentré dans la zone de sécurité centrale.
     png(composer(rouge, 1024, 0.20, None), "assets/adaptive-icon.png")
-    png(composer(rouge, 1024, 0.20, None), "assets/android-icon-foreground.png")
     # Icône monochrome (thème Android) : la forme seule, le système la recolore.
     png(composer(blanc, 1024, 0.20, None), "assets/android-icon-monochrome.png")
 

@@ -52,7 +52,24 @@ Bon "git, node $(node --version), npm $(npm --version)"
 # --- 2. Recuperer les dernieres corrections ---------------------------------
 Titre 2 'Recuperation des dernieres corrections'
 
-if (git status --porcelain) {
+# Certains fichiers sont reecrits par les outils eux-memes : Expo complete
+# tsconfig.json au demarrage, npm reecrit package-lock.json a chaque installation.
+# Ces modifications-la ne sont pas votre travail, et elles bloquent la recuperation
+# avec « Your local changes would be overwritten by merge ». On les remet donc
+# telles qu'elles sont sur GitHub, qui fait autorite pour ces deux fichiers.
+$GENERES = @('package-lock.json', 'tsconfig.json')
+$aRemettre = @()
+foreach ($fichier in $GENERES) {
+    if (git status --porcelain -- $fichier) { $aRemettre += $fichier }
+}
+if ($aRemettre.Count -gt 0) {
+    Note "Fichiers generes remis a l'etat de reference : $($aRemettre -join ', ')"
+    git checkout -- $aRemettre
+}
+
+# Tout ce qui reste modifie, c'est du vrai travail : on n'y touche pas.
+$autresModifs = git status --porcelain
+if ($autresModifs) {
     Alerte 'Des fichiers ont ete modifies sur ce PC.'
     Note 'Ils sont conserves : ce script ne supprime jamais votre travail.'
 }
@@ -77,6 +94,19 @@ foreach ($attente in @(0, 2, 4, 8, 16)) {
     }
     git pull origin $BRANCHE
     if ($LASTEXITCODE -eq 0) { $reussi = $true; break }
+}
+if (-not $reussi -and $autresModifs) {
+    # Vos modifications empechent la fusion : on les met de cote, sans les perdre.
+    Alerte 'Vos modifications locales empechent la recuperation.'
+    Note 'Elles sont mises de cote et restent recuperables.'
+    git stash push -u -m 'Mis de cote par lancer.ps1'
+    if ($LASTEXITCODE -eq 0) {
+        git pull origin $BRANCHE
+        if ($LASTEXITCODE -eq 0) {
+            $reussi = $true
+            Note 'Pour les recuperer plus tard :  git stash pop'
+        }
+    }
 }
 if (-not $reussi) {
     Abandonner 'Impossible de recuperer les corrections depuis GitHub.' `
