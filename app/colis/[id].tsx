@@ -30,7 +30,6 @@ export default function DetailColis() {
   const colis = useApp((e) => e.colis);
   const voyageur = useApp((e) => e.voyageur);
   const marquerCodePartage = useApp((e) => e.marquerCodePartage);
-  const avancerColis = useApp((e) => e.avancerColis);
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
 
   const c = colis.find((x) => x.id === id);
@@ -211,14 +210,15 @@ export default function DetailColis() {
         <Rangee gauche="Téléphone" droite={telephone(c.destinataireTelephone)} />
       </Carte>
 
-      {c.statut !== 'RETIRE' ? (
-        <Bouton
-          titre="Simuler l'étape suivante"
-          sousTitre="Démonstration du suivi"
-          variante="fantome"
-          onPress={() => avancerColis(c.id)}
-        />
-      ) : null}
+      <Carte>
+        <View style={{ flexDirection: 'row', gap: espace.sm }}>
+          <Ionicons name="sync-outline" size={16} color={couleurs.texteFaible} />
+          <Txt v="petit" couleur={couleurs.texteFaible} style={{ flex: 1 }}>
+            Le suivi avancera automatiquement une fois l'application connectée au système de
+            la compagnie. En attendant, la gare vous informe par téléphone.
+          </Txt>
+        </View>
+      </Carte>
     </Ecran>
   );
 }

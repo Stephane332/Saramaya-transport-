@@ -1,11 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { VOYAGEUR_DEMO, construireColis, construireReservations } from '../data/seed';
 import { LocalProvider } from '../sync/localProvider';
 import type { DemandeReservation, TicketScanne } from '../sync/types';
 import { genererCodeRetrait } from '../lib/colis';
 import type { Colis, Reservation, TailleColis, Voyageur } from '../types';
+
+/**
+ * État de l'application.
+ *
+ * Rien n'est pré-rempli : un nouveau client arrive sur une application vide, crée
+ * son compte, puis construit son historique en s'en servant vraiment — en scannant
+ * ses tickets papier et en réservant. Aucune donnée fictive.
+ */
 
 export interface DemandeColis {
   destinataireNom: string;
@@ -19,31 +26,29 @@ export interface DemandeColis {
 }
 
 interface EtatApp {
+  /** Null tant que le compte n'a pas été créé : c'est ce qui déclenche l'accueil. */
   voyageur: Voyageur | null;
   reservations: Reservation[];
   colis: Colis[];
-  /** Rappels déjà joués, par réservation — pour ne jamais répéter une étape. */
-  rappelsJoues: Record<string, string[]>;
-  /** Réservations dont la place a été réattribuée : la rétractation n'est plus possible. */
-  placesReattribuees: string[];
-  amorce: boolean;
+  /** Rappels déjà programmés, par réservation — pour ne pas les reprogrammer en double. */
+  rappelsProgrammes: Record<string, string[]>;
 
-  amorcer: () => void;
-  definirVoyageur: (v: Voyageur) => void;
-  reinitialiser: () => void;
+  creerCompte: (v: Omit<Voyageur, 'id'>) => void;
+  mettreAJourProfil: (champs: Partial<Voyageur>) => void;
+  supprimerCompte: () => void;
 
   creer: (d: DemandeReservation) => Promise<Reservation>;
-  envoyerColis: (d: DemandeColis, moyen: Colis['moyenPaiement']) => Promise<Colis>;
-  marquerCodePartage: (id: string) => void;
-  /** Démonstration : fait avancer un colis d'une étape dans son suivi. */
-  avancerColis: (id: string) => void;
   confirmer: (id: string) => Promise<void>;
   annuler: (id: string) => Promise<void>;
   reprendre: (id: string) => Promise<void>;
   reporter: (id: string, nouveau: { date: string; heure: string }) => Promise<void>;
-  payer: (id: string, moyen: Reservation['moyenPaiement']) => Promise<void>;
+  marquerPaiementDeclare: (id: string, moyen: Reservation['moyenPaiement']) => Promise<void>;
   importerPapier: (t: TicketScanne) => Promise<Reservation>;
-  marquerRappelJoue: (id: string, etapeId: string) => void;
+
+  envoyerColis: (d: DemandeColis, moyen: Colis['moyenPaiement']) => Promise<Colis>;
+  marquerCodePartage: (id: string) => void;
+
+  marquerRappelProgramme: (id: string, etapeId: string) => void;
 }
 
 function provider(get: () => EtatApp, set: (p: Partial<EtatApp>) => void) {
@@ -56,35 +61,23 @@ export const useApp = create<EtatApp>()(
       voyageur: null,
       reservations: [],
       colis: [],
-      rappelsJoues: {},
-      placesReattribuees: [],
-      amorce: false,
+      rappelsProgrammes: {},
 
-      amorcer: () => {
-        if (get().amorce) return;
-        set({
-          voyageur: VOYAGEUR_DEMO,
-          reservations: construireReservations(),
-          colis: construireColis(),
-          amorce: true,
-        });
+      creerCompte: (v) => {
+        set({ voyageur: { ...v, id: `v-${Date.now()}` } });
       },
 
-      definirVoyageur: (voyageur) => set({ voyageur }),
+      mettreAJourProfil: (champs) => {
+        const actuel = get().voyageur;
+        if (!actuel) return;
+        set({ voyageur: { ...actuel, ...champs } });
+      },
 
-      reinitialiser: () =>
-        set({
-          voyageur: VOYAGEUR_DEMO,
-          reservations: construireReservations(),
-          colis: construireColis(),
-          rappelsJoues: {},
-          placesReattribuees: [],
-          amorce: true,
-        }),
+      supprimerCompte: () =>
+        set({ voyageur: null, reservations: [], colis: [], rappelsProgrammes: {} }),
 
       creer: async (d) => {
-        const p = provider(get, set);
-        const { reservation } = await p.creerReservation(d);
+        const { reservation } = await provider(get, set).creerReservation(d);
         return reservation;
       },
 
@@ -96,7 +89,7 @@ export const useApp = create<EtatApp>()(
         await provider(get, set).annuler(id);
       },
 
-      /** Rétractation : on remet la réservation dans l'état où elle était. */
+      /** Rétractation : on remet la réservation dans son état précédent. */
       reprendre: async (id) => {
         set({
           reservations: get().reservations.map((r) =>
@@ -111,22 +104,34 @@ export const useApp = create<EtatApp>()(
         await provider(get, set).reporter(id, nouveau);
       },
 
-      payer: async (id, moyen) => {
-        await provider(get, set).enregistrerPaiement(id, moyen);
+      /**
+       * Le voyageur déclare avoir payé par mobile money. Ce n'est pas une
+       * confirmation de paiement — l'application ne peut pas la vérifier sans le
+       * système de la compagnie. La réservation reste « à confirmer au guichet ».
+       */
+      marquerPaiementDeclare: async (id, moyen) => {
+        set({
+          reservations: get().reservations.map((r) =>
+            r.id === id ? { ...r, moyenPaiement: moyen, paiementDeclareLe: new Date().toISOString() } : r,
+          ),
+        });
       },
 
       importerPapier: async (t) => {
-        const voyageur = get().voyageur ?? VOYAGEUR_DEMO;
+        const voyageur = get().voyageur;
+        if (!voyageur) throw new Error('Aucun compte : créez votre compte avant de scanner.');
         return provider(get, set).importerTicketPapier(t, voyageur);
       },
 
       envoyerColis: async (d, moyen) => {
+        const voyageur = get().voyageur;
+        if (!voyageur) throw new Error('Aucun compte.');
         const maintenant = new Date();
         const colis: Colis = {
           id: `colis-${Date.now()}`,
-          reference: `C-${48200 + get().colis.length * 7}`,
+          reference: `C-${Date.now().toString().slice(-6)}`,
           codeRetrait: genererCodeRetrait(),
-          expediteurId: get().voyageur?.id ?? VOYAGEUR_DEMO.id,
+          expediteurId: voyageur.id,
           ...d,
           statut: 'DEPOSE',
           deposeLe: maintenant.toISOString(),
@@ -142,22 +147,10 @@ export const useApp = create<EtatApp>()(
           colis: get().colis.map((c) => (c.id === id ? { ...c, codePartage: true } : c)),
         }),
 
-      avancerColis: (id) =>
-        set({
-          colis: get().colis.map((c) => {
-            if (c.id !== id) return c;
-            const maintenant = new Date().toISOString();
-            if (c.statut === 'DEPOSE') return { ...c, statut: 'EN_TRANSIT' };
-            if (c.statut === 'EN_TRANSIT') return { ...c, statut: 'ARRIVE', arriveLe: maintenant };
-            if (c.statut === 'ARRIVE') return { ...c, statut: 'RETIRE', retireLe: maintenant };
-            return c;
-          }),
-        }),
-
-      marquerRappelJoue: (id, etapeId) => {
-        const actuels = get().rappelsJoues[id] ?? [];
+      marquerRappelProgramme: (id, etapeId) => {
+        const actuels = get().rappelsProgrammes[id] ?? [];
         if (actuels.includes(etapeId)) return;
-        set({ rappelsJoues: { ...get().rappelsJoues, [id]: [...actuels, etapeId] } });
+        set({ rappelsProgrammes: { ...get().rappelsProgrammes, [id]: [...actuels, etapeId] } });
       },
     }),
     {
@@ -167,9 +160,7 @@ export const useApp = create<EtatApp>()(
         voyageur: s.voyageur,
         reservations: s.reservations,
         colis: s.colis,
-        rappelsJoues: s.rappelsJoues,
-        placesReattribuees: s.placesReattribuees,
-        amorce: s.amorce,
+        rappelsProgrammes: s.rappelsProgrammes,
       }),
     },
   ),

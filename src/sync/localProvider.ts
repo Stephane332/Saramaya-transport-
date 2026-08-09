@@ -11,10 +11,10 @@ import {
   JOURS_VALIDITE,
   LIBELLES_CLASSE,
   MINUTES_CONVOCATION,
+  identifiantDepart,
   ligneParId,
   nombreDeSieges,
 } from '../data/reseau';
-import { identifiantDepart, siegesOccupes } from '../lib/disponibilite';
 import { decalerHeure } from '../lib/format';
 import type { Classe, Reservation, Voyageur } from '../types';
 import type {
@@ -76,8 +76,6 @@ export class LocalProvider implements SyncProvider {
       .filter((d) => !classe || d.classe === classe)
       .map((d) => {
         const id = identifiantDepart(ligneId, date, d.heure, d.classe);
-        const occupes = siegesOccupes(id, d.classe);
-        const total = nombreDeSieges(d.classe);
         return {
           id,
           ligneId,
@@ -87,9 +85,10 @@ export class LocalProvider implements SyncProvider {
           convocation: decalerHeure(d.heure, -MINUTES_CONVOCATION),
           classe: d.classe,
           tarif: ligne.tarifs[d.classe],
-          placesTotal: total,
-          placesLibres: total - occupes.length,
-          siegesOccupes: occupes,
+          placesTotal: nombreDeSieges(d.classe),
+          // Horizon 1 : l'application ne connaît pas la disponibilité réelle.
+          placesLibres: null,
+          siegesOccupes: null,
         } satisfies DepartDisponible;
       });
   }

@@ -20,7 +20,7 @@ import {
   Trait,
   Txt,
 } from '../../src/components/base';
-import { CONDITIONS_TRANSPORT, gareParId, ligneParId } from '../../src/data/reseau';
+import { CONDITIONS_TRANSPORT, gareParId, ligneParId, paiementPourVille } from '../../src/data/reseau';
 import { politiqueAnnulation } from '../../src/lib/annulation';
 import { dateHeureDepart, retractationPossible } from '../../src/lib/confirmation';
 import { compteARebours, joursAvantExpiration, montant, telephone } from '../../src/lib/format';
@@ -33,7 +33,7 @@ export default function Billet() {
   const router = useRouter();
   const reservations = useApp((e) => e.reservations);
   const voyageur = useApp((e) => e.voyageur);
-  const { payer, confirmer, annuler, reprendre } = useApp();
+  const { marquerPaiementDeclare, confirmer, reprendre } = useApp();
   const [conditionsVisibles, setConditionsVisibles] = useState(false);
 
   const r = reservations.find((x) => x.id === id);
@@ -70,6 +70,7 @@ export default function Billet() {
   const jours = joursAvantExpiration(r.expireLe);
   const rattrapable = retractationPossible(r);
   const passe = ['EMBARQUE', 'NO_SHOW'].includes(r.statut);
+  const paiement = gare ? paiementPourVille(gare.ville) : undefined;
 
   const envoyerALaGare = () => {
     const texte = messagePourLaGare(r, voyageur);
@@ -289,23 +290,40 @@ export default function Billet() {
             <>
               <Carte style={{ borderColor: 'rgba(245,165,36,0.35)' }}>
                 <Txt v="corpsFort" couleur={couleurs.attention}>
-                  Réservation à payer
+                  {r.paiementDeclareLe ? 'Paiement déclaré' : 'Réservation à payer'}
                 </Txt>
                 <Txt v="petit" couleur={couleurs.texteFaible}>
-                  Tant qu'elle n'est pas payée, cette place reste une option : elle peut être
-                  proposée à quelqu'un d'autre à la convocation.
+                  {r.paiementDeclareLe
+                    ? "Vous avez indiqué avoir payé. Le paiement sera confirmé au guichet à la récupération de votre billet."
+                    : "Payez par Orange Money aux coordonnées ci-dessous, puis présentez-vous au guichet 30 minutes avant le départ pour retirer votre billet."}
                 </Txt>
               </Carte>
-              <Bouton
-                titre="Payer par Orange Money"
-                sousTitre={montant(r.montant)}
-                onPress={() => payer(r.id, 'ORANGE_MONEY')}
-              />
-              <Bouton
-                titre="Payer par Moov Money"
-                variante="secondaire"
-                onPress={() => payer(r.id, 'MOOV_MONEY')}
-              />
+
+              {paiement ? (
+                <Carte>
+                  <View style={styles.entre}>
+                    <Txt v="corpsFort">Orange Money · {paiement.intitule}</Txt>
+                    <Txt v="corpsFort" couleur={couleurs.marqueVif}>
+                      {montant(r.montant)}
+                    </Txt>
+                  </View>
+                  <Trait />
+                  <Rangee gauche="Numéros" droite={paiement.numeros.join('  ·  ')} />
+                  <Rangee gauche="Code paiement" droite={paiement.codes[0]} />
+                  <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                    APPELEZ LE NUMÉRO, SUIVEZ LES INSTRUCTIONS, PUIS ENTREZ LE CODE ET LE MONTANT.
+                  </Txt>
+                </Carte>
+              ) : null}
+
+              {!r.paiementDeclareLe ? (
+                <Bouton
+                  titre="J'ai effectué le paiement"
+                  sousTitre="À confirmer ensuite au guichet"
+                  variante="succes"
+                  onPress={() => marquerPaiementDeclare(r.id, 'ORANGE_MONEY')}
+                />
+              ) : null}
             </>
           ) : null}
 
@@ -371,6 +389,19 @@ export default function Billet() {
         </Carte>
       </Pressable>
     </Ecran>
+  );
+}
+
+function Rangee({ gauche, droite }: { gauche: string; droite: string }) {
+  return (
+    <View style={[styles.entre, { paddingVertical: 4 }]}>
+      <Txt v="petit" couleur={couleurs.texteFaible}>
+        {gauche}
+      </Txt>
+      <Txt v="corpsFort" numberOfLines={1} style={{ maxWidth: '62%', textAlign: 'right' }}>
+        {droite}
+      </Txt>
+    </View>
   );
 }
 

@@ -345,3 +345,50 @@ export const CONTACTS_COMPAGNIE = {
  * l'application vient combler.
  */
 export const MINUTES_OPTION_PAIEMENT = 10;
+
+
+/** Clé unique d'un départ — sert d'identifiant, sans rien simuler. */
+export function identifiantDepart(
+  ligneId: string,
+  date: string,
+  heure: string,
+  classe: Classe,
+): string {
+  return `${ligneId}|${date}|${heure}|${classe}`;
+}
+
+
+/**
+ * Coordonnées Orange Money par agence, relevées sur le site de la compagnie.
+ * Ce sont les vrais numéros et codes de paiement — l'application les affiche pour
+ * que le voyageur paie par le canal existant, sans rien inventer.
+ */
+export interface PaiementAgence {
+  villes: Ville[];
+  intitule: string;
+  numeros: string[];
+  codes: string[];
+}
+
+export const PAIEMENTS_ORANGE_MONEY: PaiementAgence[] = [
+  {
+    villes: ['Bobo-Dioulasso'],
+    intitule: 'Bobo',
+    numeros: ['05 48 40 00', '05 48 40 01'],
+    codes: ['144107580857', '144101249338'],
+  },
+  {
+    villes: ['Ouagadougou'],
+    intitule: 'Ouaga (Gounghin / Wemtenga)',
+    numeros: ['05 48 40 02', '05 48 40 03', '05 48 40 04', '05 48 40 05'],
+    codes: ['144101375257', '144102254980', '144108988511', '144103586558'],
+  },
+];
+
+/** Coordonnées Orange Money correspondant à la ville d'une gare. */
+export function paiementPourVille(ville: Ville): PaiementAgence | undefined {
+  return (
+    PAIEMENTS_ORANGE_MONEY.find((p) => p.villes.includes(ville)) ??
+    PAIEMENTS_ORANGE_MONEY[1]
+  );
+}

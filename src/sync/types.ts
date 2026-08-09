@@ -22,8 +22,13 @@ export interface DepartDisponible {
   classe: Classe;
   tarif: number;
   placesTotal: number;
-  placesLibres: number;
-  siegesOccupes: number[];
+  /**
+   * Disponibilité réelle — connue seulement quand l'application est branchée sur
+   * le système de la compagnie. En Horizon 1 (téléphone seul), elle vaut null :
+   * l'application n'invente pas de places occupées.
+   */
+  placesLibres: number | null;
+  siegesOccupes: number[] | null;
 }
 
 export interface DemandeReservation {

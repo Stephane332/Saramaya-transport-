@@ -113,6 +113,8 @@ export interface Reservation {
 
   creeLe: string;
   payeLe?: string;
+  /** Le voyageur a déclaré avoir payé (mobile money). Non vérifié tant qu'il n'y a pas de backend. */
+  paiementDeclareLe?: string;
   confirmeLe?: string;
   annuleLe?: string;
   /** Validité de 30 jours, comme sur le ticket papier. */

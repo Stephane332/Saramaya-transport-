@@ -1,38 +1,36 @@
 import { Ionicons } from '@expo/vector-icons';
 import { addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, Layout } from 'react-native-reanimated';
 import {
   BadgeClasse,
   Bouton,
   Carte,
   Ecran,
-  Jauge,
   Section,
   Trait,
   Txt,
 } from '../../src/components/base';
 import { PlanSieges } from '../../src/components/PlanSieges';
+import { ScannerCamera } from '../../src/components/ScannerCamera';
 import {
   GARES,
-  LIBELLES_CLASSE,
   LIGNES,
   PLANS_BUS,
   garesDeLaVille,
+  identifiantDepart,
   ligneParId,
-  nombreDeSieges,
 } from '../../src/data/reseau';
-import { identifiantDepart, siegesOccupes } from '../../src/lib/disponibilite';
 import { decalerHeure, montant } from '../../src/lib/format';
+import { programmerRappels } from '../../src/lib/notifications';
 import { useApp } from '../../src/store/useApp';
-import { couleurs, degrades, espace, rayon } from '../../src/theme';
-import type { Classe, MoyenPaiement } from '../../src/types';
+import { couleurs, espace, rayon } from '../../src/theme';
+import type { Classe } from '../../src/types';
 
-type Etape = 'LIGNE' | 'DATE' | 'DEPART' | 'SIEGE' | 'RECAP' | 'PAIEMENT';
+type Etape = 'LIGNE' | 'DATE' | 'DEPART' | 'SIEGE' | 'RECAP';
 
 const ETAPES: { cle: Etape; titre: string }[] = [
   { cle: 'LIGNE', titre: 'Trajet' },
@@ -40,16 +38,15 @@ const ETAPES: { cle: Etape; titre: string }[] = [
   { cle: 'DEPART', titre: 'Départ' },
   { cle: 'SIEGE', titre: 'Place' },
   { cle: 'RECAP', titre: 'Résumé' },
-  { cle: 'PAIEMENT', titre: 'Paiement' },
 ];
 
 export default function Reserver() {
   const router = useRouter();
   const params = useLocalSearchParams<{ scan?: string }>();
   const creer = useApp((e) => e.creer);
-  const payer = useApp((e) => e.payer);
+  const voyageur = useApp((e) => e.voyageur);
 
-  const [enPaiement, setEnPaiement] = useState<MoyenPaiement | null>(null);
+  const [enCours, setEnCours] = useState(false);
   const [etape, setEtape] = useState<Etape>('LIGNE');
   const [ligneId, setLigneId] = useState<string | null>(null);
   const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -59,23 +56,19 @@ export default function Reserver() {
   const [gareId, setGareId] = useState<string | null>(null);
 
   const ligne = ligneId ? ligneParId(ligneId) : null;
-  const occupes = useMemo(
-    () =>
-      ligneId && heure ? siegesOccupes(identifiantDepart(ligneId, date, heure, classe), classe) : [],
-    [ligneId, date, heure, classe],
-  );
-
   const indexEtape = ETAPES.findIndex((e) => e.cle === etape);
 
   /**
-   * Le ticket n'existe qu'une fois payé — comme au guichet, où l'on repart avec le
-   * papier après avoir réglé. Tant que le paiement n'a pas abouti, rien n'est émis.
+   * Crée la réservation. Elle naît « à payer » : le paiement se fait ensuite par
+   * Orange Money, aux vraies coordonnées affichées sur le billet, et le retrait au
+   * guichet. Rien n'est facturé ni confirmé automatiquement — ce serait faux sans le
+   * système de la compagnie. Les rappels sont programmés dès la création.
    */
-  const payerEtEmettre = async (moyen: MoyenPaiement) => {
-    if (!ligne || !heure || enPaiement) return;
-    setEnPaiement(moyen);
+  const creerReservation = async () => {
+    if (!ligne || !heure || !voyageur || enCours) return;
+    setEnCours(true);
     const reservation = await creer({
-      voyageurId: 'voyageur-1',
+      voyageurId: voyageur.id,
       departId: identifiantDepart(ligne.id, date, heure, classe),
       ligneId: ligne.id,
       gareDepartId: gareId ?? garesDeLaVille(ligne.origine)[0]?.id ?? '',
@@ -85,10 +78,8 @@ export default function Reserver() {
       siege,
       montant: ligne.tarifs[classe],
     });
-    // Le fournisseur de paiement mobile répond en quelques secondes.
-    await new Promise((r) => setTimeout(r, 1400));
-    await payer(reservation.id, moyen);
-    setEnPaiement(null);
+    await programmerRappels(reservation);
+    setEnCours(false);
     router.push(`/billet/${reservation.id}`);
   };
 
@@ -178,59 +169,51 @@ export default function Reserver() {
             VIP 1re classe et VIP directe à des horaires différents.
           </Txt>
 
-          {ligne.departs.map((d, i) => {
-            const occ = siegesOccupes(
-              identifiantDepart(ligne.id, date, d.heure, d.classe),
-              d.classe,
-            );
-            const total = nombreDeSieges(d.classe);
-            const libres = total - occ.length;
-            return (
-              <Pressable
-                key={d.heure}
-                onPress={() => {
-                  setHeure(d.heure);
-                  setClasse(d.classe);
-                  setSiege(null);
-                  setEtape('SIEGE');
-                }}
-              >
-                <Carte index={i} style={{ gap: espace.sm }}>
-                  <View style={styles.entre}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.md }}>
-                      <Txt v="sousTitre">{d.heure}</Txt>
-                      <BadgeClasse classe={d.classe} petit />
-                    </View>
-                    <Txt v="corpsFort" couleur={couleurs.marqueVif}>
-                      {montant(ligne.tarifs[d.classe])}
-                    </Txt>
+          {ligne.departs.map((d, i) => (
+            <Pressable
+              key={d.heure}
+              onPress={() => {
+                setHeure(d.heure);
+                setClasse(d.classe);
+                setSiege(null);
+                setEtape('SIEGE');
+              }}
+            >
+              <Carte index={i} style={{ gap: espace.sm }}>
+                <View style={styles.entre}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.md }}>
+                    <Txt v="sousTitre">{d.heure}</Txt>
+                    <BadgeClasse classe={d.classe} petit />
                   </View>
-                  <View style={styles.entre}>
-                    <Txt v="minuscule" couleur={couleurs.texteFaible}>
-                      CONVOCATION {decalerHeure(d.heure, -30)} ·{' '}
-                      {PLANS_BUS[d.classe].equipements[0].toUpperCase()}
-                    </Txt>
-                    <Txt v="petit" couleur={libres < 8 ? couleurs.attention : couleurs.succes}>
-                      {libres} places
-                    </Txt>
-                  </View>
-                  <Jauge
-                    valeur={occ.length / total}
-                    couleur={libres < 8 ? couleurs.attention : couleurs.marque}
-                  />
-                </Carte>
-              </Pressable>
-            );
-          })}
+                  <Txt v="corpsFort" couleur={couleurs.marqueVif}>
+                    {montant(ligne.tarifs[d.classe])}
+                  </Txt>
+                </View>
+                <View style={styles.entre}>
+                  <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                    CONVOCATION {decalerHeure(d.heure, -30)}
+                  </Txt>
+                  <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                    {PLANS_BUS[d.classe].equipements[0].toUpperCase()}
+                  </Txt>
+                </View>
+              </Carte>
+            </Pressable>
+          ))}
         </Animated.View>
       ) : null}
 
       {etape === 'SIEGE' && ligne && heure ? (
         <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
-          <Section>Votre place</Section>
-          <PlanSieges classe={classe} occupes={occupes} choisi={siege} onChoisir={setSiege} />
+          <Section>Place souhaitée</Section>
+          <Txt v="petit" couleur={couleurs.texteFaible}>
+            Indiquez la place que vous préférez : elle part avec votre demande à la gare, qui
+            l'attribue au moment de l'émission du billet. Les places déjà prises s'afficheront
+            une fois l'application connectée au système de la compagnie.
+          </Txt>
+          <PlanSieges classe={classe} occupes={[]} choisi={siege} onChoisir={setSiege} />
           <Bouton
-            titre={siege ? `Continuer avec le siège ${siege}` : 'Choisissez un siège'}
+            titre={siege ? `Continuer avec le siège ${siege}` : 'Choisissez une place'}
             desactive={!siege}
             onPress={() => setEtape('RECAP')}
           />
@@ -274,73 +257,19 @@ export default function Reserver() {
             <View style={{ flexDirection: 'row', gap: espace.sm }}>
               <Ionicons name="information-circle" size={18} color={couleurs.classique} />
               <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
-                Votre demande part à la gare avec toutes les informations déjà remplies.
-                L'agent n'a plus qu'à la saisir — il ne vous redemandera rien.
+                Votre réservation naît « à payer ». Sur l'écran suivant, réglez par Orange
+                Money aux coordonnées de la gare, puis présentez-vous au guichet pour retirer
+                votre billet. L'agent n'a rien à vous redemander : tout est déjà là.
               </Txt>
             </View>
           </Carte>
 
           <Bouton
-            titre="Passer au paiement"
-            sousTitre={`${montant(ligne.tarifs[classe])} · le ticket est émis après le règlement`}
-            onPress={() => setEtape('PAIEMENT')}
+            titre={enCours ? 'Création…' : 'Créer ma réservation'}
+            sousTitre={`${montant(ligne.tarifs[classe])} · à payer par Orange Money`}
+            desactive={enCours}
+            onPress={creerReservation}
           />
-        </Animated.View>
-      ) : null}
-
-      {etape === 'PAIEMENT' && ligne && heure ? (
-        <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
-          <Section>Paiement</Section>
-
-          <LinearGradient colors={degrades.marqueDouce} style={styles.montantAPayer}>
-            <Txt v="minuscule" couleur={couleurs.texteFaible}>
-              MONTANT À RÉGLER
-            </Txt>
-            <Txt v="geant" couleur={couleurs.marqueVif}>
-              {montant(ligne.tarifs[classe])}
-            </Txt>
-            <Txt v="petit" couleur={couleurs.texteFaible}>
-              {ligne.origine} → {ligne.destination} · {heure} ·{' '}
-              {LIBELLES_CLASSE[classe]}
-              {siege ? ` · siège ${siege}` : ''}
-            </Txt>
-          </LinearGradient>
-
-          {enPaiement ? (
-            <Carte>
-              <View style={{ alignItems: 'center', gap: espace.md, paddingVertical: espace.lg }}>
-                <ActivityIndicator color={couleurs.marqueVif} size="large" />
-                <Txt v="corpsFort">Paiement en cours…</Txt>
-                <Txt v="petit" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
-                  Validez la demande reçue sur votre téléphone
-                  {enPaiement === 'ORANGE_MONEY' ? ' Orange Money' : ' Moov Money'}.
-                </Txt>
-              </View>
-            </Carte>
-          ) : (
-            <>
-              <Bouton
-                titre="Orange Money"
-                sousTitre={`Régler ${montant(ligne.tarifs[classe])}`}
-                onPress={() => payerEtEmettre('ORANGE_MONEY')}
-              />
-              <Bouton
-                titre="Moov Money"
-                sousTitre={`Régler ${montant(ligne.tarifs[classe])}`}
-                variante="secondaire"
-                onPress={() => payerEtEmettre('MOOV_MONEY')}
-              />
-              <Carte>
-                <View style={{ flexDirection: 'row', gap: espace.sm }}>
-                  <Ionicons name="lock-closed" size={18} color={couleurs.succes} />
-                  <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
-                    Votre billet est émis dès que le paiement est confirmé. Aucun ticket n'est
-                    créé avant — comme au guichet.
-                  </Txt>
-                </View>
-              </Carte>
-            </>
-          )}
         </Animated.View>
       ) : null}
     </Ecran>
@@ -384,23 +313,39 @@ function Ligne({ gauche, droite }: { gauche: string; droite: string }) {
   );
 }
 
-/** Scan d'un ticket papier — le pont sans intégration. */
+/**
+ * Ajout d'un ticket papier.
+ *
+ * La caméra lit le code-barres et en tire le numéro du ticket ; le voyageur
+ * confirme ensuite le trajet à partir de son ticket réel — le code-barres seul ne
+ * contient pas la ligne, la date ni le siège. Rien n'est deviné.
+ */
 function PanneauScan({ onFermer }: { onFermer: () => void }) {
   const importer = useApp((e) => e.importerPapier);
   const router = useRouter();
+  const [phase, setPhase] = useState<'SCAN' | 'SAISIE'>('SCAN');
+  const [reference, setReference] = useState('');
+  const [ligneId, setLigneId] = useState(LIGNES[0].id);
+  const [dateTicket, setDateTicket] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [heureTicket, setHeureTicket] = useState('16:00');
+  const [classeTicket, setClasseTicket] = useState<Classe>('ORDINAIRE');
+  const [siegeTicket, setSiegeTicket] = useState('');
+  const [montantTicket, setMontantTicket] = useState('');
   const [enCours, setEnCours] = useState(false);
 
-  const simuler = async () => {
+  const ligne = ligneParId(ligneId);
+
+  const importerTicket = async () => {
+    if (!reference.trim() || enCours) return;
     setEnCours(true);
-    // Démonstration : les champs du ticket papier réel qui a inspiré le projet.
     const r = await importer({
-      reference: '66456',
-      ligneId: 'ligne-ouahigouya-ouaga',
-      date: format(new Date(), 'yyyy-MM-dd'),
-      heure: '16:00',
-      classe: 'ORDINAIRE',
-      siege: 93,
-      montant: 3500,
+      reference: reference.trim(),
+      ligneId,
+      date: dateTicket,
+      heure: heureTicket,
+      classe: classeTicket,
+      siege: siegeTicket ? Number(siegeTicket.replace(/\D/g, '')) : null,
+      montant: montantTicket ? Number(montantTicket.replace(/\D/g, '')) : ligne?.tarifs[classeTicket] ?? 0,
     });
     setEnCours(false);
     router.replace(`/billet/${r.id}`);
@@ -409,41 +354,134 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
   return (
     <Ecran>
       <View style={styles.entre}>
-        <Txt v="titre">Scanner un ticket</Txt>
+        <Txt v="titre">Ajouter un ticket</Txt>
         <Pressable onPress={onFermer}>
           <Ionicons name="close" size={24} color={couleurs.texteFaible} />
         </Pressable>
       </View>
 
-      <Carte>
-        <Txt v="petit" couleur={couleurs.texteDoux}>
-          Votre ticket papier porte un code-barres et toutes les informations du voyage.
-          En le scannant, il rejoint vos voyages — sans que la compagnie ait rien à faire.
-        </Txt>
-      </Carte>
+      {phase === 'SCAN' ? (
+        <>
+          <Carte>
+            <Txt v="petit" couleur={couleurs.texteDoux}>
+              Votre ticket papier porte un code-barres. Scannez-le pour récupérer son numéro,
+              puis confirmez le trajet — il rejoindra vos voyages, sans que la compagnie ait
+              rien à faire.
+            </Txt>
+          </Carte>
+          <ScannerCamera
+            onScan={(valeur) => {
+              setReference(valeur.replace(/\s/g, ''));
+              setPhase('SAISIE');
+            }}
+            onSaisieManuelle={() => setPhase('SAISIE')}
+          />
+        </>
+      ) : (
+        <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
+          <Section>Les informations de votre ticket</Section>
+          <Carte style={{ gap: espace.md }}>
+            <SaisieTicket libelle="N° DU TICKET" valeur={reference} onChange={setReference} placeholder="66456" clavier="number-pad" />
+          </Carte>
 
-      <LinearGradient colors={degrades.marqueDouce} style={styles.viseur}>
-        <View style={styles.cadreScan}>
-          <Ionicons name="scan-outline" size={64} color={couleurs.marqueVif} />
-          <Txt v="petit" couleur={couleurs.texteFaible}>
-            Cadrez le code-barres du ticket
-          </Txt>
-        </View>
-      </LinearGradient>
+          <Section>Trajet</Section>
+          {LIGNES.map((l) => (
+            <Pressable key={l.id} onPress={() => setLigneId(l.id)}>
+              <View style={[styles.optionLigne, l.id === ligneId && styles.optionLigneActive]}>
+                <Txt v="corpsFort">
+                  {l.origine} → {l.destination}
+                </Txt>
+                {l.id === ligneId ? (
+                  <Ionicons name="checkmark-circle" size={18} color={couleurs.marqueVif} />
+                ) : null}
+              </View>
+            </Pressable>
+          ))}
 
-      <Bouton
-        titre={enCours ? 'Lecture…' : 'Simuler la lecture du ticket n° 66456'}
-        sousTitre="Ouahigouya → Ouagadougou · 3 500 F · siège 93"
-        onPress={simuler}
-        desactive={enCours}
-      />
-      <Bouton titre="Saisir les informations à la main" variante="secondaire" onPress={onFermer} />
+          <Section>Détails</Section>
+          <Carte style={{ gap: espace.md }}>
+            <SaisieTicket libelle="DATE (AAAA-MM-JJ)" valeur={dateTicket} onChange={setDateTicket} placeholder="2026-08-06" />
+            <Trait />
+            <SaisieTicket libelle="HEURE (HH:MM)" valeur={heureTicket} onChange={setHeureTicket} placeholder="16:00" />
+            <Trait />
+            <View style={styles.selecteurClasse}>
+              {(['ORDINAIRE', 'VIP_1RE', 'VIP_DIRECTE'] as Classe[]).map((c) => (
+                <Pressable key={c} style={{ flex: 1 }} onPress={() => setClasseTicket(c)}>
+                  <View style={[styles.optionClasse, classeTicket === c && styles.optionClasseActive]}>
+                    <BadgeClasse classe={c} petit />
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+            <Trait />
+            <SaisieTicket libelle="SIÈGE (facultatif)" valeur={siegeTicket} onChange={setSiegeTicket} placeholder="93" clavier="number-pad" />
+            <Trait />
+            <SaisieTicket
+              libelle={`TARIF (${montant(ligne?.tarifs[classeTicket] ?? 0)} par défaut)`}
+              valeur={montantTicket}
+              onChange={setMontantTicket}
+              placeholder={String(ligne?.tarifs[classeTicket] ?? '')}
+              clavier="number-pad"
+            />
+          </Carte>
+
+          <Bouton
+            titre={enCours ? 'Ajout…' : 'Ajouter à mes voyages'}
+            desactive={!reference.trim() || enCours}
+            onPress={importerTicket}
+          />
+          <Bouton titre="Rescanner" variante="fantome" onPress={() => setPhase('SCAN')} />
+        </Animated.View>
+      )}
     </Ecran>
+  );
+}
+
+function SaisieTicket({
+  libelle,
+  valeur,
+  onChange,
+  placeholder,
+  clavier = 'default',
+}: {
+  libelle: string;
+  valeur: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  clavier?: 'default' | 'number-pad';
+}) {
+  return (
+    <View>
+      <Txt v="minuscule" couleur={couleurs.texteFaible}>
+        {libelle}
+      </Txt>
+      <TextInput
+        value={valeur}
+        onChangeText={onChange}
+        placeholder={placeholder}
+        placeholderTextColor="rgba(255,255,255,0.22)"
+        keyboardType={clavier}
+        autoCapitalize="none"
+        style={styles.saisieTicket}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   entre: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  saisieTicket: { color: '#F7F2FA', fontSize: 16, fontWeight: '600', paddingVertical: 6 },
+  optionLigne: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: '#16101C',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  optionLigneActive: { borderColor: '#F0362F' },
   fil: { flexDirection: 'row', gap: espace.sm },
   barre: { height: 3, borderRadius: 2 },
   jour: {

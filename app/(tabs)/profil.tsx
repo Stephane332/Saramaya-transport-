@@ -12,7 +12,7 @@ export default function Profil() {
   const router = useRouter();
   const voyageur = useApp((e) => e.voyageur);
   const reservations = useApp((e) => e.reservations);
-  const reinitialiser = useApp((e) => e.reinitialiser);
+  const supprimerCompte = useApp((e) => e.supprimerCompte);
 
   if (!voyageur) return null;
   const effectues = voyagesEffectues(reservations);
@@ -104,17 +104,20 @@ export default function Profil() {
         </View>
       </Carte>
 
-      <Section>Démonstration</Section>
+      <Section>Aperçu côté gare</Section>
       <Bouton
-        titre="Voir l'écran de la gare"
-        sousTitre="Ce que verraient les agents"
+        titre="Voir l'écran des agents"
+        sousTitre="Ce que la gare verra une fois connectée"
         variante="secondaire"
         onPress={() => router.push('/gare')}
       />
+
+      <Section>Compte</Section>
       <Bouton
-        titre="Réinitialiser les données de démonstration"
+        titre="Supprimer mon compte"
+        sousTitre="Efface vos données de ce téléphone"
         variante="fantome"
-        onPress={reinitialiser}
+        onPress={supprimerCompte}
       />
     </Ecran>
   );

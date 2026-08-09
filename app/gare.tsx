@@ -1,54 +1,70 @@
 /**
- * Écran gare — horizon 2.
+ * Aperçu côté gare.
  *
- * C'est la réponse au vrai problème de la compagnie : aujourd'hui, un agent
- * appelle chaque passager avant la convocation pour savoir qui a payé et qui
- * viendra. Ici, il ne surveille qu'une liste, et n'appelle que les rares
- * personnes dont la notification n'est pas passée.
+ * Ce que verront les agents une fois l'application connectée au système de la
+ * compagnie : la liste des passagers d'un départ, avec leur statut en direct, pour
+ * ne plus appeler tout le monde un par un.
+ *
+ * Ici, rien n'est inventé : l'écran affiche les réservations réelles présentes dans
+ * l'application. Tant qu'il n'y a pas de système partagé, il ne montre que les
+ * vôtres — d'où l'aperçu. Branché sur la compagnie, il affichera tous les voyageurs.
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { Bouton, Carte, Ecran, Jauge, Section, Trait, Txt } from '../src/components/base';
-import { LIBELLES_CLASSE_COURT, MINUTES_LIBERATION_PLACE, ligneParId } from '../src/data/reseau';
-import { ETIQUETTES_ETAT, manifesteDemo, type PassagerManifeste } from '../src/data/passagers';
+import { BadgeClasse, Carte, Ecran, Section, Trait, Txt } from '../src/components/base';
+import { MINUTES_LIBERATION_PLACE, ligneParId } from '../src/data/reseau';
 import { montant, telephone } from '../src/lib/format';
+import { prochainVoyage, useApp } from '../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../src/theme';
+import type { Reservation } from '../src/types';
 
-const LIGNE_DEMO = 'ligne-ouahigouya-ouaga';
+/** Traduit le statut d'une réservation en ce que l'agent doit en faire. */
+function etatAgent(r: Reservation): { texte: string; couleur: string; appel: boolean } {
+  switch (r.statut) {
+    case 'CONFIRMEE':
+      return { texte: 'Confirmé', couleur: couleurs.succes, appel: false };
+    case 'PAYEE':
+      return { texte: 'Payé', couleur: couleurs.classique, appel: false };
+    case 'OPTION':
+      return r.paiementDeclareLe
+        ? { texte: 'Paiement déclaré', couleur: couleurs.attention, appel: true }
+        : { texte: 'À payer', couleur: couleurs.attention, appel: false };
+    case 'ANNULEE':
+      return { texte: 'Annulé', couleur: couleurs.danger, appel: false };
+    case 'EMBARQUE':
+      return { texte: 'Embarqué', couleur: couleurs.neutre, appel: false };
+    default:
+      return { texte: r.statut, couleur: couleurs.neutre, appel: false };
+  }
+}
 
 export default function EcranGare() {
   const router = useRouter();
-  const ligne = ligneParId(LIGNE_DEMO)!;
-  const [heure, setHeure] = useState(ligne.departs[3]?.heure ?? ligne.departs[0].heure);
-  const [filtre, setFiltre] = useState<'TOUS' | 'A_TRAITER'>('TOUS');
+  const reservations = useApp((e) => e.reservations);
+  const voyageur = useApp((e) => e.voyageur);
 
-  const classeDuDepart =
-    ligne.departs.find((d) => d.heure === heure)?.classe ?? 'ORDINAIRE';
-  const passagers = useMemo(
-    () => manifesteDemo(classeDuDepart, ligne.tarifs[classeDuDepart]),
-    [ligne, classeDuDepart],
+  // On regroupe autour du prochain départ réel du voyageur, s'il y en a un.
+  const prochain = useMemo(() => prochainVoyage(reservations), [reservations]);
+  const duMemeDepart = useMemo(
+    () =>
+      prochain
+        ? reservations.filter(
+            (r) => r.ligneId === prochain.ligneId && r.date === prochain.date && r.heure === prochain.heure,
+          )
+        : [],
+    [reservations, prochain],
   );
 
-  const compte = useMemo(() => {
-    const c = { CONFIRME: 0, PAYE_NON_CONFIRME: 0, SANS_REPONSE: 0, ANNULE: 0, INJOIGNABLE: 0, EMBARQUE: 0 };
-    passagers.forEach((p) => (c[p.etat] += 1));
-    return c;
-  }, [passagers]);
-
-  const aTraiter = passagers.filter((p) =>
-    ['INJOIGNABLE', 'SANS_REPONSE', 'ANNULE'].includes(p.etat),
-  );
-  const appelsNecessaires = compte.INJOIGNABLE;
-  const repondus = compte.CONFIRME + compte.ANNULE;
-  const affiches = filtre === 'TOUS' ? passagers : aTraiter;
-  const remboursements = passagers.filter((p) => p.etat === 'ANNULE');
+  const ligne = prochain ? ligneParId(prochain.ligneId) : null;
+  const aTraiter = duMemeDepart.filter((r) => etatAgent(r).appel).length;
+  const confirmes = duMemeDepart.filter((r) => ['CONFIRMEE', 'PAYEE'].includes(r.statut)).length;
 
   return (
     <Ecran>
@@ -56,7 +72,7 @@ export default function EcranGare() {
         <Pressable onPress={() => router.back()} style={styles.retour}>
           <Ionicons name="chevron-back" size={22} color={couleurs.texte} />
         </Pressable>
-        <View style={styles.etiquetteDemo}>
+        <View style={styles.etiquetteApercu}>
           <Txt v="minuscule" couleur={couleurs.attention}>
             APERÇU — CÔTÉ GARE
           </Txt>
@@ -64,166 +80,109 @@ export default function EcranGare() {
       </View>
 
       <View>
-        <Txt v="titre">Départs du jour</Txt>
+        <Txt v="titre">Départs</Txt>
         <Txt v="petit" couleur={couleurs.texteFaible}>
-          Gare de Ouahigouya · {format(new Date(), 'EEEE d MMMM', { locale: fr })}
+          {format(new Date(), 'EEEE d MMMM', { locale: fr })}
         </Txt>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      {/* Ce que cet écran deviendra, dit honnêtement. */}
+      <Carte style={{ borderColor: 'rgba(245,165,36,0.35)' }}>
         <View style={{ flexDirection: 'row', gap: espace.sm }}>
-          {ligne.departs.map((d) => (
-            <Pressable key={d.heure} onPress={() => setHeure(d.heure)}>
-              <View style={[styles.creneau, d.heure === heure && styles.creneauActif]}>
-                <Txt v="corpsFort" couleur={d.heure === heure ? '#fff' : couleurs.texteDoux}>
-                  {d.heure}
-                </Txt>
-                <Txt
-                  v="minuscule"
-                  couleur={d.heure === heure ? 'rgba(255,255,255,0.75)' : couleurs.texteFaible}
-                >
-                  {LIBELLES_CLASSE_COURT[d.classe]}
-                </Txt>
-              </View>
-            </Pressable>
-          ))}
-        </View>
-      </ScrollView>
-
-      {/* Le chiffre qui porte tout l'argument. */}
-      <Animated.View entering={FadeInDown.springify().damping(18)}>
-        <LinearGradient
-          colors={['rgba(46,204,143,0.20)', 'rgba(23,145,106,0.05)']}
-          style={styles.bandeauGain}
-        >
-          <Ionicons name="call-outline" size={22} color={couleurs.succes} />
-          <View style={{ flex: 1 }}>
-            <Txt v="sousTitre" couleur={couleurs.succes}>
-              {appelsNecessaires} appel{appelsNecessaires > 1 ? 's' : ''} à passer
-            </Txt>
-            <Txt v="petit" couleur={couleurs.texteDoux}>
-              au lieu de {passagers.length} — {repondus} voyageurs ont répondu dans l'application
-            </Txt>
-          </View>
-        </LinearGradient>
-      </Animated.View>
-
-      <View style={styles.grilleCompteurs}>
-        <Compteur valeur={compte.CONFIRME} libelle="confirmés" couleur={couleurs.succes} />
-        <Compteur valeur={compte.PAYE_NON_CONFIRME} libelle="payés" couleur={couleurs.classique} />
-        <Compteur valeur={compte.SANS_REPONSE} libelle="en attente" couleur={couleurs.attention} />
-        <Compteur valeur={compte.ANNULE} libelle="annulés" couleur={couleurs.danger} />
-      </View>
-
-      <Carte>
-        <View style={styles.entre}>
-          <Txt v="corpsFort">Remplissage</Txt>
-          <Txt v="petit" couleur={couleurs.texteFaible}>
-            {passagers.length - compte.ANNULE} / {passagers.length} places
+          <Ionicons name="information-circle" size={18} color={couleurs.attention} />
+          <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
+            Cet écran montre les réservations réelles de l'application. Connecté au système de
+            la compagnie, il affichera tous les voyageurs de chaque départ, avec leur statut de
+            paiement en direct — de quoi remplacer les appels de confirmation.
           </Txt>
         </View>
-        <Jauge valeur={(passagers.length - compte.ANNULE) / passagers.length} couleur={couleurs.succes} />
-        <Txt v="petit" couleur={couleurs.texteFaible}>
-          Les {compte.ANNULE} places annulées sont déjà proposées à la liste d'attente. À{' '}
-          {MINUTES_LIBERATION_PLACE} minutes du départ, les absents seront remplacés.
-        </Txt>
       </Carte>
 
-      {remboursements.length > 0 ? (
+      {!prochain || !ligne ? (
+        <Carte>
+          <Txt v="corpsFort">Aucun départ à afficher</Txt>
+          <Txt v="petit" couleur={couleurs.texteFaible}>
+            Créez une réservation depuis l'onglet « Réserver » : elle apparaîtra ici, comme
+            l'agent la verrait.
+          </Txt>
+        </Carte>
+      ) : (
         <>
-          <Section>À traiter en caisse</Section>
-          <Carte>
-            {remboursements.map((p, i) => (
-              <View key={p.nom}>
-                {i > 0 ? <Trait /> : null}
-                <View style={[styles.entre, { paddingVertical: espace.sm }]}>
-                  <View>
-                    <Txt v="corpsFort">{p.nom}</Txt>
-                    <Txt v="minuscule" couleur={couleurs.texteFaible}>
-                      SIÈGE {p.siege} · ANNULÉ À TEMPS
-                    </Txt>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Txt v="corpsFort" couleur={couleurs.attention}>
-                      {montant(p.montant)}
-                    </Txt>
-                    <Txt v="minuscule" couleur={couleurs.texteFaible}>
-                      À REMBOURSER
-                    </Txt>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </Carte>
-        </>
-      ) : null}
-
-      <View style={styles.entre}>
-        <Section>Manifeste</Section>
-        <View style={styles.bascule}>
-          {(['TOUS', 'A_TRAITER'] as const).map((f) => (
-            <Pressable key={f} onPress={() => setFiltre(f)}>
-              <View style={[styles.optionBascule, filtre === f && styles.optionBasculeActive]}>
-                <Txt v="minuscule" couleur={filtre === f ? '#fff' : couleurs.texteFaible}>
-                  {f === 'TOUS' ? 'TOUS' : `À TRAITER (${aTraiter.length})`}
+          <Animated.View entering={FadeInDown.springify().damping(18)}>
+            <LinearGradient
+              colors={['rgba(46,204,143,0.20)', 'rgba(23,145,106,0.05)']}
+              style={styles.bandeauGain}
+            >
+              <Ionicons name="call-outline" size={22} color={couleurs.succes} />
+              <View style={{ flex: 1 }}>
+                <Txt v="sousTitre" couleur={couleurs.succes}>
+                  {aTraiter} appel{aTraiter > 1 ? 's' : ''} à passer
+                </Txt>
+                <Txt v="petit" couleur={couleurs.texteDoux}>
+                  {ligne.origine} → {ligne.destination} · {prochain.heure} ·{' '}
+                  {confirmes} confirmé{confirmes > 1 ? 's' : ''} sans un appel
                 </Txt>
               </View>
-            </Pressable>
+            </LinearGradient>
+          </Animated.View>
+
+          <Carte>
+            <View style={styles.entre}>
+              <Txt v="corpsFort">Remplissage</Txt>
+              <Txt v="petit" couleur={couleurs.texteFaible}>
+                {duMemeDepart.filter((r) => r.statut !== 'ANNULEE').length} réservation
+                {duMemeDepart.filter((r) => r.statut !== 'ANNULEE').length > 1 ? 's' : ''}
+              </Txt>
+            </View>
+            <Txt v="petit" couleur={couleurs.texteFaible}>
+              À {MINUTES_LIBERATION_PLACE} minutes du départ, les places non retirées sont
+              proposées à la liste d'attente.
+            </Txt>
+          </Carte>
+
+          <Section>Manifeste</Section>
+          {duMemeDepart.map((r, i) => (
+            <RangeePassager key={r.id} reservation={r} nomVoyageur={`${voyageur?.nom ?? ''} ${voyageur?.prenom ?? ''}`} index={i} />
           ))}
-        </View>
-      </View>
-
-      {affiches.map((p, i) => (
-        <RangeePassager key={p.nom} passager={p} index={i} />
-      ))}
-
-      <Bouton
-        titre="Scanner un billet à l'embarquement"
-        variante="secondaire"
-        icone={<Ionicons name="scan" size={18} color={couleurs.texte} />}
-      />
+        </>
+      )}
     </Ecran>
   );
 }
 
-function Compteur({ valeur, libelle, couleur }: { valeur: number; libelle: string; couleur: string }) {
+function RangeePassager({
+  reservation,
+  nomVoyageur,
+  index,
+}: {
+  reservation: Reservation;
+  nomVoyageur: string;
+  index: number;
+}) {
+  const e = etatAgent(reservation);
   return (
-    <View style={[styles.compteur, { borderColor: `${couleur}44` }]}>
-      <Txt v="sousTitre" couleur={couleur}>
-        {valeur}
-      </Txt>
-      <Txt v="minuscule" couleur={couleurs.texteFaible} numberOfLines={1}>
-        {libelle.toUpperCase()}
-      </Txt>
-    </View>
-  );
-}
-
-function RangeePassager({ passager, index }: { passager: PassagerManifeste; index: number }) {
-  const e = ETIQUETTES_ETAT[passager.etat];
-  const urgent = passager.etat === 'INJOIGNABLE';
-  return (
-    <Animated.View entering={FadeIn.delay(Math.min(index, 12) * 35)}>
-      <View style={[styles.rangeePassager, urgent && styles.rangeeUrgente]}>
+    <Animated.View entering={FadeIn.delay(Math.min(index, 10) * 40)}>
+      <View style={[styles.rangee, e.appel && styles.rangeeUrgente]}>
         <View style={[styles.siegeRond, { borderColor: `${e.couleur}66` }]}>
           <Txt v="minuscule" couleur={e.couleur}>
-            {passager.siege}
+            {reservation.siege ?? '—'}
           </Txt>
         </View>
         <View style={{ flex: 1 }}>
           <Txt v="corpsFort" numberOfLines={1}>
-            {passager.nom}
+            {nomVoyageur.trim() || 'Voyageur'}
           </Txt>
           <Txt v="minuscule" couleur={couleurs.texteFaible}>
-            {telephone(passager.telephone)}
-            {!passager.notificationDelivree ? ' · NOTIFICATION NON DÉLIVRÉE' : ''}
+            RÉF {reservation.reference} · {montant(reservation.montant)}
           </Txt>
         </View>
-        <View style={[styles.etat, { backgroundColor: `${e.couleur}1E`, borderColor: `${e.couleur}55` }]}>
-          <Ionicons name={e.icone as never} size={12} color={e.couleur} />
-          <Txt v="minuscule" couleur={e.couleur}>
-            {e.texte}
-          </Txt>
+        <View style={{ alignItems: 'flex-end', gap: 4 }}>
+          <BadgeClasse classe={reservation.classe} petit />
+          <View style={[styles.etat, { backgroundColor: `${e.couleur}1E`, borderColor: `${e.couleur}55` }]}>
+            <Txt v="minuscule" couleur={e.couleur}>
+              {e.texte.toUpperCase()}
+            </Txt>
+          </View>
         </View>
       </View>
     </Animated.View>
@@ -242,7 +201,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: couleurs.bordure,
   },
-  etiquetteDemo: {
+  etiquetteApercu: {
     borderRadius: rayon.rond,
     borderWidth: 1,
     borderColor: 'rgba(245,165,36,0.4)',
@@ -250,17 +209,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  creneau: {
-    paddingVertical: espace.md,
-    paddingHorizontal: espace.lg,
-    borderRadius: rayon.md,
-    backgroundColor: couleurs.surface,
-    borderWidth: 1,
-    borderColor: couleurs.bordure,
-    alignItems: 'center',
-    gap: 2,
-  },
-  creneauActif: { backgroundColor: couleurs.marqueProfond, borderColor: couleurs.marqueVif },
   bandeauGain: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -270,24 +218,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(46,204,143,0.35)',
   },
-  grilleCompteurs: { flexDirection: 'row', gap: espace.sm },
-  compteur: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: espace.md,
-    borderRadius: rayon.md,
-    backgroundColor: couleurs.surface,
-    borderWidth: 1,
-  },
-  bascule: { flexDirection: 'row', gap: 4 },
-  optionBascule: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: rayon.rond,
-    backgroundColor: couleurs.surfaceHaute,
-  },
-  optionBasculeActive: { backgroundColor: couleurs.marqueProfond },
-  rangeePassager: {
+  rangee: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: espace.md,
