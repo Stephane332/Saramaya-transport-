@@ -10,6 +10,7 @@ import {
   Bouton,
   Carte,
   Ecran,
+  EnAttenteDeLaCompagnie,
   EnTeteRetour,
   Section,
   Trait,
@@ -29,6 +30,7 @@ import {
 } from '../../src/data/reseau';
 import { decalerHeure, montant } from '../../src/lib/format';
 import { departsDuJour } from '../../src/lib/departs';
+import { etatFonction } from '../../src/lib/disponibilite';
 import { useRetourMateriel } from '../../src/lib/retour';
 import { programmerRappels } from '../../src/lib/notifications';
 import { useStatutService } from '../../src/lib/statutService';
@@ -303,6 +305,7 @@ export default function Reserver() {
       {etape === 'SIEGE' && ligne && heure ? (
         <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
           <Section>Place souhaitée</Section>
+          <EnAttenteDeLaCompagnie {...etatFonction('PLACES_OCCUPEES')} />
           <Txt v="petit" couleur={couleurs.texteFaible}>
             Indiquez la place que vous préférez : elle part avec votre demande à la gare, qui
             l'attribue au moment de l'émission du billet. Les places déjà prises s'afficheront

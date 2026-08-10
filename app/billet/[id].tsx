@@ -12,7 +12,6 @@ import { CarteSpatiale } from '../../src/components/CarteSpatiale';
 import { LogoSaramaya } from '../../src/components/LogoSaramaya';
 import {
   BadgeClasse,
-  BadgeStatut,
   Bouton,
   Carte,
   Ecran,
@@ -26,6 +25,7 @@ import { dateHeureDepart, retractationPossible } from '../../src/lib/confirmatio
 import { compteARebours, joursAvantExpiration, montant, telephone } from '../../src/lib/format';
 import { messagePourLaGare } from '../../src/sync/localProvider';
 import { construireQrBillet } from '../../src/lib/billetQr';
+import { actionsPossibles, libelleEtape } from '../../src/lib/parcours';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
@@ -64,6 +64,11 @@ export default function Billet() {
   const passe = ['EMBARQUE', 'NO_SHOW'].includes(r.statut);
   const paiement = gare ? paiementPourVille(gare.ville) : undefined;
 
+  // Les règles du parcours viennent d'un seul endroit, testé — et non de conditions
+  // reconstruites ici, qui avaient laissé passer un billet délivré avant paiement.
+  const actions = actionsPossibles(r);
+  const etape = libelleEtape(r);
+
   const envoyerALaGare = () => {
     const texte = messagePourLaGare(r, voyageur);
     const numero = (gare?.telephones[0] ?? '').replace(/\s/g, '');
@@ -80,7 +85,11 @@ export default function Billet() {
         <Pressable onPress={() => router.back()} style={styles.retour}>
           <Ionicons name="chevron-back" size={22} color={couleurs.texte} />
         </Pressable>
-        <BadgeStatut statut={r.statut} />
+        <View style={styles.etatEnTete}>
+          <Txt v="minuscule" couleur={actions.afficherBillet ? couleurs.succes : couleurs.attention}>
+            {etape.titre.toUpperCase()}
+          </Txt>
+        </View>
       </View>
 
       {/* Le billet, dessiné comme le ticket papier. Il prend du relief à l'inclinaison. */}
@@ -89,7 +98,7 @@ export default function Billet() {
         <LinearGradient colors={degrades.ticket} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.souche}>
           <View style={{ gap: 8, flex: 1 }}>
             <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
-              TICKET DE VOYAGE
+              {actions.afficherBillet ? 'TICKET DE VOYAGE' : 'RÉSERVATION'}
             </Txt>
             {/* Sur leurs supports, l'emblème est toujours posé sur du blanc. */}
             <View style={styles.plaqueLogo}>
@@ -175,6 +184,24 @@ export default function Billet() {
             <View style={styles.encocheDroite} />
           </View>
 
+          {/*
+            Le code n'apparaît qu'une fois le paiement établi. Avant cela, la place
+            est retenue mais aucun titre de transport n'existe : afficher un QR
+            tromperait le voyageur, qui se croirait en règle à la porte du bus.
+          */}
+          {!actions.afficherBillet ? (
+            <View style={styles.zoneQr}>
+              <View style={styles.cadreAttente}>
+                <Ionicons name="lock-closed-outline" size={34} color={couleurs.texteFaible} />
+              </View>
+              <View style={{ flex: 1, gap: 6 }}>
+                <Txt v="corpsFort">{etape.titre}</Txt>
+                <Txt v="petit" couleur={couleurs.texteFaible}>
+                  {etape.explication}
+                </Txt>
+              </View>
+            </View>
+          ) : (
           <View style={styles.zoneQr}>
             <View style={styles.cadreQr}>
               <QRCode
@@ -205,14 +232,31 @@ export default function Billet() {
               </View>
             </View>
           </View>
+          )}
 
-          {/* Code-barres Code 39, lisible par les mêmes lecteurs que le ticket papier. */}
-          <View style={styles.zoneCodeBarres}>
-            <CodeBarres valeur={r.reference} hauteur={40} />
-            <Txt v="minuscule" couleur="#0A070E" style={{ letterSpacing: 4 }}>
-              {r.reference}
-            </Txt>
-          </View>
+          {/*
+            Code-barres Code 39, lisible par les mêmes lecteurs que le ticket papier —
+            et réservé, lui aussi, au billet réellement émis. Avant paiement, seule la
+            référence s'affiche en clair : de quoi la dicter à la gare, sans donner
+            l'apparence d'un titre de transport.
+          */}
+          {actions.afficherBillet ? (
+            <View style={styles.zoneCodeBarres}>
+              <CodeBarres valeur={r.reference} hauteur={40} />
+              <Txt v="minuscule" couleur="#0A070E" style={{ letterSpacing: 4 }}>
+                {r.reference}
+              </Txt>
+            </View>
+          ) : (
+            <View style={styles.zoneReference}>
+              <Txt v="minuscule" couleur="#0A070E">
+                RÉFÉRENCE DE VOTRE RÉSERVATION
+              </Txt>
+              <Txt v="sousTitre" couleur="#0A070E" style={{ letterSpacing: 3 }}>
+                {r.reference}
+              </Txt>
+            </View>
+          )}
 
           <View style={{ gap: 2 }}>
             <Txt v="minuscule" couleur={couleurs.texteFaible}>
@@ -278,7 +322,7 @@ export default function Billet() {
         <View style={{ gap: espace.md }}>
           <Section>Actions</Section>
 
-          {r.statut === 'OPTION' ? (
+          {!actions.afficherBillet ? (
             <>
               <Carte style={{ borderColor: 'rgba(245,165,36,0.35)' }}>
                 <Txt v="corpsFort" couleur={couleurs.attention}>
@@ -308,7 +352,7 @@ export default function Billet() {
                 </Carte>
               ) : null}
 
-              {!r.paiementDeclareLe ? (
+              {actions.declarerPaiement ? (
                 <Bouton
                   titre="J'ai effectué le paiement"
                   sousTitre="À confirmer ensuite au guichet"
@@ -411,6 +455,26 @@ function Case({ titre, valeur, accent = false }: { titre: string; valeur: string
 }
 
 const styles = StyleSheet.create({
+  etatEnTete: {
+    borderRadius: rayon.rond,
+    borderWidth: 1,
+    borderColor: couleurs.bordureForte,
+    backgroundColor: couleurs.surfaceHaute,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  zoneReference: { alignItems: 'center', gap: 4, paddingVertical: espace.md },
+  cadreAttente: {
+    width: 132,
+    height: 132,
+    borderRadius: rayon.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: couleurs.surfaceBasse,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: couleurs.bordureForte,
+  },
   entre: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   retour: {
     width: 40,

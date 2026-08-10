@@ -36,6 +36,7 @@ import {
   versOctets,
   versTexte,
 } from './sha256';
+import { billetEmis } from './parcours';
 import type { Classe, Reservation, StatutReservation, Voyageur } from '../types';
 
 /** Préfixe de version : il permettra de faire évoluer le format sans casser l'ancien. */
@@ -78,8 +79,18 @@ function signer(corps: string): string {
   return versBase64Url(hmacSha256(CLE, versOctets(corps)).slice(0, OCTETS_SIGNATURE));
 }
 
-/** Fabrique le contenu du QR d'une réservation. */
+/**
+ * Fabrique le contenu du QR d'une réservation payée.
+ *
+ * Renvoie une chaîne vide tant que le paiement n'est pas établi. C'est volontaire et
+ * c'est une garde, pas une commodité d'affichage : un QR est un titre de transport,
+ * et il ne doit pas exister avant que la compagnie ait constaté le paiement. Un
+ * voyageur qui présenterait un tel code croirait de bonne foi être en règle, et
+ * l'agent découvrirait le contraire à la porte du bus.
+ */
 export function construireQrBillet(r: Reservation, voyageur: Voyageur): string {
+  if (!billetEmis(r)) return '';
+
   const contenu: ContenuBillet = {
     r: r.reference,
     n: `${voyageur.nom} ${voyageur.prenom}`.trim(),

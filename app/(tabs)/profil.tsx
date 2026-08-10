@@ -3,7 +3,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Bouton, Carte, Ecran, Section, Trait, Txt } from '../../src/components/base';
+import {
+  Bouton,
+  Carte,
+  Ecran,
+  EnAttenteDeLaCompagnie,
+  Section,
+  Trait,
+  Txt,
+} from '../../src/components/base';
+import { etatFonction } from '../../src/lib/disponibilite';
 import { initiales, telephone } from '../../src/lib/format';
 import { useApp, voyagesEffectues } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
@@ -103,6 +112,9 @@ export default function Profil() {
           </Txt>
         </View>
       </Carte>
+
+      <Section>Anciens voyages</Section>
+      <EnAttenteDeLaCompagnie {...etatFonction('HISTORIQUE_ANCIEN_CLIENT')} />
 
       <Section>Pièce d'identité</Section>
       <Bouton

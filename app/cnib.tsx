@@ -44,7 +44,15 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Bouton, Carte, EnTeteRetour, Section, Trait, Txt } from '../src/components/base';
+import {
+  Bouton,
+  Carte,
+  EnAttenteDeLaCompagnie,
+  EnTeteRetour,
+  Section,
+  Trait,
+  Txt,
+} from '../src/components/base';
 import { joursAvantExpirationCnib, lireBandeTD1, type IdentiteLue } from '../src/lib/cnib';
 import { programmerRappelsCnib } from '../src/lib/notifications';
 import { useApp } from '../src/store/useApp';
@@ -58,7 +66,7 @@ export default function EcranCnib() {
 
   const [permission, demanderPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
-  const [photo, setPhoto] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<string | null>(voyageur?.cnibPhotoUri ?? null);
   const [appareilOuvert, setAppareilOuvert] = useState(false);
 
   const [bande, setBande] = useState('');
@@ -94,6 +102,7 @@ export default function EcranCnib() {
     const dateValide = /^\d{4}-\d{2}-\d{2}$/.test(expiration);
     mettreAJourProfil({
       cnib: numero.trim() || undefined,
+      cnibPhotoUri: photo ?? undefined,
       cnibExpireLe: dateValide ? expiration : undefined,
       ...(lu?.dateNaissance ? { dateNaissance: lu.dateNaissance } : {}),
     });
@@ -133,6 +142,35 @@ export default function EcranCnib() {
             Saisie une fois, présentée au guichet. Vos informations restent sur ce
             téléphone — rien n'est envoyé.
           </Txt>
+
+          <Section>Photo de la carte</Section>
+          {photo ? (
+            <Animated.View entering={FadeIn} style={{ gap: espace.sm }}>
+              <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
+              <Txt v="minuscule" couleur={couleurs.succes}>
+                ENREGISTRÉE SUR CE TÉLÉPHONE — JAMAIS ENVOYÉE
+              </Txt>
+              <Bouton titre="Reprendre la photo" variante="fantome" onPress={() => setAppareilOuvert(true)} />
+            </Animated.View>
+          ) : (
+            <Bouton
+              titre="Photographier ma CNIB"
+              sousTitre="Bien à plat, bien éclairée, les deux faces si possible"
+              icone={<Ionicons name="camera-outline" size={18} color={couleurs.texte} />}
+              onPress={async () => {
+                if (!permission?.granted) {
+                  const accord = await demanderPermission();
+                  if (!accord.granted) return;
+                }
+                setAppareilOuvert(true);
+              }}
+            />
+          )}
+
+          <EnAttenteDeLaCompagnie
+            promesse="Vos informations remplies automatiquement à partir de la photo."
+            raison="La lecture automatique d'une image demande un module de reconnaissance absent d'Expo Go. En attendant, recopiez la bande du dos ci-dessous — elle contient tout — ou saisissez les champs à la main."
+          />
 
           <Section>La bande au dos</Section>
           <Carte style={{ gap: espace.md }}>
@@ -213,28 +251,6 @@ export default function EcranCnib() {
               </Txt>
             ) : null}
           </Carte>
-
-          <Section>Photo du dos</Section>
-          {photo ? (
-            <Animated.View entering={FadeIn} style={{ gap: espace.sm }}>
-              <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
-              <Bouton titre="Reprendre la photo" variante="fantome" onPress={() => setAppareilOuvert(true)} />
-            </Animated.View>
-          ) : (
-            <Bouton
-              titre="Photographier le dos de la carte"
-              sousTitre="Reste sur ce téléphone, jamais envoyée"
-              variante="secondaire"
-              icone={<Ionicons name="camera-outline" size={18} color={couleurs.texteDoux} />}
-              onPress={async () => {
-                if (!permission?.granted) {
-                  const accord = await demanderPermission();
-                  if (!accord.granted) return;
-                }
-                setAppareilOuvert(true);
-              }}
-            />
-          )}
 
           <Carte>
             <View style={{ flexDirection: 'row', gap: espace.sm }}>

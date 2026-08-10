@@ -156,6 +156,34 @@ export function EnTeteRetour({
   );
 }
 
+/**
+ * Fonction qui attend l'ouverture du système de la compagnie.
+ *
+ * On la montre plutôt que de la cacher : le voyageur comprend ce que l'application
+ * fera, et ce qui manque pour cela. Rien n'est simulé — le bloc dit ce qui se passe
+ * en attendant, et disparaîtra de lui-même le jour de la connexion.
+ */
+export function EnAttenteDeLaCompagnie({
+  promesse,
+  raison,
+}: {
+  promesse: string;
+  raison: string;
+}) {
+  return (
+    <View style={styles.attente}>
+      <View style={styles.enteteAttente}>
+        <Ionicons name="time-outline" size={16} color={couleurs.attention} />
+        <Text style={[typo.minuscule, { color: couleurs.attention }]}>
+          INDISPONIBLE POUR LE MOMENT
+        </Text>
+      </View>
+      <Text style={[typo.petit, { color: couleurs.texteDoux }]}>{promesse}</Text>
+      <Text style={[typo.minuscule, { color: couleurs.texteFaible }]}>{raison}</Text>
+    </View>
+  );
+}
+
 export function Section({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <View style={styles.enteteSection}>
@@ -371,6 +399,15 @@ export function Jauge({ valeur, couleur = couleurs.marque }: { valeur: number; c
 }
 
 const styles = StyleSheet.create({
+  attente: {
+    gap: 6,
+    padding: espace.md,
+    borderRadius: rayon.md,
+    borderWidth: 1,
+    borderColor: 'rgba(245,165,36,0.3)',
+    backgroundColor: 'rgba(245,165,36,0.07)',
+  },
+  enteteAttente: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   enTeteRetour: {
     flexDirection: 'row',
     alignItems: 'center',

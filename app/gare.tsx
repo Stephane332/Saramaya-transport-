@@ -18,9 +18,18 @@ import { Redirect, useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
-import { BadgeClasse, Bouton, Carte, Ecran, Section, Txt } from '../src/components/base';
+import {
+  BadgeClasse,
+  Bouton,
+  Carte,
+  Ecran,
+  EnAttenteDeLaCompagnie,
+  Section,
+  Txt,
+} from '../src/components/base';
 import { MINUTES_LIBERATION_PLACE, ligneParId } from '../src/data/reseau';
 import { montant, telephone } from '../src/lib/format';
+import { etatFonction } from '../src/lib/disponibilite';
 import { MODE_AGENT } from '../src/lib/modeAgent';
 import { prochainVoyage, useApp } from '../src/store/useApp';
 import { couleurs, espace, rayon } from '../src/theme';
@@ -92,17 +101,7 @@ export default function EcranGare() {
         </Txt>
       </View>
 
-      {/* Ce que cet écran deviendra, dit honnêtement. */}
-      <Carte style={{ borderColor: 'rgba(245,165,36,0.35)' }}>
-        <View style={{ flexDirection: 'row', gap: espace.sm }}>
-          <Ionicons name="information-circle" size={18} color={couleurs.attention} />
-          <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
-            Cet écran montre les réservations réelles de l'application. Connecté au système de
-            la compagnie, il affichera tous les voyageurs de chaque départ, avec leur statut de
-            paiement en direct — de quoi remplacer les appels de confirmation.
-          </Txt>
-        </View>
-      </Carte>
+      <EnAttenteDeLaCompagnie {...etatFonction('MANIFESTE_COMPLET')} />
 
       {!prochain || !ligne ? (
         <Carte>

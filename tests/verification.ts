@@ -19,6 +19,7 @@ import {
 } from '../src/lib/identifiants';
 import { construireQrBillet, verifierQrBillet } from '../src/lib/billetQr';
 import { cleControle, joursAvantExpirationCnib, lireBandeTD1 } from '../src/lib/cnib';
+import { actionsPossibles, billetEmis, etapeReservation } from '../src/lib/parcours';
 import {
   depuisBase64Url,
   hmacSha256,
@@ -249,17 +250,19 @@ verifier(
   'ILLISIBLE',
 );
 
+// Depuis que le billet n'est émis qu'une fois le paiement établi, ces deux cas ne
+// produisent plus de QR du tout — garantie plus forte que de le signaler à la porte.
+// Les verdicts NON_PAYE et ANNULE restent dans le vérificateur : ils défendent contre
+// un code émis par une version antérieure ou par un autre outil.
 verifier(
-  'billet non payé : signalé, pas rejeté comme faux',
-  verifierQrBillet(construireQrBillet({ ...billetDeBase, statut: 'OPTION' }, voyageurTest), LE_JOUR)
-    .verdict,
-  'NON_PAYE',
+  'une réservation impayée ne produit aucun code à présenter',
+  construireQrBillet({ ...billetDeBase, statut: 'OPTION' }, voyageurTest),
+  '',
 );
 verifier(
-  'réservation annulée : signalée',
-  verifierQrBillet(construireQrBillet({ ...billetDeBase, statut: 'ANNULEE' }, voyageurTest), LE_JOUR)
-    .verdict,
-  'ANNULE',
+  'une réservation annulée ne produit aucun code à présenter',
+  construireQrBillet({ ...billetDeBase, statut: 'ANNULEE' }, voyageurTest),
+  '',
 );
 verifier(
   "billet d'un autre jour : signalé",
@@ -336,6 +339,74 @@ if (carteRecente.ok) {
 
 verifier('CNIB expirant dans sept jours', joursAvantExpirationCnib('2026-08-16', LE_JOUR), 7);
 verifier('CNIB déjà expirée', joursAvantExpirationCnib('2026-08-01', LE_JOUR), -8);
+
+
+/* ── L'ordre des étapes ──────────────────────────────────────────────────── */
+
+groupe("Parcours — ce qui ne doit pas arriver avant d'avoir payé");
+
+const enAttente = { ...billetDeBase, statut: 'OPTION' as const };
+const declare = { ...enAttente, paiementDeclareLe: '2026-08-09T07:00:00.000Z' };
+const paye = { ...billetDeBase, statut: 'PAYEE' as const };
+const effectue = { ...billetDeBase, statut: 'EMBARQUE' as const };
+const annule = { ...billetDeBase, statut: 'ANNULEE' as const };
+
+verifier('réservation non payée : étape « à payer »', etapeReservation(enAttente), 'A_PAYER');
+verifier('paiement déclaré : étape distincte', etapeReservation(declare), 'PAIEMENT_DECLARE');
+verifier('réservation payée : billet émis', etapeReservation(paye), 'BILLET_EMIS');
+
+// La règle centrale, sous ses trois formes.
+verifier('aucun billet tant que ce n\'est pas payé', billetEmis(enAttente), false);
+verifier('une déclaration de paiement ne vaut pas un billet', billetEmis(declare), false);
+verifier('billet émis une fois le paiement établi', billetEmis(paye), true);
+
+// Et la garde au niveau du QR lui-même : impossible de contourner par l'affichage.
+verifier(
+  'aucun QR fabriqué pour une réservation impayée',
+  construireQrBillet(enAttente, voyageurTest),
+  '',
+);
+verifier(
+  'aucun QR fabriqué sur simple déclaration de paiement',
+  construireQrBillet(declare, voyageurTest),
+  '',
+);
+verifier(
+  'QR fabriqué une fois le paiement établi',
+  construireQrBillet(paye, voyageurTest).startsWith('SB1.'),
+  true,
+);
+
+verifier(
+  'on ne déclare pas deux fois son paiement',
+  actionsPossibles(declare).declarerPaiement,
+  false,
+);
+verifier(
+  'un voyage effectué ne se reporte plus',
+  actionsPossibles(effectue).reporter,
+  false,
+);
+verifier(
+  'un billet passé reste consultable',
+  actionsPossibles(effectue).afficherBillet,
+  true,
+);
+verifier(
+  "une réservation annulée n'affiche pas de billet",
+  actionsPossibles(annule).afficherBillet,
+  false,
+);
+verifier(
+  'une annulation peut être reprise',
+  actionsPossibles(annule).reprendre,
+  true,
+);
+verifier(
+  "on n'annule pas un voyage déjà effectué",
+  actionsPossibles(effectue).annuler,
+  false,
+);
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
 process.exit(echoues > 0 ? 1 : 0);

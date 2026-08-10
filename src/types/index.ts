@@ -100,6 +100,11 @@ export interface Voyageur {
    * caché — voir docs/presentation/donnees-des-voyageurs.md.
    */
   cnibExpireLe?: string;
+  /**
+   * Chemin local de la photo de la carte. Un chemin, pas l'image : le fichier reste
+   * dans l'espace privé de l'application, et n'est jamais transmis.
+   */
+  cnibPhotoUri?: string;
 }
 
 export interface Reservation {
