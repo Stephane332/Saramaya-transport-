@@ -103,12 +103,18 @@ export const REFUSES = [
   'Espèces et bijoux non déclarés',
 ] as const;
 
+/**
+ * La frise de suivi commence par « À déposer », et c'est volontaire : préparer un
+ * envoi dans l'application ne dépose rien. La première étape n'est franchie que
+ * lorsque l'expéditeur a réellement remis le colis au guichet.
+ */
 export const ETAPES_SUIVI: Array<{
-  statut: 'DEPOSE' | 'EN_TRANSIT' | 'ARRIVE' | 'RETIRE';
+  statut: 'A_DEPOSER' | 'DEPOSE' | 'EN_TRANSIT' | 'ARRIVE' | 'RETIRE';
   libelle: string;
   detail: string;
   icone: string;
 }> = [
+  { statut: 'A_DEPOSER', libelle: 'À déposer', detail: 'Envoi préparé, à remettre au guichet', icone: 'create' },
   { statut: 'DEPOSE', libelle: 'Déposé', detail: 'Enregistré à la gare de départ', icone: 'checkmark-circle' },
   { statut: 'EN_TRANSIT', libelle: 'En route', detail: 'Chargé dans le car', icone: 'bus' },
   { statut: 'ARRIVE', libelle: 'Arrivé', detail: 'Disponible au guichet', icone: 'location' },

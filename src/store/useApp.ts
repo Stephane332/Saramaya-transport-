@@ -5,6 +5,7 @@ import { LocalProvider } from '../sync/localProvider';
 import type { DemandeReservation, TicketScanne } from '../sync/types';
 import { genererCodeRetrait } from '../lib/colis';
 import { identifiant, referenceBillet } from '../lib/identifiants';
+import { SCHEMA_VERSION, migrerEtat } from './migration';
 import type { Caisse, Colis, Reservation, TailleColis, Voyageur } from '../types';
 
 /**
@@ -14,37 +15,6 @@ import type { Caisse, Colis, Reservation, TailleColis, Voyageur } from '../types
  * son compte, puis construit son historique en s'en servant vraiment — en scannant
  * ses tickets papier et en réservant. Aucune donnée fictive.
  */
-
-/**
- * Version de la forme des données enregistrées.
- *
- * 1 — forme d'origine (voyageur, réservations, colis, rappels).
- * 2 — ajout de la caisse ; les références produites par l'application passent au
- *     préfixe « SB- » pour ne plus ressembler aux numéros de la billetterie.
- */
-const SCHEMA_VERSION = 2;
-
-/**
- * Convertit un contenu enregistré par une version antérieure.
- *
- * Règle absolue : on ne supprime jamais de données qu'on ne sait pas convertir.
- * Ce qui est inconnu est laissé tel quel — un voyage de trop vaut mieux qu'un
- * historique amputé.
- */
-function migrerEtat(enregistre: unknown, versionPrecedente: number): Partial<EtatApp> {
-  const etat = (enregistre ?? {}) as Partial<EtatApp>;
-
-  if (versionPrecedente < 2) {
-    return {
-      ...etat,
-      reservations: Array.isArray(etat.reservations) ? etat.reservations : [],
-      colis: Array.isArray(etat.colis) ? etat.colis : [],
-      caisse: etat.caisse ?? null,
-    };
-  }
-
-  return etat;
-}
 
 export interface DemandeColis {
   destinataireNom: string;
@@ -92,6 +62,7 @@ interface EtatApp {
   importerPapier: (t: TicketScanne) => Promise<Reservation>;
 
   envoyerColis: (d: DemandeColis, moyen: Colis['moyenPaiement']) => Promise<Colis>;
+  marquerColisDepose: (id: string, codeGuichet?: string) => Promise<void>;
   marquerCodePartage: (id: string) => void;
 
   marquerRappelProgramme: (id: string, etapeId: string) => void;
@@ -177,23 +148,53 @@ export const useApp = create<EtatApp>()(
         return provider(get, set).importerTicketPapier(t, voyageur);
       },
 
+      /**
+       * Prépare un envoi. Ne dépose rien et ne paie rien : le colis attend d'être
+       * remis au guichet, où il sera enregistré et réglé. `moyenPaiement` est le
+       * mode choisi d'avance, pas un règlement constaté.
+       */
       envoyerColis: async (d, moyen) => {
         const voyageur = get().voyageur;
-        if (!voyageur) throw new Error('Aucun compte.');
-        const maintenant = new Date();
+        if (!voyageur) throw new Error('Créez votre compte avant de préparer un envoi.');
         const colis: Colis = {
           id: identifiant('colis'),
           reference: referenceBillet(),
           codeRetrait: genererCodeRetrait(),
           expediteurId: voyageur.id,
           ...d,
-          statut: 'DEPOSE',
-          deposeLe: maintenant.toISOString(),
+          statut: 'A_DEPOSER',
+          prepareLe: new Date().toISOString(),
           codePartage: false,
           moyenPaiement: moyen,
         };
         set({ colis: [colis, ...get().colis] });
         return colis;
+      },
+
+      /**
+       * L'expéditeur revient du guichet : le colis est remis et réglé.
+       *
+       * C'est lui qui le déclare, faute de lien avec le système de la compagnie —
+       * et c'est le guichet qui fait foi pour le code. S'il en a remis un autre,
+       * c'est celui-là qu'on garde : le destinataire présentera celui du guichet,
+       * pas celui de l'application.
+       */
+      marquerColisDepose: async (id, codeGuichet) => {
+        const code = codeGuichet?.trim().toUpperCase();
+        const maintenant = new Date().toISOString();
+        set({
+          colis: get().colis.map((c) =>
+            c.id === id
+              ? {
+                  ...c,
+                  statut: 'DEPOSE',
+                  deposeLe: maintenant,
+                  regleLe: maintenant,
+                  ...(code ? { codeRetrait: code, codeDuGuichet: true } : {}),
+                }
+              : c,
+          ),
+        });
       },
 
       marquerCodePartage: (id) =>

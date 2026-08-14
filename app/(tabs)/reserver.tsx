@@ -12,6 +12,7 @@ import {
   Ecran,
   EnAttenteDeLaCompagnie,
   EnTeteRetour,
+  MessageErreur,
   Section,
   Trait,
   Txt,
@@ -28,6 +29,7 @@ import {
   identifiantDepart,
   ligneParId,
 } from '../../src/data/reseau';
+import { useAction } from '../../src/lib/action';
 import { decalerHeure, montant } from '../../src/lib/format';
 import { departsDuJour } from '../../src/lib/departs';
 import { etatFonction } from '../../src/lib/disponibilite';
@@ -55,7 +57,6 @@ export default function Reserver() {
   const voyageur = useApp((e) => e.voyageur);
   const statut = useStatutService();
 
-  const [enCours, setEnCours] = useState(false);
   const [etape, setEtape] = useState<Etape>('LIGNE');
   const [ligneId, setLigneId] = useState<string | null>(null);
   const [date, setDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -97,11 +98,14 @@ export default function Reserver() {
    * Orange Money, aux vraies coordonnées affichées sur le billet, et le retrait au
    * guichet. Rien n'est facturé ni confirmé automatiquement — ce serait faux sans le
    * système de la compagnie. Les rappels sont programmés dès la création.
+   *
+   * Passé par `useAction` : un double appui sur « Créer ma réservation » ne crée
+   * qu'une seule place retenue, et un échec d'écriture se voit au lieu de laisser
+   * l'écran figé.
    */
-  const creerReservation = async () => {
-    if (!ligne || !heure || !voyageur || enCours) return;
-    setEnCours(true);
-    const reservation = await creer({
+  const reservation = useAction(async () => {
+    if (!ligne || !heure || !voyageur) return;
+    const creee = await creer({
       voyageurId: voyageur.id,
       departId: identifiantDepart(ligne.id, date, heure, classe),
       ligneId: ligne.id,
@@ -112,10 +116,14 @@ export default function Reserver() {
       siege,
       montant: ligne.tarifs[classe],
     });
-    await programmerRappels(reservation);
-    setEnCours(false);
-    router.push(`/billet/${reservation.id}`);
-  };
+    /*
+     * Un rappel qui ne se programme pas — permission refusée, quota du système —
+     * ne doit pas faire échouer une réservation déjà enregistrée. Le voyageur
+     * perdrait son billet des yeux pour une notification manquante.
+     */
+    await programmerRappels(creee).catch(() => undefined);
+    router.push(`/billet/${creee.id}`);
+  }, "La réservation n'a pas pu être enregistrée. Réessayez dans un instant.");
 
   if (params.scan) {
     return <PanneauScan onFermer={() => router.setParams({ scan: undefined })} />;
@@ -364,11 +372,13 @@ export default function Reserver() {
             </View>
           </Carte>
 
+          <MessageErreur texte={reservation.erreur} />
+
           <Bouton
-            titre={enCours ? 'Création…' : 'Créer ma réservation'}
+            titre={reservation.enCours ? 'Création…' : 'Créer ma réservation'}
             sousTitre={`${montant(ligne.tarifs[classe])} · à payer par Orange Money`}
-            desactive={enCours}
-            onPress={creerReservation}
+            desactive={reservation.enCours}
+            onPress={reservation.lancer}
           />
         </Animated.View>
       ) : null}
@@ -468,13 +478,16 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
   const [classeTicket, setClasseTicket] = useState<Classe>('ORDINAIRE');
   const [siegeTicket, setSiegeTicket] = useState('');
   const [montantTicket, setMontantTicket] = useState('');
-  const [enCours, setEnCours] = useState(false);
 
   const ligne = ligneParId(ligneId);
 
-  const importerTicket = async () => {
-    if (!reference.trim() || enCours) return;
-    setEnCours(true);
+  /*
+   * Sans verrou, deux appuis sur « Ajouter à mes voyages » importeraient deux fois
+   * le même ticket papier : l'historique afficherait un voyage en double et les
+   * compteurs de fidélité seraient faux.
+   */
+  const importation = useAction(async () => {
+    if (!reference.trim()) return;
     const r = await importer({
       reference: reference.trim(),
       ligneId,
@@ -484,9 +497,8 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
       siege: siegeTicket ? Number(siegeTicket.replace(/\D/g, '')) : null,
       montant: montantTicket ? Number(montantTicket.replace(/\D/g, '')) : ligne?.tarifs[classeTicket] ?? 0,
     });
-    setEnCours(false);
     router.replace(`/billet/${r.id}`);
-  };
+  }, "Le ticket n'a pas pu être ajouté. Vérifiez les informations et réessayez.");
 
   /**
    * Retour depuis la saisie : on revient au scan plutôt que de tout fermer. Les
@@ -573,10 +585,12 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
             />
           </Carte>
 
+          <MessageErreur texte={importation.erreur} />
+
           <Bouton
-            titre={enCours ? 'Ajout…' : 'Ajouter à mes voyages'}
-            desactive={!reference.trim() || enCours}
-            onPress={importerTicket}
+            titre={importation.enCours ? 'Ajout…' : 'Ajouter à mes voyages'}
+            desactive={!reference.trim() || importation.enCours}
+            onPress={importation.lancer}
           />
           <Bouton titre="Rescanner" variante="fantome" onPress={() => setPhase('SCAN')} />
         </Animated.View>

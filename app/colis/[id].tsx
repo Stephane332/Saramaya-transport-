@@ -13,16 +13,33 @@ import { fr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import QRCode from 'react-native-qrcode-svg';
-import { Bouton, Carte, Ecran, Section, Trait, Txt } from '../../src/components/base';
+import {
+  Bouton,
+  Carte,
+  Ecran,
+  MessageErreur,
+  Section,
+  Trait,
+  Txt,
+} from '../../src/components/base';
 import { ETAPES_SUIVI, FORMATS_COLIS, SEUIL_DECLARATION } from '../../src/data/colis';
 import { gareParId } from '../../src/data/reseau';
-import { etapeCourante, partagerParWhatsApp, relanceNecessaire } from '../../src/lib/colis';
+import { useAction } from '../../src/lib/action';
+import { etapeCourante, relanceNecessaire } from '../../src/lib/colis';
+import { partagerParWhatsApp } from '../../src/lib/partage';
 import { montant, telephone } from '../../src/lib/format';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
+import type { MoyenPaiement } from '../../src/types';
+
+const LIBELLES_PAIEMENT: Record<MoyenPaiement, string> = {
+  ORANGE_MONEY: 'Orange Money',
+  MOOV_MONEY: 'Moov Money',
+  ESPECES_GUICHET: 'Espèces au guichet',
+};
 
 export default function DetailColis() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,9 +47,31 @@ export default function DetailColis() {
   const colis = useApp((e) => e.colis);
   const voyageur = useApp((e) => e.voyageur);
   const marquerCodePartage = useApp((e) => e.marquerCodePartage);
-  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const marquerColisDepose = useApp((e) => e.marquerColisDepose);
+  const [codeGuichet, setCodeGuichet] = useState('');
+  const [depotDemande, setDepotDemande] = useState(false);
 
   const c = colis.find((x) => x.id === id);
+
+  /*
+   * Les crochets d'action sont déclarés avant la sortie anticipée : React exige le
+   * même nombre de crochets à chaque rendu, et un colis introuvable ne doit pas
+   * changer cet ordre.
+   */
+  const partage = useAction(async () => {
+    if (!c || !voyageur) return;
+    const ok = await partagerParWhatsApp(c, `${voyageur.nom} ${voyageur.prenom}`);
+    if (!ok) throw new Error("Ni WhatsApp ni les SMS n'ont pu être ouverts sur ce téléphone.");
+    marquerCodePartage(c.id);
+  }, "Le message n'a pas pu être ouvert. Vous pouvez dicter le code au destinataire.");
+
+  const depot = useAction(async () => {
+    if (!c) return;
+    await marquerColisDepose(c.id, codeGuichet);
+    setDepotDemande(false);
+    setCodeGuichet('');
+  }, "Le dépôt n'a pas pu être enregistré. Réessayez dans un instant.");
+
   if (!c || !voyageur) {
     return (
       <Ecran>
@@ -46,13 +85,7 @@ export default function DetailColis() {
   const arrivee = gareParId(c.gareArriveeId);
   const etape = etapeCourante(c.statut);
   const aRelancer = relanceNecessaire(c);
-
-  const partager = async () => {
-    setEnvoiEnCours(true);
-    const ok = await partagerParWhatsApp(c, `${voyageur.nom} ${voyageur.prenom}`);
-    if (ok) marquerCodePartage(c.id);
-    setEnvoiEnCours(false);
-  };
+  const aDeposer = c.statut === 'A_DEPOSER';
 
   return (
     <Ecran>
@@ -65,26 +98,121 @@ export default function DetailColis() {
         </Txt>
       </View>
 
-      {/* Le code de retrait, en très grand : c'est l'information centrale. */}
-      <Animated.View entering={FadeInDown.springify().damping(18)}>
-        <LinearGradient colors={degrades.marque} style={styles.carteCode}>
-          <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
-            CODE DE RETRAIT
-          </Txt>
-          <Txt v="geant" couleur="#fff" style={{ letterSpacing: 4, fontSize: 44 }}>
-            {c.codeRetrait}
-          </Txt>
-          <Txt v="petit" couleur="rgba(255,255,255,0.85)" style={{ textAlign: 'center' }}>
-            À présenter au guichet de {arrivee?.nom}, avec une pièce d'identité
-          </Txt>
-          <View style={styles.cadreQr}>
-            <QRCode value={c.codeRetrait} size={92} backgroundColor="#FFFFFF" color="#0A070E" />
-          </View>
-        </LinearGradient>
-      </Animated.View>
+      {/*
+        Tant que le colis n'est pas déposé, on n'affiche pas un code de retrait
+        comme s'il était valable : le guichet ne le connaît pas encore, et il peut
+        en remettre un autre. On montre donc le récapitulatif du dépôt.
+      */}
+      {aDeposer ? (
+        <Animated.View entering={FadeInDown.springify().damping(18)}>
+          <LinearGradient colors={degrades.marque} style={styles.carteCode}>
+            <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
+              À REMETTRE AU GUICHET
+            </Txt>
+            <Txt v="titre" couleur="#fff" style={{ textAlign: 'center' }}>
+              {depart?.nom}
+            </Txt>
+            <Txt v="geant" couleur="#fff" style={{ fontSize: 34 }}>
+              {montant(c.montant)}
+            </Txt>
+            <Txt v="petit" couleur="rgba(255,255,255,0.85)" style={{ textAlign: 'center' }}>
+              Montant estimé, à confirmer au pesage · réf. {c.reference}
+            </Txt>
+          </LinearGradient>
+        </Animated.View>
+      ) : (
+        /* Le code de retrait, en très grand : c'est l'information centrale. */
+        <Animated.View entering={FadeInDown.springify().damping(18)}>
+          <LinearGradient colors={degrades.marque} style={styles.carteCode}>
+            <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
+              CODE DE RETRAIT
+            </Txt>
+            <Txt v="geant" couleur="#fff" style={{ letterSpacing: 4, fontSize: 44 }}>
+              {c.codeRetrait}
+            </Txt>
+            <Txt v="petit" couleur="rgba(255,255,255,0.85)" style={{ textAlign: 'center' }}>
+              À présenter au guichet de {arrivee?.nom}, avec une pièce d'identité
+            </Txt>
+            <View style={styles.cadreQr}>
+              <QRCode value={c.codeRetrait} size={92} backgroundColor="#FFFFFF" color="#0A070E" />
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      )}
+
+      {/*
+        L'étape qui manquait : le passage au guichet. C'est l'expéditeur qui le
+        déclare, faute de lien avec le système de la compagnie — et c'est là qu'on
+        récupère le code que le guichet lui a remis, s'il en a remis un.
+      */}
+      {aDeposer ? (
+        <Animated.View entering={FadeIn} style={{ gap: espace.md }}>
+          <Carte style={{ borderColor: 'rgba(245,165,36,0.4)', gap: espace.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.sm }}>
+              <Ionicons name="storefront" size={18} color={couleurs.attention} />
+              <Txt v="corpsFort" couleur={couleurs.attention}>
+                Colis pas encore déposé
+              </Txt>
+            </View>
+            <Txt v="petit" couleur={couleurs.texteDoux}>
+              Présentez cet écran au guichet de {depart?.nom} : tout y est, l'agent n'a rien à
+              vous redemander. Le colis est pesé, réglé, et enregistré. Vous pourrez alors
+              envoyer le code au destinataire.
+            </Txt>
+            {depart?.telephones[0] ? (
+              <Bouton
+                titre={`Appeler la gare · ${depart.telephones[0]}`}
+                variante="secondaire"
+                icone={<Ionicons name="call-outline" size={18} color={couleurs.texteDoux} />}
+                onPress={() => Linking.openURL(`tel:${depart.telephones[0]?.replace(/\s/g, '')}`)}
+              />
+            ) : null}
+          </Carte>
+
+          {!depotDemande ? (
+            <Bouton
+              titre="J'ai déposé le colis"
+              sousTitre="À faire une fois le colis remis et réglé au guichet"
+              variante="succes"
+              onPress={() => setDepotDemande(true)}
+            />
+          ) : (
+            <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
+              <Carte style={{ gap: espace.md }}>
+                <Txt v="corpsFort">Le guichet vous a-t-il donné un code ?</Txt>
+                <Txt v="petit" couleur={couleurs.texteFaible}>
+                  Si oui, recopiez-le : c'est celui-là que le destinataire présentera. Sinon,
+                  laissez vide, celui de l'application est conservé.
+                </Txt>
+                <TextInput
+                  value={codeGuichet}
+                  onChangeText={setCodeGuichet}
+                  placeholder={c.codeRetrait}
+                  placeholderTextColor="rgba(255,255,255,0.22)"
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  style={styles.saisieCode}
+                />
+              </Carte>
+              <MessageErreur texte={depot.erreur} />
+              <Bouton
+                titre={depot.enCours ? 'Enregistrement…' : 'Confirmer le dépôt'}
+                variante="succes"
+                desactive={depot.enCours}
+                onPress={depot.lancer}
+              />
+              <Bouton
+                titre="Pas encore"
+                variante="fantome"
+                onPress={() => setDepotDemande(false)}
+              />
+            </Animated.View>
+          )}
+        </Animated.View>
+      ) : null}
 
       {/* Le geste central : transmettre le code. */}
-      {!c.codePartage ? (
+      {aDeposer ? null : !c.codePartage ? (
         <Animated.View entering={FadeIn} style={{ gap: espace.md }}>
           <Carte style={{ borderColor: 'rgba(245,165,36,0.4)' }}>
             <Txt v="corpsFort" couleur={couleurs.attention}>
@@ -95,13 +223,14 @@ export default function DetailColis() {
               reste qu'à l'envoyer.
             </Txt>
           </Carte>
+          <MessageErreur texte={partage.erreur} />
           <Bouton
-            titre={envoiEnCours ? 'Ouverture de WhatsApp…' : 'Envoyer le code par WhatsApp'}
+            titre={partage.enCours ? 'Ouverture de WhatsApp…' : 'Envoyer le code par WhatsApp'}
             sousTitre={`À ${c.destinataireNom} · ${telephone(c.destinataireTelephone)}`}
             variante="succes"
-            desactive={envoiEnCours}
+            desactive={partage.enCours}
             icone={<Ionicons name="logo-whatsapp" size={20} color="#fff" />}
-            onPress={partager}
+            onPress={partage.lancer}
           />
         </Animated.View>
       ) : (
@@ -113,11 +242,13 @@ export default function DetailColis() {
               dès que le colis arrivera.
             </Txt>
           </View>
+          <MessageErreur texte={partage.erreur} />
           <Bouton
             titre="Renvoyer le code"
             variante="fantome"
+            desactive={partage.enCours}
             icone={<Ionicons name="logo-whatsapp" size={18} color={couleurs.texteDoux} />}
-            onPress={partager}
+            onPress={partage.lancer}
           />
         </Carte>
       )}
@@ -198,9 +329,34 @@ export default function DetailColis() {
         <Trait />
         <Rangee gauche="Retrait" droite={arrivee?.nom ?? '—'} />
         <Trait />
-        <Rangee gauche="Déposé le" droite={format(parseISO(c.deposeLe), 'd MMM à HH:mm', { locale: fr })} />
+        <Rangee
+          gauche="Préparé le"
+          droite={format(parseISO(c.prepareLe), 'd MMM à HH:mm', { locale: fr })}
+        />
+        {c.deposeLe ? (
+          <>
+            <Trait />
+            <Rangee
+              gauche="Déposé le"
+              droite={format(parseISO(c.deposeLe), 'd MMM à HH:mm', { locale: fr })}
+            />
+          </>
+        ) : null}
         <Trait />
-        <Rangee gauche="Payé" droite={montant(c.montant)} />
+        {/*
+          Le montant n'est jamais présenté comme encaissé tant qu'il ne l'a pas été.
+          L'application ne prélève rien : elle ne peut que rapporter ce que
+          l'expéditeur déclare avoir réglé au guichet.
+        */}
+        <Rangee
+          gauche={c.regleLe ? 'Réglé au guichet' : 'À régler au dépôt'}
+          droite={montant(c.montant)}
+        />
+        {c.moyenPaiement && !c.regleLe ? (
+          <Txt v="minuscule" couleur={couleurs.texteFaible}>
+            PAIEMENT PRÉVU · {LIBELLES_PAIEMENT[c.moyenPaiement].toUpperCase()}
+          </Txt>
+        ) : null}
       </Carte>
 
       <Section>Destinataire</Section>
@@ -259,6 +415,16 @@ const styles = StyleSheet.create({
     borderRadius: rayon.md,
     padding: espace.sm,
     marginTop: espace.sm,
+  },
+  saisieCode: {
+    color: couleurs.texte,
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 3,
+    textAlign: 'center',
+    paddingVertical: espace.md,
+    borderRadius: rayon.md,
+    backgroundColor: couleurs.surfaceBasse,
   },
   etapeRangee: { flexDirection: 'row', gap: espace.md },
   pastilleEtape: {

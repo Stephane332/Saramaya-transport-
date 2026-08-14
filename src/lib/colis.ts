@@ -3,11 +3,14 @@
  *
  * C'est le geste que la compagnie fait déjà : donner un code à l'expéditeur, qui
  * l'envoie par WhatsApp. L'application ne change pas l'habitude, elle la rend
- * fiable — le code est généré, partagé en un geste, et le destinataire est
- * prévenu quand le colis arrive réellement.
+ * fiable — le code est généré, transmis en un geste, et le colis se suit du dépôt
+ * jusqu'au retrait.
+ *
+ * Tout ce fichier est du calcul pur : aucune dépendance au téléphone, donc tout
+ * est vérifiable par `npm test`. L'ouverture de WhatsApp, elle, vit dans
+ * `partage.ts`.
  */
 
-import { Linking, Platform } from 'react-native';
 import { gareParId } from '../data/reseau';
 import type { Colis } from '../types';
 
@@ -44,7 +47,14 @@ export function messageDestinataire(colis: Colis, nomExpediteur: string): string
     arrivee?.telephones[0] ? `Téléphone de la gare : ${arrivee.telephones[0]}` : null,
     ``,
     `Présentez ce code et une pièce d'identité au guichet.`,
-    `Vous serez prévenu dès que le colis arrive.`,
+    /*
+     * Aucune promesse d'alerte automatique : le destinataire n'a pas cette
+     * application, et la compagnie seule peut le prévenir. On donne donc ce qui
+     * marche vraiment aujourd'hui — le numéro de la gare, écrit plus haut.
+     */
+    arrivee?.telephones[0]
+      ? `Vous pouvez appeler la gare pour savoir si le colis est arrivé.`
+      : null,
   ]
     .filter((l) => l !== null)
     .join('\n');
@@ -57,45 +67,22 @@ export function numeroInternational(telephone: string): string {
   return `226${chiffres}`;
 }
 
-/**
- * Ouvre WhatsApp sur la conversation du destinataire, message déjà écrit.
- * Si WhatsApp n'est pas installé, on retombe sur un SMS.
- */
-export async function partagerParWhatsApp(
-  colis: Colis,
-  nomExpediteur: string,
-): Promise<boolean> {
-  const texte = messageDestinataire(colis, nomExpediteur);
-  const numero = numeroInternational(colis.destinataireTelephone);
-  const lien = `https://wa.me/${numero}?text=${encodeURIComponent(texte)}`;
-
-  try {
-    await Linking.openURL(lien);
-    return true;
-  } catch {
-    const separateur = Platform.OS === 'ios' ? '&' : '?';
-    try {
-      await Linking.openURL(`sms:${numero}${separateur}body=${encodeURIComponent(texte)}`);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-}
-
 /** Position du colis dans le suivi, pour dessiner la frise. */
 export function etapeCourante(statut: Colis['statut']): number {
   switch (statut) {
+    case 'A_DEPOSER':
+      return 0;
     case 'DEPOSE':
-      return 0;
-    case 'EN_TRANSIT':
       return 1;
-    case 'ARRIVE':
+    case 'EN_TRANSIT':
       return 2;
-    case 'RETIRE':
+    case 'ARRIVE':
       return 3;
+    case 'RETIRE':
+      return 4;
     default:
-      return 0;
+      // Retour à l'expéditeur : le parcours normal s'arrête, on reste au dépôt.
+      return 1;
   }
 }
 

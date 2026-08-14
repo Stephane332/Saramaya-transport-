@@ -49,10 +49,12 @@ import {
   Carte,
   EnAttenteDeLaCompagnie,
   EnTeteRetour,
+  MessageErreur,
   Section,
   Trait,
   Txt,
 } from '../src/components/base';
+import { useAction } from '../src/lib/action';
 import { joursAvantExpirationCnib, lireBandeTD1, type IdentiteLue } from '../src/lib/cnib';
 import { programmerRappelsCnib } from '../src/lib/notifications';
 import { useApp } from '../src/store/useApp';
@@ -92,13 +94,30 @@ export default function EcranCnib() {
     setExpiration(resultat.identite.dateExpiration);
   };
 
-  const prendrePhoto = async () => {
-    const cliche = await camera.current?.takePictureAsync({ quality: 0.7 });
-    if (cliche?.uri) setPhoto(cliche.uri);
-    setAppareilOuvert(false);
-  };
+  const acces = useAction(async () => {
+    if (!permission?.granted) {
+      const accord = await demanderPermission();
+      if (!accord.granted) {
+        throw new Error(
+          "L'accès à l'appareil photo a été refusé. Autorisez-le dans les réglages du téléphone, ou recopiez la bande du dos ci-dessous.",
+        );
+      }
+    }
+    setAppareilOuvert(true);
+  }, "L'appareil photo n'a pas pu être ouvert. Recopiez la bande du dos ci-dessous.");
 
-  const enregistrer = async () => {
+  const photographie = useAction(async () => {
+    try {
+      const cliche = await camera.current?.takePictureAsync({ quality: 0.7 });
+      if (cliche?.uri) setPhoto(cliche.uri);
+    } finally {
+      // On referme la caméra dans tous les cas : un échec de capture ne doit pas
+      // enfermer le voyageur dans un écran noir sans issue.
+      setAppareilOuvert(false);
+    }
+  }, "La photo n'a pas pu être prise. Réessayez, ou recopiez la bande du dos.");
+
+  const enregistrement = useAction(async () => {
     const dateValide = /^\d{4}-\d{2}-\d{2}$/.test(expiration);
     mettreAJourProfil({
       cnib: numero.trim() || undefined,
@@ -106,9 +125,11 @@ export default function EcranCnib() {
       cnibExpireLe: dateValide ? expiration : undefined,
       ...(lu?.dateNaissance ? { dateNaissance: lu.dateNaissance } : {}),
     });
-    if (dateValide) await programmerRappelsCnib(expiration);
+    // Le rappel est un confort : son échec ne doit pas empêcher l'enregistrement
+    // de la carte, qui, lui, sert au contrôle à la gare.
+    if (dateValide) await programmerRappelsCnib(expiration).catch(() => undefined);
     router.back();
-  };
+  }, "Vos informations n'ont pas pu être enregistrées. Réessayez dans un instant.");
 
   const jours = /^\d{4}-\d{2}-\d{2}$/.test(expiration)
     ? joursAvantExpirationCnib(expiration)
@@ -122,7 +143,11 @@ export default function EcranCnib() {
           <Txt v="petit" couleur="#fff" style={{ textAlign: 'center' }}>
             Cadrez le dos de la carte, bien à plat et bien éclairé.
           </Txt>
-          <Bouton titre="Prendre la photo" onPress={prendrePhoto} />
+          <Bouton
+            titre={photographie.enCours ? 'Capture…' : 'Prendre la photo'}
+            desactive={photographie.enCours}
+            onPress={photographie.lancer}
+          />
           <Bouton titre="Annuler" variante="fantome" onPress={() => setAppareilOuvert(false)} />
         </View>
       </View>
@@ -169,16 +194,13 @@ export default function EcranCnib() {
             <Bouton
               titre="Photographier ma CNIB"
               sousTitre="Bien à plat, bien éclairée, les deux faces si possible"
+              desactive={acces.enCours}
               icone={<Ionicons name="camera-outline" size={18} color={couleurs.texte} />}
-              onPress={async () => {
-                if (!permission?.granted) {
-                  const accord = await demanderPermission();
-                  if (!accord.granted) return;
-                }
-                setAppareilOuvert(true);
-              }}
+              onPress={acces.lancer}
             />
           )}
+
+          <MessageErreur texte={acces.erreur ?? photographie.erreur} />
 
           <EnAttenteDeLaCompagnie
             promesse="Vos informations remplies automatiquement à partir de la photo."
@@ -277,12 +299,13 @@ export default function EcranCnib() {
           </Carte>
         </ScrollView>
 
-        <View style={[styles.barreBas, { paddingBottom: insets.bottom + espace.md }]}>
+        <View style={[styles.barreBas, { paddingBottom: insets.bottom + espace.md, gap: espace.sm }]}>
+          <MessageErreur texte={enregistrement.erreur} />
           <Bouton
-            titre="Enregistrer"
+            titre={enregistrement.enCours ? 'Enregistrement…' : 'Enregistrer'}
             sousTitre={numero.trim() ? undefined : 'Renseignez au moins le numéro'}
-            desactive={!numero.trim()}
-            onPress={enregistrer}
+            desactive={!numero.trim() || enregistrement.enCours}
+            onPress={enregistrement.lancer}
           />
         </View>
       </KeyboardAvoidingView>

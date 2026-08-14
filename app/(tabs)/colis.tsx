@@ -11,13 +11,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import {
   Bouton,
   Carte,
   Ecran,
   EnTeteRetour,
+  MessageErreur,
   Section,
   Trait,
   Txt,
@@ -29,6 +30,7 @@ import {
   GARE_DEPART_DEFAUT,
   gareParId,
 } from '../../src/data/reseau';
+import { useAction } from '../../src/lib/action';
 import { montant } from '../../src/lib/format';
 import { useRetourMateriel } from '../../src/lib/retour';
 import { useApp } from '../../src/store/useApp';
@@ -36,6 +38,7 @@ import { couleurs, degrades, espace, rayon } from '../../src/theme';
 import type { Colis, MoyenPaiement, TailleColis } from '../../src/types';
 
 const ETIQUETTES: Record<Colis['statut'], { texte: string; couleur: string }> = {
+  A_DEPOSER: { texte: 'À déposer', couleur: couleurs.attention },
   DEPOSE: { texte: 'Déposé', couleur: couleurs.classique },
   EN_TRANSIT: { texte: 'En route', couleur: couleurs.attention },
   ARRIVE: { texte: 'À retirer', couleur: couleurs.succes },
@@ -70,7 +73,7 @@ export default function EcranColis() {
               Envoyer un colis
             </Txt>
             <Txt v="petit" couleur="rgba(255,255,255,0.85)">
-              Le code part au destinataire par WhatsApp
+              Préparez tout ici, déposez au guichet, partagez le code
             </Txt>
           </View>
           <Ionicons name="arrow-forward" size={20} color="#fff" />
@@ -164,7 +167,14 @@ function CarteColis({
           </Txt>
         </View>
 
-        {!colis.codePartage ? (
+        {colis.statut === 'A_DEPOSER' ? (
+          <View style={styles.alerteCode}>
+            <Ionicons name="storefront-outline" size={14} color={couleurs.attention} />
+            <Txt v="minuscule" couleur={couleurs.attention}>
+              À REMETTRE ET À RÉGLER AU GUICHET
+            </Txt>
+          </View>
+        ) : !colis.codePartage ? (
           <View style={styles.alerteCode}>
             <Ionicons name="logo-whatsapp" size={14} color={couleurs.attention} />
             <Txt v="minuscule" couleur={couleurs.attention}>
@@ -190,7 +200,7 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
   const [tel, setTel] = useState('');
   const [description, setDescription] = useState('');
   const [valeur, setValeur] = useState('');
-  const [enPaiement, setEnPaiement] = useState<MoyenPaiement | null>(null);
+  const [moyenPrevu, setMoyenPrevu] = useState<MoyenPaiement>('ORANGE_MONEY');
 
   const distance = useMemo(() => {
     const a = gareParId(gareDepartId);
@@ -205,9 +215,16 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
   const complet =
     nom.trim().length > 1 && tel.replace(/\D/g, '').length >= 8 && gareDepartId !== gareArriveeId;
 
-  const valider = async (moyen: MoyenPaiement) => {
-    if (!complet || enPaiement) return;
-    setEnPaiement(moyen);
+  /*
+   * Préparer, pas payer.
+   *
+   * Cet écran affichait auparavant « Paiement en cours… » pendant 1,2 seconde, puis
+   * annonçait le colis payé et déposé. Rien de tout cela n'avait eu lieu : aucun
+   * franc n'a quitté le téléphone, aucun colis n'a été remis. Le règlement se fait
+   * au guichet, au moment du dépôt — c'est ce que l'écran dit maintenant.
+   */
+  const preparation = useAction(async () => {
+    if (!complet) return;
     const colis = await envoyerColis(
       {
         destinataireNom: nom.trim(),
@@ -219,12 +236,10 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
         valeurDeclaree: valeurNombre,
         montant: prix,
       },
-      moyen,
+      moyenPrevu,
     );
-    await new Promise((r) => setTimeout(r, 1200));
-    setEnPaiement(null);
     router.push(`/colis/${colis.id}`);
-  };
+  }, "L'envoi n'a pas pu être préparé. Réessayez dans un instant.");
 
   useRetourMateriel(true, onFermer);
 
@@ -302,10 +317,10 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
         ) : null}
       </Carte>
 
-      <Section>Paiement</Section>
+      <Section>À régler au dépôt</Section>
       <LinearGradient colors={degrades.marqueDouce} style={styles.montantAPayer}>
         <Txt v="minuscule" couleur={couleurs.texteFaible}>
-          MONTANT À RÉGLER
+          MONTANT ESTIMÉ
         </Txt>
         <Txt v="geant" couleur={couleurs.marqueVif}>
           {montant(prix)}
@@ -316,29 +331,59 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
         </Txt>
       </LinearGradient>
 
-      {enPaiement ? (
-        <Carte>
-          <View style={{ alignItems: 'center', gap: espace.md, paddingVertical: espace.lg }}>
-            <ActivityIndicator color={couleurs.marqueVif} size="large" />
-            <Txt v="corpsFort">Paiement en cours…</Txt>
-          </View>
-        </Carte>
-      ) : (
-        <>
-          <Bouton
-            titre="Payer par Orange Money"
-            sousTitre={complet ? montant(prix) : 'Complétez les informations du destinataire'}
-            desactive={!complet}
-            onPress={() => valider('ORANGE_MONEY')}
-          />
-          <Bouton
-            titre="Payer au guichet"
-            variante="secondaire"
-            desactive={!complet}
-            onPress={() => valider('ESPECES_GUICHET')}
-          />
-        </>
-      )}
+      {/*
+        Le moyen de paiement est une intention, notée d'avance pour aller plus vite
+        au guichet. L'application ne prélève rien : elle n'a pas de compte marchand,
+        et faire croire le contraire serait le pire des mensonges à un expéditeur.
+      */}
+      <View style={styles.formats}>
+        {(
+          [
+            { moyen: 'ORANGE_MONEY' as const, libelle: 'Orange Money', icone: 'phone-portrait' },
+            { moyen: 'ESPECES_GUICHET' as const, libelle: 'Espèces', icone: 'cash' },
+          ] satisfies { moyen: MoyenPaiement; libelle: string; icone: string }[]
+        ).map((o) => {
+          const actif = o.moyen === moyenPrevu;
+          return (
+            <Pressable key={o.moyen} style={{ flex: 1 }} onPress={() => setMoyenPrevu(o.moyen)}>
+              <View style={[styles.format, actif && styles.formatActif]}>
+                <Ionicons
+                  name={o.icone as never}
+                  size={20}
+                  color={actif ? couleurs.marqueVif : couleurs.texteFaible}
+                />
+                <Txt v="minuscule" couleur={actif ? couleurs.texte : couleurs.texteFaible}>
+                  {o.libelle.toUpperCase()}
+                </Txt>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Carte>
+        <View style={{ flexDirection: 'row', gap: espace.sm }}>
+          <Ionicons name="information-circle" size={18} color={couleurs.classique} />
+          <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
+            Rien n'est prélevé ici. L'application prépare l'envoi et vous donne un
+            récapitulatif à présenter au guichet : c'est là que le colis est remis, pesé,
+            réglé, et que le tarif exact est confirmé.
+          </Txt>
+        </View>
+      </Carte>
+
+      <MessageErreur texte={preparation.erreur} />
+
+      <Bouton
+        titre={preparation.enCours ? 'Préparation…' : "Préparer l'envoi"}
+        sousTitre={
+          complet
+            ? `${montant(prix)} à régler au guichet de ${gareParId(gareDepartId)?.ville}`
+            : 'Complétez les informations du destinataire'
+        }
+        desactive={!complet || preparation.enCours}
+        onPress={preparation.lancer}
+      />
     </Ecran>
   );
 }

@@ -38,8 +38,17 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bus3D } from '../src/components/Bus3D';
-import { Bouton, Carte, EnTeteRetour, Section, Trait, Txt } from '../src/components/base';
+import {
+  Bouton,
+  Carte,
+  EnTeteRetour,
+  MessageErreur,
+  Section,
+  Trait,
+  Txt,
+} from '../src/components/base';
 import { CONTACTS_COMPAGNIE } from '../src/data/reseau';
+import { useAction } from '../src/lib/action';
 import { extraireBandeDepuisTexte, lireBandeTD1 } from '../src/lib/cnib';
 import { programmerRappelsCnib } from '../src/lib/notifications';
 import { lireTexteImage } from '../src/lib/ocr';
@@ -99,9 +108,32 @@ export default function Bienvenue() {
     return true;
   };
 
-  const prendrePhoto = async () => {
-    const cliche = await camera.current?.takePictureAsync({ quality: 0.8 });
-    setAppareilOuvert(false);
+  /*
+   * Demander l'accès à l'appareil puis l'ouvrir : deux gestes du système, donc deux
+   * occasions d'échouer. Un refus se dit ; une erreur ne doit pas laisser le bouton
+   * sans réaction.
+   */
+  const acces = useAction(async () => {
+    if (!permission?.granted) {
+      const accord = await demanderPermission();
+      if (!accord.granted) {
+        throw new Error(
+          "L'accès à l'appareil photo a été refusé. Autorisez-le dans les réglages du téléphone, ou recopiez la bande du dos ci-dessous.",
+        );
+      }
+    }
+    setAppareilOuvert(true);
+  }, "L'appareil photo n'a pas pu être ouvert. Recopiez la bande du dos ci-dessous.");
+
+  const photographie = useAction(async () => {
+    let cliche: { uri?: string } | undefined;
+    try {
+      cliche = await camera.current?.takePictureAsync({ quality: 0.8 });
+    } finally {
+      // Quoi qu'il arrive — appareil occupé, mémoire pleine, permission retirée en
+      // cours de route — on ne laisse personne coincé devant une caméra muette.
+      setAppareilOuvert(false);
+    }
     if (!cliche?.uri) return;
     setPhoto(cliche.uri);
     setLecture('encours');
@@ -122,9 +154,14 @@ export default function Bienvenue() {
     }
     setBande(bandeTrouvee);
     appliquerBande(bandeTrouvee);
-  };
+  }, "La photo n'a pas pu être prise. Réessayez, ou recopiez la bande du dos de la carte.");
 
-  const ouvrirCompte = async () => {
+  /*
+   * L'ouverture de compte est l'action la moins rattrapable de l'application : si
+   * elle échoue en silence, le bouton reste inerte et le nouveau venu abandonne
+   * avant même d'avoir vu un écran utile.
+   */
+  const ouverture = useAction(async () => {
     if (!complet) return;
     creerCompte({
       prenom: prenom.trim(),
@@ -135,9 +172,11 @@ export default function Bienvenue() {
       cnibExpireLe: DATE_ISO.test(expiration) ? expiration : undefined,
       cnibPhotoUri: photo ?? undefined,
     });
-    if (DATE_ISO.test(expiration)) await programmerRappelsCnib(expiration);
+    // Le rappel d'expiration est un confort : son échec ne doit pas priver le
+    // voyageur du compte qu'il vient de créer.
+    if (DATE_ISO.test(expiration)) await programmerRappelsCnib(expiration).catch(() => undefined);
     router.replace('/');
-  };
+  }, "Le compte n'a pas pu être créé. Réessayez dans un instant.");
 
   /* ── Caméra plein écran ─────────────────────────────────────────────────── */
 
@@ -152,7 +191,11 @@ export default function Bienvenue() {
             Photographiez le dos de votre CNIB, bien à plat et bien éclairé — c'est là que
             se trouvent les lignes de caractères.
           </Txt>
-          <Bouton titre="Prendre la photo" onPress={prendrePhoto} />
+          <Bouton
+            titre={photographie.enCours ? 'Capture…' : 'Prendre la photo'}
+            desactive={photographie.enCours}
+            onPress={photographie.lancer}
+          />
           <Bouton titre="Annuler" variante="fantome" onPress={() => setAppareilOuvert(false)} />
         </View>
       </View>
@@ -226,16 +269,13 @@ export default function Bienvenue() {
             <Bouton
               titre="Photographier ma CNIB"
               sousTitre="Le dos de la carte — reste sur ce téléphone"
+              desactive={acces.enCours}
               icone={<Ionicons name="camera-outline" size={18} color={couleurs.texte} />}
-              onPress={async () => {
-                if (!permission?.granted) {
-                  const accord = await demanderPermission();
-                  if (!accord.granted) return;
-                }
-                setAppareilOuvert(true);
-              }}
+              onPress={acces.lancer}
             />
           )}
+
+          <MessageErreur texte={acces.erreur ?? photographie.erreur} />
 
           {lecture === 'encours' ? (
             <Carte>
@@ -338,12 +378,13 @@ export default function Bienvenue() {
           </View>
         </ScrollView>
 
-        <View style={[styles.barreBas, { paddingBottom: insets.bottom + espace.md }]}>
+        <View style={[styles.barreBas, { paddingBottom: insets.bottom + espace.md, gap: espace.sm }]}>
+          <MessageErreur texte={ouverture.erreur} />
           <Bouton
-            titre="Ouvrir mon compte"
+            titre={ouverture.enCours ? 'Création…' : 'Ouvrir mon compte'}
             sousTitre={complet ? undefined : 'Prénom, nom et téléphone sont nécessaires'}
-            desactive={!complet}
-            onPress={ouvrirCompte}
+            desactive={!complet || ouverture.enCours}
+            onPress={ouverture.lancer}
           />
         </View>
       </KeyboardAvoidingView>

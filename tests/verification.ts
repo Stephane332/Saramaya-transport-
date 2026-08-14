@@ -25,6 +25,13 @@ import {
   lireBandeTD1,
 } from '../src/lib/cnib';
 import { actionsPossibles, billetEmis, etapeReservation } from '../src/lib/parcours';
+import {
+  etapeCourante,
+  messageDestinataire,
+  numeroInternational,
+  relanceNecessaire,
+} from '../src/lib/colis';
+import { migrerEtat } from '../src/store/migration';
 import { calculerFidelite, phraseHabitue } from '../src/lib/fidelite';
 import {
   depuisBase64Url,
@@ -35,7 +42,7 @@ import {
   versOctets,
   versTexte,
 } from '../src/lib/sha256';
-import type { Reservation, Voyageur } from '../src/types';
+import type { Colis, Reservation, Voyageur } from '../src/types';
 
 let reussis = 0;
 let echoues = 0;
@@ -493,6 +500,117 @@ verifier(
   calculerFidelite([]).voyages,
   0,
 );
+
+/* ── Colis : préparer n'est pas déposer, et déposer n'est pas payer ───────── */
+
+groupe("Colis — l'application prépare, le guichet dépose et encaisse");
+
+const colisPrepare: Colis = {
+  id: 'colis-1',
+  reference: 'SB-A1B2C3',
+  codeRetrait: 'ABC-123',
+  expediteurId: 'v-1',
+  destinataireNom: 'OUEDRAOGO Fatimata',
+  destinataireTelephone: '70451288',
+  gareDepartId: 'gare-ouaga-gounghin',
+  gareArriveeId: 'gare-bobo-tounouma',
+  taille: 'PETIT',
+  description: 'Documents',
+  valeurDeclaree: 0,
+  montant: 2500,
+  statut: 'A_DEPOSER',
+  prepareLe: '2026-08-14T10:00:00.000Z',
+  codePartage: false,
+  moyenPaiement: 'ORANGE_MONEY',
+};
+
+// La frise démarre à « À déposer » : rien n'est franchi tant que le colis n'a pas
+// été remis. Auparavant, préparer un envoi l'affichait « Déposé » sur-le-champ.
+verifier('un envoi préparé n’est franchi d’aucune étape de transport', etapeCourante('A_DEPOSER'), 0);
+verifier('déposé vient après', etapeCourante('DEPOSE'), 1);
+verifier('en transit', etapeCourante('EN_TRANSIT'), 2);
+verifier('arrivé', etapeCourante('ARRIVE'), 3);
+verifier('retiré', etapeCourante('RETIRE'), 4);
+
+// Une relance n'a de sens que sur un colis réellement arrivé et qui traîne.
+verifier('aucune relance sur un colis pas encore déposé', relanceNecessaire(colisPrepare), false);
+verifier(
+  'relance après 48 h au guichet d’arrivée',
+  relanceNecessaire(
+    { ...colisPrepare, statut: 'ARRIVE', arriveLe: '2026-08-10T10:00:00.000Z' },
+    new Date('2026-08-14T10:00:00.000Z'),
+  ),
+  true,
+);
+verifier(
+  'pas de relance avant 48 h',
+  relanceNecessaire(
+    { ...colisPrepare, statut: 'ARRIVE', arriveLe: '2026-08-14T00:00:00.000Z' },
+    new Date('2026-08-14T10:00:00.000Z'),
+  ),
+  false,
+);
+
+// Le message au destinataire ne promet rien que l'application ne puisse tenir :
+// elle ne peut pas prévenir quelqu'un qui ne l'a pas installée.
+const message = messageDestinataire(colisPrepare, 'SAWADOGO Ange');
+verifier('le message porte le code de retrait', message.includes('ABC-123'), true);
+verifier('et la référence', message.includes('SB-A1B2C3'), true);
+verifier(
+  'aucune promesse d’alerte automatique au destinataire',
+  /pr[ée]venu d[èe]s que/i.test(message),
+  false,
+);
+verifier('le numéro de la gare est indiqué à la place', message.includes('Téléphone de la gare'), true);
+
+verifier('numéro déjà international laissé intact', numeroInternational('22670451288'), '22670451288');
+verifier('indicatif ajouté sinon', numeroInternational('70 45 12 88'), '22670451288');
+
+/* ── Migration : une mise à jour ne fait perdre aucun voyage ──────────────── */
+
+groupe('Migration — convertir sans rien perdre');
+
+verifier(
+  'un contenu absent donne un état vide exploitable, pas une exception',
+  migrerEtat(undefined, 1),
+  { reservations: [], colis: [], caisse: null },
+);
+
+// Le cas réel : un colis enregistré par l'ancienne version, marqué « déposé » à la
+// seconde où le formulaire avait été validé. Il redevient « à déposer », et sa date
+// de création est conservée comme date de préparation.
+const migre = migrerEtat(
+  {
+    voyageur: { id: 'v-1', nom: 'SAWADOGO', prenom: 'Ange', telephone: '70451288' },
+    reservations: [billetDeBase],
+    colis: [
+      { ...colisPrepare, statut: 'DEPOSE', prepareLe: undefined, deposeLe: '2026-08-01T09:00:00.000Z' },
+      { ...colisPrepare, id: 'colis-2', statut: 'ARRIVE', prepareLe: undefined, deposeLe: '2026-07-01T09:00:00.000Z', arriveLe: '2026-07-02T09:00:00.000Z' },
+    ],
+    rappelsProgrammes: {},
+    caisse: null,
+  },
+  2,
+);
+const colisMigres = migre.colis ?? [];
+
+verifier('aucun colis perdu', colisMigres.length, 2);
+verifier('aucune réservation perdue', (migre.reservations ?? []).length, 1);
+verifier('le compte est conservé', migre.voyageur?.nom, 'SAWADOGO');
+verifier('un colis « déposé » d’office redevient à déposer', colisMigres[0]?.statut, 'A_DEPOSER');
+verifier('sa fausse date de dépôt disparaît', colisMigres[0]?.deposeLe, undefined);
+verifier(
+  'et devient sa date de préparation',
+  colisMigres[0]?.prepareLe,
+  '2026-08-01T09:00:00.000Z',
+);
+// Un colis déjà arrivé a forcément été remis au guichet : on ne le fait pas reculer.
+verifier('un colis déjà en route n’est pas rembobiné', colisMigres[1]?.statut, 'ARRIVE');
+verifier('sa date de dépôt est conservée', colisMigres[1]?.deposeLe, '2026-07-01T09:00:00.000Z');
+
+// Repasser la migration sur un contenu déjà converti ne doit rien changer.
+const deuxiemePassage = migrerEtat(migre, 3);
+verifier('migration déjà faite : rien ne bouge', (deuxiemePassage.colis ?? [])[0]?.statut, 'A_DEPOSER');
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
 process.exit(echoues > 0 ? 1 : 0);

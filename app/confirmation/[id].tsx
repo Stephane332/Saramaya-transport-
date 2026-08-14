@@ -27,8 +27,18 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { BadgeClasse, Bouton, Carte, Ecran, Section, Trait, Txt } from '../../src/components/base';
+import {
+  BadgeClasse,
+  Bouton,
+  Carte,
+  Ecran,
+  MessageErreur,
+  Section,
+  Trait,
+  Txt,
+} from '../../src/components/base';
 import { ligneParId } from '../../src/data/reseau';
+import { useAction } from '../../src/lib/action';
 import { politiqueAnnulation } from '../../src/lib/annulation';
 import { dateHeureConvocation, estProtegee } from '../../src/lib/confirmation';
 import { compteARebours, montant } from '../../src/lib/format';
@@ -84,10 +94,10 @@ function Alarme({ reservationId }: { reservationId: string }) {
   const animCercle = useAnimatedStyle(() => ({ transform: [{ scale: pulsation.value }] }));
   const animLueur = useAnimatedStyle(() => ({ opacity: lueur.value }));
 
-  const repondreOui = async () => {
+  const reponse = useAction(async () => {
     await confirmer(r.id);
     router.replace(`/billet/${r.id}`);
-  };
+  }, "Votre réponse n'a pas pu être enregistrée. Réessayez, ou appelez la gare.");
 
   return (
     <Ecran defilant={false}>
@@ -122,11 +132,13 @@ function Alarme({ reservationId }: { reservationId: string }) {
         </Animated.View>
 
         <Animated.View entering={FadeInDown.delay(300)} style={{ width: '100%', gap: espace.md }}>
+          <MessageErreur texte={reponse.erreur} />
           <Bouton
-            titre="Oui, je viens"
+            titre={reponse.enCours ? 'Enregistrement…' : 'Oui, je viens'}
             sousTitre="Votre place est gardée"
             variante="succes"
-            onPress={repondreOui}
+            desactive={reponse.enCours}
+            onPress={reponse.lancer}
           />
           <Bouton
             titre="Je ne peux pas venir"
@@ -174,10 +186,15 @@ function Annulation({ reservationId }: { reservationId: string }) {
   const politique = politiqueAnnulation(r);
   const [confirmationDemandee, setConfirmationDemandee] = useState(false);
 
-  const annulerVraiment = async () => {
+  /*
+   * L'annulation est irréversible aux yeux du voyageur : si elle échoue en
+   * silence, il croit sa place libérée alors qu'elle est toujours retenue — ou
+   * l'inverse. Elle doit dire ce qui s'est passé.
+   */
+  const annulation = useAction(async () => {
     await annuler(r.id);
     router.replace(`/billet/${r.id}`);
-  };
+  }, "L'annulation n'a pas pu être enregistrée. Votre place est toujours retenue — réessayez.");
 
   return (
     <Ecran>
@@ -256,7 +273,13 @@ function Annulation({ reservationId }: { reservationId: string }) {
               pendant 15 minutes, tant qu'elle n'a pas été réattribuée.
             </Txt>
           </Carte>
-          <Bouton titre="Oui, annuler définitivement" variante="danger" onPress={annulerVraiment} />
+          <MessageErreur texte={annulation.erreur} />
+          <Bouton
+            titre={annulation.enCours ? 'Annulation…' : 'Oui, annuler définitivement'}
+            variante="danger"
+            desactive={annulation.enCours}
+            onPress={annulation.lancer}
+          />
           <Bouton
             titre="Non, garder ma place"
             variante="secondaire"
@@ -278,10 +301,10 @@ function Report({ reservationId }: { reservationId: string }) {
   const ligne = ligneParId(r.ligneId);
   const [date, setDate] = useState(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
 
-  const appliquer = async (heure: string) => {
+  const report = useAction(async (heure: string) => {
     await reporter(r.id, { date, heure });
     router.replace(`/billet/${r.id}`);
-  };
+  }, "Le report n'a pas pu être enregistré. Votre départ initial reste valable — réessayez.");
 
   return (
     <Ecran>
@@ -318,9 +341,10 @@ function Report({ reservationId }: { reservationId: string }) {
       </View>
 
       <Section>Nouveau départ</Section>
+      <MessageErreur texte={report.erreur} />
       {(ligne?.departs ?? []).map((d) => (
-        <Pressable key={d.heure} onPress={() => appliquer(d.heure)}>
-          <Carte style={{ paddingVertical: espace.md }}>
+        <Pressable key={d.heure} disabled={report.enCours} onPress={() => report.lancer(d.heure)}>
+          <Carte style={{ paddingVertical: espace.md, opacity: report.enCours ? 0.5 : 1 }}>
             <View style={styles.entre}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.md }}>
                 <Txt v="sousTitre">{d.heure}</Txt>

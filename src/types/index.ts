@@ -187,7 +187,17 @@ export interface LigneSurveillance {
  * WhatsApp ; rien ne suit le colis, et un code perdu devient un litige.
  */
 
+/**
+ * Cycle de vie d'un colis.
+ *
+ * `A_DEPOSER` est le premier état, et il est important : l'application **prépare**
+ * un envoi, elle ne le dépose pas. Tant que l'expéditeur n'est pas passé au
+ * guichet, rien n'a été remis et rien n'a été payé. Afficher « Déposé » à la
+ * seconde où le formulaire est validé serait le même mensonge que délivrer un
+ * billet avant paiement.
+ */
 export type StatutColis =
+  | 'A_DEPOSER'
   | 'DEPOSE'
   | 'EN_TRANSIT'
   | 'ARRIVE'
@@ -200,8 +210,16 @@ export interface Colis {
   id: string;
   /** Référence interne, comme pour un billet. */
   reference: string;
-  /** Le code que le destinataire présente au guichet pour retirer le colis. */
+  /**
+   * Le code que le destinataire présente au guichet pour retirer le colis.
+   *
+   * Tant que l'application n'est pas reliée au système de la compagnie, c'est le
+   * guichet qui fait foi : s'il remet un autre code au dépôt, c'est celui-là qui
+   * est enregistré ici, par-dessus celui que l'application avait proposé.
+   */
   codeRetrait: string;
+  /** Vrai quand le code vient du guichet, et non de l'application. */
+  codeDuGuichet?: boolean;
 
   expediteurId: string;
   destinataireNom: string;
@@ -217,12 +235,22 @@ export interface Colis {
   montant: number;
 
   statut: StatutColis;
-  deposeLe: string;
+  /** Moment où l'envoi a été préparé dans l'application. */
+  prepareLe: string;
+  /** Renseigné seulement quand le colis a réellement été remis au guichet. */
+  deposeLe?: string;
   arriveLe?: string;
   retireLe?: string;
   /** Vrai dès que le code a été transmis au destinataire. */
   codePartage: boolean;
+  /**
+   * Moyen de paiement **prévu**, pas constaté. Le règlement se fait au dépôt, et
+   * l'application n'a aucun moyen de le vérifier tant qu'elle n'est pas reliée au
+   * système de la compagnie.
+   */
   moyenPaiement?: MoyenPaiement;
+  /** Renseigné quand l'expéditeur déclare avoir réglé au guichet. */
+  regleLe?: string;
 }
 
 

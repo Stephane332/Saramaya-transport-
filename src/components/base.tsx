@@ -184,6 +184,23 @@ export function EnAttenteDeLaCompagnie({
   );
 }
 
+/**
+ * Échec d'une action, montré à l'utilisateur.
+ *
+ * Une action qui rate doit le dire là où elle a été lancée. Renvoyer quelqu'un vers
+ * un écran d'erreur générique, ou pire ne rien afficher, le laisse retoucher le
+ * bouton sans comprendre.
+ */
+export function MessageErreur({ texte }: { texte: string | null }) {
+  if (!texte) return null;
+  return (
+    <View style={styles.messageErreur}>
+      <Ionicons name="alert-circle" size={18} color={couleurs.danger} />
+      <Text style={[typo.petit, { color: couleurs.texteDoux, flex: 1 }]}>{texte}</Text>
+    </View>
+  );
+}
+
 export function Section({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <View style={styles.enteteSection}>
@@ -399,6 +416,16 @@ export function Jauge({ valeur, couleur = couleurs.marque }: { valeur: number; c
 }
 
 const styles = StyleSheet.create({
+  messageErreur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espace.sm,
+    padding: espace.md,
+    borderRadius: rayon.md,
+    borderWidth: 1,
+    borderColor: 'rgba(242,84,91,0.4)',
+    backgroundColor: 'rgba(242,84,91,0.08)',
+  },
   attente: {
     gap: 6,
     padding: espace.md,
