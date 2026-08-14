@@ -25,6 +25,7 @@ import {
   lireBandeTD1,
 } from '../src/lib/cnib';
 import { actionsPossibles, billetEmis, etapeReservation } from '../src/lib/parcours';
+import { calculerFidelite, phraseHabitue } from '../src/lib/fidelite';
 import {
   depuisBase64Url,
   hmacSha256,
@@ -447,6 +448,50 @@ verifier(
   "aucune bande dans un texte quelconque : rien n'est inventé",
   extraireBandeDepuisTexte('Bonjour, ceci est un ticket de bus ordinaire.'),
   null,
+);
+
+
+/* ── Fidélité ────────────────────────────────────────────────────────────── */
+
+groupe("Fidélité — ce que l'application sait d'un habitué, sans rien transmettre");
+
+const fait = (n: number, extra: Partial<Reservation> = {}): Reservation => ({
+  ...billetDeBase,
+  id: `res-${n}`,
+  statut: 'EMBARQUE',
+  ...extra,
+});
+
+const historique: Reservation[] = [
+  fait(1, { siege: 93, date: '2026-05-01' }),
+  fait(2, { siege: 93, date: '2026-06-02' }),
+  fait(3, { siege: 12, date: '2026-07-03' }),
+  fait(4, { ligneId: 'ligne-ouaga-bobo', montant: 6500, siege: 5, date: '2026-08-04' }),
+  // Ni les réservations en cours ni les annulations ne comptent comme des voyages.
+  { ...billetDeBase, id: 'res-5', statut: 'OPTION' },
+  { ...billetDeBase, id: 'res-6', statut: 'ANNULEE' },
+];
+
+const f = calculerFidelite(historique);
+verifier('seuls les voyages effectués comptent', f.voyages, 4);
+verifier('total réellement dépensé', f.totalDepense, 3500 * 3 + 6500);
+// Trois fois Ouahigouya–Ouaga (182 km) et une fois Ouaga–Bobo (356 km).
+verifier('kilomètres parcourus, distances réelles', f.kilometres, 182 * 3 + 356);
+verifier('ligne habituelle', f.ligneHabituelle, 'ligne-ouahigouya-ouaga');
+verifier('siège préféré', f.siegePrefere, 93);
+verifier('dernier voyage', f.dernierVoyage, '2026-08-04');
+
+verifier('phrase de reconnaissance pour un habitué', phraseHabitue(f) !== null, true);
+// On ne dit pas « votre trajet habituel » à quelqu'un venu une seule fois.
+verifier(
+  'aucune phrase après un seul voyage',
+  phraseHabitue(calculerFidelite([fait(1)])),
+  null,
+);
+verifier(
+  'historique vide : aucun compteur inventé',
+  calculerFidelite([]).voyages,
+  0,
 );
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);

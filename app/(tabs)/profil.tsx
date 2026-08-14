@@ -13,7 +13,8 @@ import {
   Txt,
 } from '../../src/components/base';
 import { etatFonction } from '../../src/lib/disponibilite';
-import { initiales, telephone } from '../../src/lib/format';
+import { calculerFidelite, phraseHabitue } from '../../src/lib/fidelite';
+import { initiales, montant, telephone } from '../../src/lib/format';
 import { useApp, voyagesEffectues } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
@@ -25,6 +26,8 @@ export default function Profil() {
 
   if (!voyageur) return null;
   const effectues = voyagesEffectues(reservations);
+  const fidelite = calculerFidelite(reservations);
+  const phrase = phraseHabitue(fidelite);
 
   return (
     <Ecran>
@@ -91,6 +94,37 @@ export default function Profil() {
         </View>
       </Carte>
 
+      {/*
+        Ce que l'application sait de l'habitué — calculé sur cet appareil, à partir de
+        son seul historique. Rien n'est transmis : ces chiffres n'existent que dans le
+        téléphone qui les affiche.
+      */}
+      {fidelite.voyages > 0 ? (
+        <>
+          <Section>Votre parcours</Section>
+          <Carte style={{ gap: espace.md }}>
+            <View style={styles.grilleFidelite}>
+              <Statistique valeur={String(fidelite.voyages)} libelle="VOYAGES" />
+              <Statistique valeur={`${fidelite.kilometres}`} libelle="KILOMÈTRES" />
+              <Statistique valeur={montant(fidelite.totalDepense)} libelle="DÉPENSÉ" />
+            </View>
+            {phrase ? (
+              <>
+                <Trait />
+                <Txt v="petit" couleur={couleurs.texteDoux}>
+                  {phrase}
+                </Txt>
+              </>
+            ) : null}
+            {fidelite.siegePrefere !== null ? (
+              <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                PLACE HABITUELLE · {fidelite.siegePrefere} — PROPOSÉE D'EMBLÉE À VOTRE PROCHAINE RÉSERVATION
+              </Txt>
+            ) : null}
+          </Carte>
+        </>
+      ) : null}
+
       <Section>Rappels</Section>
       <Carte>
         <Reglage icone="notifications" titre="Rappel la veille du départ" actif />
@@ -140,6 +174,17 @@ export default function Profil() {
   );
 }
 
+function Statistique({ valeur, libelle }: { valeur: string; libelle: string }) {
+  return (
+    <View style={{ flex: 1, gap: 2 }}>
+      <Txt v="sousTitre">{valeur}</Txt>
+      <Txt v="minuscule" couleur={couleurs.texteFaible}>
+        {libelle}
+      </Txt>
+    </View>
+  );
+}
+
 function Reglage({
   icone,
   titre,
@@ -170,6 +215,7 @@ function Reglage({
 }
 
 const styles = StyleSheet.create({
+  grilleFidelite: { flexDirection: 'row', gap: espace.md },
   carteIdentite: { borderRadius: rayon.xl, padding: espace.lg, gap: espace.lg },
   enteteIdentite: { flexDirection: 'row', alignItems: 'center', gap: espace.md },
   avatar: {

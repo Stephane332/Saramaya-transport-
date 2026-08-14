@@ -144,7 +144,20 @@ export default function EcranCnib() {
           </Txt>
 
           <Section>Photo de la carte</Section>
-          {photo ? (
+          {Platform.OS === 'web' ? (
+            /*
+              Sur le web, la caméra d'expo-camera charge un script de lecture depuis un
+              service extérieur. Puisque rien de ce projet ne doit sortir sans raison, on
+              ne la propose pas ici : la version web sert à découvrir l'application, et la
+              bande se recopie tout aussi bien. Sur téléphone, la photo est disponible.
+            */
+            <Carte>
+              <Txt v="petit" couleur={couleurs.texteDoux}>
+                La photo de la carte est disponible dans l'application installée sur
+                téléphone. Ici, recopiez la bande du dos : le résultat est identique.
+              </Txt>
+            </Carte>
+          ) : photo ? (
             <Animated.View entering={FadeIn} style={{ gap: espace.sm }}>
               <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
               <Txt v="minuscule" couleur={couleurs.succes}>
