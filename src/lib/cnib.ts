@@ -180,3 +180,46 @@ export function joursAvantExpirationCnib(dateIso: string, maintenant = new Date(
   const jour = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate());
   return Math.round((cible.getTime() - jour.getTime()) / 86400000);
 }
+
+
+/**
+ * Retrouve la bande à lecture machine dans un texte quelconque.
+ *
+ * C'est le chaînon entre une photo et le décodage. Une reconnaissance de caractères
+ * ne rend pas trois lignes propres : elle rend tout ce qu'elle a vu sur la carte —
+ * en-têtes, mentions, nom en gros, et quelque part au milieu la bande. Cette
+ * fonction va la chercher.
+ *
+ * Deux tolérances, parce qu'une lecture optique se trompe toujours un peu :
+ *
+ *   - les espaces parasites sont retirés (l'œil de la machine coupe volontiers les
+ *     suites de chevrons) ;
+ *   - le chiffre 0 et la lettre O sont confondus par toutes les reconnaissances du
+ *     monde ; la bande n'utilisant que des majuscules, des chiffres et « < », on
+ *     tente les deux lectures et on garde celle dont les clés de contrôle tombent
+ *     juste. C'est exactement à cela que servent ces clés.
+ */
+export function extraireBandeDepuisTexte(texte: string): string | null {
+  const candidates = texte
+    .toUpperCase()
+    .split(/\r?\n/)
+    .map((l) => l.replace(/[^A-Z0-9<]/g, ''))
+    .filter((l) => l.length >= 28 && l.length <= 32 && l.includes('<'));
+
+  // On cherche trois lignes consécutives qui forment une bande valide.
+  for (let i = 0; i + 2 < candidates.length + 1 && i + 2 < candidates.length + 1; i += 1) {
+    const trois = candidates.slice(i, i + 3);
+    if (trois.length < 3) break;
+    const bande = trois.map((l) => l.slice(0, 30).padEnd(30, '<')).join('\n');
+    if (lireBandeTD1(bande).ok) return bande;
+
+    // Deuxième chance : la confusion classique entre O et 0 dans les zones de chiffres.
+    const corrigee = trois
+      .map((l, rang) => (rang === 1 ? l.replace(/O/g, '0') : l))
+      .map((l) => l.slice(0, 30).padEnd(30, '<'))
+      .join('\n');
+    const essai = lireBandeTD1(corrigee);
+    if (essai.ok && essai.avertissements.length === 0) return corrigee;
+  }
+  return null;
+}

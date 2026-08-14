@@ -18,7 +18,12 @@ import {
   referenceBillet,
 } from '../src/lib/identifiants';
 import { construireQrBillet, verifierQrBillet } from '../src/lib/billetQr';
-import { cleControle, joursAvantExpirationCnib, lireBandeTD1 } from '../src/lib/cnib';
+import {
+  cleControle,
+  extraireBandeDepuisTexte,
+  joursAvantExpirationCnib,
+  lireBandeTD1,
+} from '../src/lib/cnib';
 import { actionsPossibles, billetEmis, etapeReservation } from '../src/lib/parcours';
 import {
   depuisBase64Url,
@@ -406,6 +411,42 @@ verifier(
   "on n'annule pas un voyage déjà effectué",
   actionsPossibles(effectue).annuler,
   false,
+);
+
+
+groupe("CNIB — retrouver la bande dans une lecture de photo");
+
+// Ce qu'une reconnaissance de caractères rend vraiment : tout ce qu'elle a vu sur la
+// carte, dans le désordre, la bande noyée au milieu.
+const LECTURE_BRUTE = [
+  'BURKINA FASO',
+  'CARTE NATIONALE D IDENTITE BURKINABE',
+  'Nom / Surname  ERIKSSON',
+  '',
+  'I<UTOD231458907<<<<<<<<<<<<<<<',
+  '7408122F1204159UTO<<<<<<<<<<<6',
+  'ERIKSSON<<ANNA<MARIA<<<<<<<<<<',
+  '',
+  'Signature du titulaire',
+].join('\n');
+
+const trouvee = extraireBandeDepuisTexte(LECTURE_BRUTE);
+verifier('bande retrouvée au milieu du reste', trouvee !== null, true);
+if (trouvee) {
+  const decodee = lireBandeTD1(trouvee, LE_JOUR);
+  verifier('et décodable sans avertissement', decodee.ok && decodee.avertissements.length === 0, true);
+}
+
+// Les espaces parasites sont fréquents : la machine coupe les suites de chevrons.
+verifier(
+  'espaces parasites tolérés',
+  extraireBandeDepuisTexte(LECTURE_BRUTE.replace('I<UTOD', 'I< UTO D')) !== null,
+  true,
+);
+verifier(
+  "aucune bande dans un texte quelconque : rien n'est inventé",
+  extraireBandeDepuisTexte('Bonjour, ceci est un ticket de bus ordinaire.'),
+  null,
 );
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
