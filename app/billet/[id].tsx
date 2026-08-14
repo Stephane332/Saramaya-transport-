@@ -15,11 +15,13 @@ import {
   Bouton,
   Carte,
   Ecran,
+  MessageErreur,
   Section,
   Trait,
   Txt,
 } from '../../src/components/base';
 import { CONDITIONS_TRANSPORT, gareParId, ligneParId, paiementPourVille } from '../../src/data/reseau';
+import { useAction } from '../../src/lib/action';
 import { politiqueAnnulation } from '../../src/lib/annulation';
 import { dateHeureDepart, retractationPossible } from '../../src/lib/confirmation';
 import { compteARebours, joursAvantExpiration, montant, telephone } from '../../src/lib/format';
@@ -34,7 +36,14 @@ export default function Billet() {
   const router = useRouter();
   const reservations = useApp((e) => e.reservations);
   const voyageur = useApp((e) => e.voyageur);
-  const { marquerPaiementDeclare, confirmer, reprendre } = useApp();
+  /*
+   * Un sélecteur par action, et non `useApp()` tout entier : sans sélecteur, cet
+   * écran se redessine à la moindre modification du magasin — un colis ajouté, un
+   * rappel programmé — alors qu'il n'affiche qu'un billet.
+   */
+  const marquerPaiementDeclare = useApp((e) => e.marquerPaiementDeclare);
+  const confirmer = useApp((e) => e.confirmer);
+  const reprendre = useApp((e) => e.reprendre);
   const [conditionsVisibles, setConditionsVisibles] = useState(false);
 
   const r = reservations.find((x) => x.id === id);
@@ -46,6 +55,39 @@ export default function Billet() {
     () => (r && voyageur ? construireQrBillet(r, voyageur) : ''),
     [r, voyageur],
   );
+
+  /*
+   * Ces trois actions changent l'état du billet. Lancées telles quelles dans un
+   * `onPress`, elles renvoyaient une promesse que personne n'attendait : un échec
+   * disparaissait, et le voyageur pouvait déclarer deux fois son paiement en
+   * tapant deux fois.
+   */
+  const declaration = useAction(async () => {
+    if (!r) return;
+    await marquerPaiementDeclare(r.id, 'ORANGE_MONEY');
+  }, "Votre déclaration n'a pas pu être enregistrée. Réessayez.");
+
+  const presence = useAction(async () => {
+    if (!r) return;
+    await confirmer(r.id);
+  }, "Votre confirmation n'a pas pu être enregistrée. Réessayez, ou appelez la gare.");
+
+  const reprise = useAction(async () => {
+    if (!r) return;
+    await reprendre(r.id);
+  }, "Votre place n'a pas pu être reprise. Réessayez, ou appelez la gare.");
+
+  const demandeGare = useAction(async () => {
+    if (!r || !voyageur) return;
+    const texte = messagePourLaGare(r, voyageur);
+    const numero = (gareParId(r.gareDepartId)?.telephones[0] ?? '').replace(/\s/g, '');
+    const separateur = Platform.OS === 'ios' ? '&' : '?';
+    const url =
+      Platform.OS === 'web'
+        ? `sms:${numero}?body=${encodeURIComponent(texte)}`
+        : `sms:${numero}${separateur}body=${encodeURIComponent(texte)}`;
+    await Linking.openURL(url);
+  }, "L'application de messages n'a pas pu être ouverte. Le numéro de la gare est indiqué sur le billet.");
 
   if (!r || !voyageur) {
     return (
@@ -68,16 +110,6 @@ export default function Billet() {
   // reconstruites ici, qui avaient laissé passer un billet délivré avant paiement.
   const actions = actionsPossibles(r);
   const etape = libelleEtape(r);
-
-  const envoyerALaGare = () => {
-    const texte = messagePourLaGare(r, voyageur);
-    const numero = (gare?.telephones[0] ?? '').replace(/\s/g, '');
-    const url =
-      Platform.OS === 'web'
-        ? `sms:${numero}?body=${encodeURIComponent(texte)}`
-        : `sms:${numero}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(texte)}`;
-    Linking.openURL(url).catch(() => {});
-  };
 
   return (
     <Ecran>
@@ -308,10 +340,12 @@ export default function Billet() {
             <Txt v="petit" couleur={couleurs.texteFaible}>
               Votre place n'a pas encore été réattribuée. Vous pouvez revenir en arrière.
             </Txt>
+            <MessageErreur texte={reprise.erreur} />
             <Bouton
-              titre="Reprendre ma place"
+              titre={reprise.enCours ? 'Reprise…' : 'Reprendre ma place'}
               variante="succes"
-              onPress={() => reprendre(r.id)}
+              desactive={reprise.enCours}
+              onPress={reprise.lancer}
             />
           </Carte>
         </Animated.View>
@@ -353,29 +387,39 @@ export default function Billet() {
               ) : null}
 
               {actions.declarerPaiement ? (
-                <Bouton
-                  titre="J'ai effectué le paiement"
-                  sousTitre="À confirmer ensuite au guichet"
-                  variante="succes"
-                  onPress={() => marquerPaiementDeclare(r.id, 'ORANGE_MONEY')}
-                />
+                <>
+                  <MessageErreur texte={declaration.erreur} />
+                  <Bouton
+                    titre={declaration.enCours ? 'Enregistrement…' : "J'ai effectué le paiement"}
+                    sousTitre="À confirmer ensuite au guichet"
+                    variante="succes"
+                    desactive={declaration.enCours}
+                    onPress={declaration.lancer}
+                  />
+                </>
               ) : null}
             </>
           ) : null}
 
           {r.statut === 'PAYEE' ? (
-            <Bouton
-              titre="Je confirme ma présence"
-              variante="succes"
-              onPress={() => confirmer(r.id)}
-            />
+            <>
+              <MessageErreur texte={presence.erreur} />
+              <Bouton
+                titre={presence.enCours ? 'Enregistrement…' : 'Je confirme ma présence'}
+                variante="succes"
+                desactive={presence.enCours}
+                onPress={presence.lancer}
+              />
+            </>
           ) : null}
 
+          <MessageErreur texte={demandeGare.erreur} />
           <Bouton
             titre="Envoyer la demande à la gare"
             sousTitre={`SMS pré-rempli vers ${gare?.telephones[0] ?? 'la gare'}`}
             variante="secondaire"
-            onPress={envoyerALaGare}
+            desactive={demandeGare.enCours}
+            onPress={demandeGare.lancer}
           />
 
           <Bouton

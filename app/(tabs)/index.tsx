@@ -20,6 +20,7 @@ import {
   Txt,
 } from '../../src/components/base';
 import { LIGNES, ligneParId } from '../../src/data/reseau';
+import { MODE_AGENT } from '../../src/lib/modeAgent';
 import { dateHeureConvocation, dateHeureDepart, evaluerReservation } from '../../src/lib/confirmation';
 import { compteARebours, jourCourt, montant } from '../../src/lib/format';
 import { prochainVoyage, useApp, voyagesEffectues } from '../../src/store/useApp';
@@ -62,9 +63,23 @@ export default function Accueil() {
           </Txt>
           <Txt v="titre">Bonjour {voyageur?.prenom ?? ''}</Txt>
         </View>
-        <Pressable onPress={() => router.push('/gare')} style={styles.boutonGare}>
-          <Ionicons name="business-outline" size={18} color={couleurs.texteDoux} />
-        </Pressable>
+        {/*
+          Le manifeste des départs est un outil de gare, pas un écran de voyageur.
+          Dans l'application publique il n'existe pas — et le bouton non plus :
+          `modeAgent.ts` promet qu'aucun bouton n'y renvoie, or celui-ci le faisait,
+          pour retomber aussitôt sur l'accueil puisque l'écran est protégé. Un
+          bouton qui ne fait rien est un bouton de trop.
+        */}
+        {MODE_AGENT ? (
+          <Pressable
+            onPress={() => router.push('/gare')}
+            style={styles.boutonGare}
+            accessibilityRole="button"
+            accessibilityLabel="Manifeste des départs"
+          >
+            <Ionicons name="business-outline" size={18} color={couleurs.texteDoux} />
+          </Pressable>
+        ) : null}
       </Animated.View>
 
       <Animated.View entering={FadeIn.delay(150).duration(700)}>
@@ -101,7 +116,7 @@ export default function Accueil() {
         <Raccourci
           icone="cube"
           titre="Envoyer un colis"
-          detail="Le code part au destinataire par WhatsApp"
+          detail="Préparez l'envoi, déposez au guichet"
           onPress={() => router.push('/colis')}
         />
         <Raccourci

@@ -376,6 +376,16 @@ export default function Bienvenue() {
               problème à un contrôle.
             </Txt>
           </View>
+
+          {/*
+            Le lien est ici, au moment où l'on demande une pièce d'identité — pas
+            enterré dans un écran de réglages qu'on ouvre après coup.
+          */}
+          <Bouton
+            titre="Ce qui est fait de vos informations"
+            variante="fantome"
+            onPress={() => router.push('/confidentialite')}
+          />
         </ScrollView>
 
         <View style={[styles.barreBas, { paddingBottom: insets.bottom + espace.md, gap: espace.sm }]}>

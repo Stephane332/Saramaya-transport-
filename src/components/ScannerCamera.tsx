@@ -10,7 +10,8 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { Bouton, Txt } from './base';
+import { Bouton, MessageErreur, Txt } from './base';
+import { useAction } from '../lib/action';
 import { couleurs, espace, rayon } from '../theme';
 
 export function ScannerCamera({
@@ -22,6 +23,20 @@ export function ScannerCamera({
 }) {
   const [permission, demanderPermission] = useCameraPermissions();
   const [verrouille, setVerrouille] = useState(false);
+
+  /*
+   * La demande d'autorisation est asynchrone : lancée telle quelle depuis un
+   * `onPress`, un refus ou une erreur du système ne se voyait nulle part, et le
+   * bouton semblait ne rien faire.
+   */
+  const acces = useAction(async () => {
+    const accord = await demanderPermission();
+    if (!accord.granted) {
+      throw new Error(
+        "La caméra a été refusée. Autorisez-la dans les réglages du téléphone, ou saisissez le numéro du ticket à la main.",
+      );
+    }
+  }, "La caméra n'a pas pu être ouverte. Saisissez le numéro du ticket à la main.");
 
   if (!permission) {
     return <View style={styles.viseur} />;
@@ -35,7 +50,12 @@ export function ScannerCamera({
             Autorisez la caméra pour scanner le code-barres de votre ticket.
           </Txt>
         </View>
-        <Bouton titre="Autoriser la caméra" onPress={demanderPermission} />
+        <MessageErreur texte={acces.erreur} />
+        <Bouton
+          titre={acces.enCours ? 'Demande…' : 'Autoriser la caméra'}
+          desactive={acces.enCours}
+          onPress={acces.lancer}
+        />
         <Bouton titre="Saisir à la main" variante="secondaire" onPress={onSaisieManuelle} />
       </View>
     );

@@ -31,6 +31,39 @@ claire de ce qui dépend de la compagnie.
 | Compte **Apple Developer** (99 $/an) | developer.apple.com | Publier sur iOS |
 | **Autorisation écrite** de Saramaya | la compagnie | Publier sous leur nom et leur marque |
 
+### La politique de confidentialité : déjà écrite, et déjà en ligne
+
+Les deux boutiques refusent une application sans **adresse publique** menant à une
+politique de confidentialité — a fortiori une application qui touche à une pièce
+d'identité.
+
+Elle est dans le dépôt, et elle n'est pas un document à part : c'est l'écran
+`app/confidentialite.tsx`, alimenté par `src/data/mentionsLegales.ts`. Le voyageur la
+lit depuis son profil, **hors ligne**, et la version web la publie à la même adresse
+que le reste. Le lien à déclarer aux stores est donc :
+
+```
+https://<le-domaine-du-déploiement>/confidentialite
+```
+
+où `<le-domaine-du-déploiement>` est l'adresse renvoyée par `eas deploy --prod`.
+
+> **Règle à tenir.** Ce texte décrit ce que le logiciel fait *aujourd'hui*. Toute
+> modification qui change ce qui sort du téléphone — un serveur, une mesure d'audience,
+> l'intégration Digiparc — doit modifier `mentionsLegales.ts` **dans le même commit**.
+> Une politique qui décrit une version antérieure du logiciel est pire que pas de
+> politique du tout.
+
+Ce qu'il faudra déclarer dans les formulaires des stores, et qui correspond au texte :
+
+| Question du store | Réponse |
+|---|---|
+| Données collectées | Aucune. Rien n'est transmis à un serveur du projet ; il n'y en a pas. |
+| Données stockées sur l'appareil | Identité, CNIB et photo, réservations, colis. |
+| Traceurs / publicité | Aucun. |
+| Chiffrement non exempté (iOS) | Non — déclaré par `ITSAppUsesNonExemptEncryption: false`. La signature des billets (HMAC-SHA-256) relève de l'authentification, qui est exemptée. |
+| Suppression du compte (exigée par Apple) | Dans l'application : Profil → Supprimer mon compte, avec confirmation. |
+
 > Les comptes stores et l'autorisation écrite relèvent de la compagnie : une
 > publication publique au nom de Saramaya exige leur accord. Les builds internes
 > (`preview`) et la démonstration par QR ne l'exigent pas — c'est par là qu'on
@@ -143,10 +176,30 @@ C'est ce qui alimente le lien de démonstration en ligne, sans installation.
 
 ## Vérifications avant chaque build de production
 
-1. `npx tsc --noEmit` — aucune erreur de type.
+1. `npm run verifier` — versions des paquets alignées, `tsc --noEmit` propre, tests
+   au vert. C'est la commande qui remplace les trois vérifications séparées.
 2. `npx expo export --platform web` — l'export réussit (bon indicateur que le
    bundle est sain).
 3. Version affichée : incrémenter `expo.version` dans `app.json` (le
    `versionCode`/`buildNumber`, lui, s'incrémente tout seul).
-4. Tester le parcours réel sur un build `preview` : ouverture de compte, scan
+4. `src/data/mentionsLegales.ts` décrit-il toujours ce que le logiciel fait ? Si
+   quelque chose de nouveau sort du téléphone, mettre à jour le texte **et**
+   `REVISION_MENTIONS`.
+5. Tester le parcours réel sur un build `preview` : ouverture de compte, scan
    d'un ticket, réservation, billet hors ligne, configuration de la caisse.
+
+### Le parcours à refaire à la main, dans cet ordre
+
+Ces enchaînements sont ceux où une erreur coûte une place ou de l'argent. Ils sont
+couverts par `npm test` côté règles, mais le geste doit être vérifié sur l'appareil.
+
+| Ce qu'on fait | Ce qui doit se passer |
+|---|---|
+| Ouvrir un compte, puis fermer et rouvrir l'application | Le compte est toujours là. Jamais de retour à l'écran de bienvenue. |
+| Créer une réservation, taper deux fois sur le bouton | **Une seule** réservation créée. |
+| Regarder le billet avant de payer | Aucun QR, aucun code-barres : « Place retenue — à payer ». |
+| Déclarer le paiement | Toujours pas de QR : « Paiement déclaré ». Le bouton de déclaration disparaît. |
+| Préparer un colis | Statut « À déposer ». Aucun paiement annoncé. Le code de retrait n'est pas encore montré. |
+| Confirmer le dépôt avec un code du guichet | C'est ce code-là qui s'affiche et qui part au destinataire. |
+| Mode avion, rouvrir un billet émis | Le QR s'affiche. C'est le test de la gare sans réseau. |
+| Profil → Supprimer mon compte | Une confirmation, qui énumère ce qui va disparaître. |

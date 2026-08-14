@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -22,12 +23,15 @@ export default function Profil() {
   const router = useRouter();
   const voyageur = useApp((e) => e.voyageur);
   const reservations = useApp((e) => e.reservations);
+  const colis = useApp((e) => e.colis);
   const supprimerCompte = useApp((e) => e.supprimerCompte);
+  const [suppressionDemandee, setSuppressionDemandee] = useState(false);
 
   if (!voyageur) return null;
   const effectues = voyagesEffectues(reservations);
   const fidelite = calculerFidelite(reservations);
   const phrase = phraseHabitue(fidelite);
+  const resume = resumeDonnees(reservations.length, colis.length);
 
   return (
     <Ecran>
@@ -146,6 +150,13 @@ export default function Profil() {
           </Txt>
         </View>
       </Carte>
+      <Bouton
+        titre="Confidentialité et conditions"
+        sousTitre="Ce qui est enregistré, ce qui sort — et rien d'autre"
+        variante="secondaire"
+        icone={<Ionicons name="shield-outline" size={18} color={couleurs.texteDoux} />}
+        onPress={() => router.push('/confidentialite')}
+      />
 
       <Section>Anciens voyages</Section>
       <EnAttenteDeLaCompagnie {...etatFonction('HISTORIQUE_ANCIEN_CLIENT')} />
@@ -164,14 +175,58 @@ export default function Profil() {
       />
 
       <Section>Compte</Section>
-      <Bouton
-        titre="Supprimer mon compte"
-        sousTitre="Efface vos données de ce téléphone"
-        variante="fantome"
-        onPress={supprimerCompte}
-      />
+      {/*
+        Un seul appui effaçait tout : le compte, les billets, l'historique, les
+        colis — et rien n'existe ailleurs, puisque rien n'est envoyé sur un serveur.
+        C'est le geste le plus destructeur de l'application ; il demande maintenant
+        une confirmation, et dit exactement ce qui va disparaître.
+      */}
+      {!suppressionDemandee ? (
+        <Bouton
+          titre="Supprimer mon compte"
+          sousTitre="Efface vos données de ce téléphone"
+          variante="fantome"
+          onPress={() => setSuppressionDemandee(true)}
+        />
+      ) : (
+        <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
+          <Carte style={{ borderColor: 'rgba(242,84,91,0.45)', gap: espace.sm }}>
+            <Txt v="corpsFort" couleur={couleurs.danger}>
+              Supprimer définitivement ?
+            </Txt>
+            <Txt v="petit" couleur={couleurs.texteDoux}>
+              {resume} disparaîtront de ce téléphone. Rien n'est enregistré ailleurs : cette
+              suppression est définitive, et vos billets déjà payés ne pourront plus être
+              présentés depuis l'application.
+            </Txt>
+          </Carte>
+          <Bouton
+            titre="Oui, tout supprimer"
+            variante="danger"
+            onPress={supprimerCompte}
+          />
+          <Bouton
+            titre="Non, garder mes données"
+            variante="secondaire"
+            onPress={() => setSuppressionDemandee(false)}
+          />
+        </Animated.View>
+      )}
     </Ecran>
   );
+}
+
+/** Ce que la suppression va réellement effacer, dit en clair avant de le faire. */
+function resumeDonnees(reservations: number, colis: number): string {
+  const morceaux = [
+    'Votre compte',
+    reservations > 0 ? `${reservations} réservation${reservations > 1 ? 's' : ''}` : null,
+    colis > 0 ? `${colis} colis` : null,
+  ].filter((m): m is string => m !== null);
+
+  if (morceaux.length === 1) return `${morceaux[0]} et son historique`;
+  const dernier = morceaux[morceaux.length - 1];
+  return `${morceaux.slice(0, -1).join(', ')} et ${dernier}`;
 }
 
 function Statistique({ valeur, libelle }: { valeur: string; libelle: string }) {
