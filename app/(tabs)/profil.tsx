@@ -15,12 +15,7 @@ import {
   Txt,
 } from '../../src/components/base';
 import { LogoSaramaya } from '../../src/components/LogoSaramaya';
-import {
-  CONCEPTEUR,
-  MENTION_INDEPENDANCE,
-  NOM_APPLICATION,
-  VERSION,
-} from '../../src/data/application';
+import { NOM_APPLICATION, NOM_COMPAGNIE, VERSION } from '../../src/data/application';
 import { useAction } from '../../src/lib/action';
 import { etatFonction } from '../../src/lib/disponibilite';
 import { RAPPELS_ANNONCES, useEtatNotifications } from '../../src/lib/notifications';
@@ -246,22 +241,20 @@ export default function Profil() {
       )}
 
       {/*
-        Le pied de l'application : qui l'a faite, quelle version, et surtout ce
-        qu'elle n'est pas. Un voyageur qui rencontre un problème doit savoir à quelle
-        porte frapper — la gare pour un voyage, le concepteur pour l'application —
-        et la compagnie ne doit pas se voir imputer un logiciel qu'elle n'édite pas.
+        Le pied de l'application : les deux noms, et la version.
+        Le rappel de qui édite l'application et de qui la conçoit n'a pas disparu —
+        il est à sa place, dans les conditions d'utilisation et la politique de
+        confidentialité, atteignables juste au-dessus. Un pied de page n'est pas
+        l'endroit d'un paragraphe.
       */}
       <Trait />
       <View style={styles.pied}>
         <LogoSaramaya hauteur={22} />
-        <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
-          {NOM_APPLICATION.toUpperCase()} · VERSION {VERSION}
-        </Txt>
-        <Txt v="petit" couleur={couleurs.texteDoux} style={{ textAlign: 'center' }}>
-          Conçu par {CONCEPTEUR}
+        <Txt v="petit" couleur={couleurs.texteDoux} style={styles.piedNoms}>
+          {NOM_COMPAGNIE.toUpperCase()} · {NOM_APPLICATION.toUpperCase()}
         </Txt>
         <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
-          {MENTION_INDEPENDANCE}
+          VERSION {VERSION}
         </Txt>
       </View>
     </Ecran>
@@ -375,4 +368,5 @@ const styles = StyleSheet.create({
   },
   grilleIdentite: { flexDirection: 'row', justifyContent: 'space-between' },
   pied: { alignItems: 'center', gap: 6, paddingVertical: espace.md },
+  piedNoms: { textAlign: 'center', letterSpacing: 1.2 },
 });

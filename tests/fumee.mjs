@@ -431,10 +431,12 @@ async function jouerLeParcours() {
   await page.screenshot({ path: join(RACINE, 'fumee-billet-paye.png') });
 
   /*
-   * 7. Le pied de l'application : version et concepteur.
+   * 7. Le pied de l'application : les deux noms et la version.
    *
-   * Un voyageur doit pouvoir dire à qui il a affaire, et sur quelle version — c'est
-   * la première chose qu'on demande quand quelque chose ne va pas.
+   * La version est la première chose qu'on demande quand quelque chose ne va pas ;
+   * elle doit être lisible sans rien installer ni chercher. Le contrôle vérifie
+   * aussi qu'aucun paragraphe n'est revenu s'y loger — un pied de page porte des
+   * noms, pas des explications.
    */
   await page.goto(`http://localhost:${PORT}/profil`, { waitUntil: 'networkidle' });
   await page.waitForTimeout(3000);
@@ -444,12 +446,12 @@ async function jouerLeParcours() {
   await page.waitForTimeout(800);
   const profil = await page.innerText('body');
   await controler(
-    'le profil nomme le concepteur et la version',
-    profil.includes('Conçu par') && /VERSION \d+\.\d+\.\d+/.test(profil),
+    'le pied porte les deux noms et la version',
+    profil.includes('SARAMAYA TRANSPORT · SIRABA') && /VERSION \d+\.\d+\.\d+/.test(profil),
   );
   await controler(
-    'et rappelle que l’application n’est pas éditée par la compagnie',
-    profil.includes("n'est ni éditée ni exploitée par la compagnie"),
+    'et rien d’autre — aucune description n’y est revenue',
+    !profil.includes('Conçu par') && !profil.includes('application indépendante'),
   );
   await page.screenshot({ path: join(RACINE, 'fumee-profil-pied.png') });
 }

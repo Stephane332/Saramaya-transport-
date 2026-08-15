@@ -278,10 +278,13 @@ colis avec code de retrait, rappels locaux, fidélité calculée sur l'appareil.
 ## Conception et marque
 
 L'application est conçue et publiée par **Ange Stéphane Sawadogo**, voyageur et client de
-Saramaya Transport. Elle n'est ni éditée, ni exploitée, ni approuvée par la compagnie — la
-même mention figure dans l'application, au bas de l'écran Profil et dans la politique de
-confidentialité, pour qu'aucun voyageur ne s'y trompe et qu'aucun incident logiciel ne soit
-imputé à la compagnie.
+Saramaya Transport. Elle n'est ni éditée, ni exploitée, ni approuvée par la compagnie.
+
+Cette mention figure dans les **conditions d'utilisation** et la **politique de
+confidentialité**, atteignables depuis le profil : c'est là qu'elle a sa place, et c'est là
+que les boutiques la cherchent. Le pied de l'écran Profil ne porte que les deux noms —
+Saramaya Transport, Siraba — et le numéro de version. Un pied de page n'est pas l'endroit
+d'un paragraphe.
 
 Le nom et le logo Saramaya Transport lui appartiennent. **Toute publication publique de
 l'application sous ce nom exige leur autorisation écrite.**
