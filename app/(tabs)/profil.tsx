@@ -9,11 +9,14 @@ import {
   Carte,
   Ecran,
   EnAttenteDeLaCompagnie,
+  MessageErreur,
   Section,
   Trait,
   Txt,
 } from '../../src/components/base';
+import { useAction } from '../../src/lib/action';
 import { etatFonction } from '../../src/lib/disponibilite';
+import { RAPPELS_ANNONCES, useEtatNotifications } from '../../src/lib/notifications';
 import { calculerFidelite, phraseHabitue } from '../../src/lib/fidelite';
 import { initiales, montant, telephone } from '../../src/lib/format';
 import { useApp, voyagesEffectues } from '../../src/store/useApp';
@@ -129,15 +132,35 @@ export default function Profil() {
         </>
       ) : null}
 
+      {/*
+        Cette carte montrait quatre interrupteurs toujours allumés qui ne
+        commandaient rien — dont un « Repli par SMS » décrivant une fonction qui
+        n'existe pas et ne peut pas exister sans serveur. À la place : ce qui est
+        réellement programmé, et l'état réel de l'autorisation, relu au retour au
+        premier plan. Un rappel refusé se voit, au lieu de s'afficher en vert.
+      */}
       <Section>Rappels</Section>
-      <Carte>
-        <Reglage icone="notifications" titre="Rappel la veille du départ" actif />
+      <Carte style={{ gap: espace.md }}>
+        <EtatRappels />
         <Trait />
-        <Reglage icone="alarm" titre="Alarme de confirmation" detail="60 minutes avant le départ" actif />
+        {RAPPELS_ANNONCES.map((r, i) => (
+          <View key={r.titre} style={{ gap: espace.md }}>
+            {i > 0 ? <Trait /> : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.md }}>
+              <Ionicons name="notifications-outline" size={18} color={couleurs.marqueVif} />
+              <View style={{ flex: 1 }}>
+                <Txt v="corpsFort">{r.titre}</Txt>
+                <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                  {r.detail}
+                </Txt>
+              </View>
+            </View>
+          </View>
+        ))}
         <Trait />
-        <Reglage icone="hourglass" titre="Alerte d'expiration" detail="7 jours et 2 jours avant" actif />
-        <Trait />
-        <Reglage icone="chatbox" titre="Repli par SMS" detail="Si la notification ne passe pas" actif />
+        <Txt v="minuscule" couleur={couleurs.texteFaible}>
+          TOUS SONT PROGRAMMÉS PAR CE TÉLÉPHONE · AUCUN SERVEUR NE SAIT QUAND VOUS VOYAGEZ
+        </Txt>
       </Carte>
 
       <Section>Données</Section>
@@ -240,31 +263,69 @@ function Statistique({ valeur, libelle }: { valeur: string; libelle: string }) {
   );
 }
 
-function Reglage({
-  icone,
-  titre,
-  detail,
-  actif,
-}: {
-  icone: keyof typeof Ionicons.glyphMap;
-  titre: string;
-  detail?: string;
-  actif: boolean;
-}) {
+/**
+ * L'autorisation de notifier, dite telle qu'elle est.
+ *
+ * Trois cas, trois messages différents — parce que « refusé » et « impossible sur
+ * le web » n'appellent pas la même action de la part du voyageur.
+ */
+function EtatRappels() {
+  const { etat, demander } = useEtatNotifications();
+
+  const autorisation = useAction(async () => {
+    await demander();
+  }, "L'autorisation n'a pas pu être demandée. Ouvrez les réglages du téléphone.");
+
+  if (etat === 'ACCORDEES') {
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.sm }}>
+        <Ionicons name="checkmark-circle" size={18} color={couleurs.succes} />
+        <Txt v="petit" couleur={couleurs.succes} style={{ flex: 1 }}>
+          Les rappels sont autorisés sur ce téléphone.
+        </Txt>
+      </View>
+    );
+  }
+
+  if (etat === 'INDISPONIBLE') {
+    return (
+      <View style={{ flexDirection: 'row', gap: espace.sm }}>
+        <Ionicons name="information-circle-outline" size={18} color={couleurs.texteFaible} />
+        <Txt v="petit" couleur={couleurs.texteFaible} style={{ flex: 1 }}>
+          Les rappels programmés existent dans l'application installée sur téléphone. Ici, sur
+          le web, ils ne sont pas fiables — ils ne sont donc pas annoncés comme actifs.
+        </Txt>
+      </View>
+    );
+  }
+
+  if (etat === 'INCONNU') {
+    return (
+      <Txt v="petit" couleur={couleurs.texteFaible}>
+        Vérification de l'autorisation…
+      </Txt>
+    );
+  }
+
   return (
-    <View style={styles.reglage}>
-      <Ionicons name={icone} size={18} color={couleurs.marqueVif} />
-      <View style={{ flex: 1 }}>
-        <Txt v="corpsFort">{titre}</Txt>
-        {detail ? (
-          <Txt v="minuscule" couleur={couleurs.texteFaible}>
-            {detail}
-          </Txt>
-        ) : null}
+    <View style={{ gap: espace.sm }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.sm }}>
+        <Ionicons name="notifications-off" size={18} color={couleurs.attention} />
+        <Txt v="corpsFort" couleur={couleurs.attention} style={{ flex: 1 }}>
+          Aucun rappel ne partira
+        </Txt>
       </View>
-      <View style={[styles.interrupteur, actif && styles.interrupteurActif]}>
-        <View style={[styles.pastilleInterrupteur, actif && { alignSelf: 'flex-end' }]} />
-      </View>
+      <Txt v="petit" couleur={couleurs.texteDoux}>
+        Les notifications sont refusées pour cette application. Les rappels ci-dessous sont
+        programmés, mais votre téléphone ne les affichera pas.
+      </Txt>
+      <MessageErreur texte={autorisation.erreur} />
+      <Bouton
+        titre={autorisation.enCours ? 'Demande…' : 'Autoriser les rappels'}
+        variante="secondaire"
+        desactive={autorisation.enCours}
+        onPress={autorisation.lancer}
+      />
     </View>
   );
 }
@@ -284,20 +345,4 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
   },
   grilleIdentite: { flexDirection: 'row', justifyContent: 'space-between' },
-  reglage: { flexDirection: 'row', alignItems: 'center', gap: espace.md, paddingVertical: espace.sm },
-  interrupteur: {
-    width: 44,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: 3,
-    justifyContent: 'center',
-  },
-  interrupteurActif: { backgroundColor: couleurs.marque },
-  pastilleInterrupteur: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-  },
 });

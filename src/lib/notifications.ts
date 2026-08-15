@@ -10,7 +10,8 @@
  * deviennent silencieuses plutôt que d'échouer.
  */
 
-import { Platform } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { addDays } from 'date-fns';
 import { ECHELLE_RAPPELS, dateHeureDepart } from './confirmation';
@@ -194,3 +195,62 @@ export async function notifierMaintenant(titre: string, corps: string) {
 export function joursRestants(r: Reservation): number {
   return joursAvantExpiration(r.expireLe);
 }
+
+/* ── L'état réel des rappels, tel qu'il doit s'afficher ──────────────────── */
+
+export type EtatNotifications = 'INCONNU' | 'ACCORDEES' | 'REFUSEES' | 'INDISPONIBLE';
+
+/**
+ * L'autorisation de notifier, telle que le système la voit.
+ *
+ * L'écran Profil affichait quatre interrupteurs toujours allumés, qui ne
+ * commandaient rien : un décor. Or un rappel dépend d'une autorisation que le
+ * voyageur peut refuser, ou retirer plus tard dans les réglages du téléphone —
+ * auquel cas **plus aucun rappel ne part**, et l'application continuait de montrer
+ * tout en vert.
+ *
+ * L'état est relu au retour au premier plan : c'est précisément le moment où l'on
+ * revient des réglages du système après avoir changé d'avis.
+ */
+export function useEtatNotifications(): {
+  etat: EtatNotifications;
+  demander: () => Promise<void>;
+} {
+  const [etat, setEtat] = useState<EtatNotifications>(web ? 'INDISPONIBLE' : 'INCONNU');
+
+  const relire = useCallback(async () => {
+    if (web) return;
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setEtat(status === 'granted' ? 'ACCORDEES' : 'REFUSEES');
+    } catch {
+      setEtat('INDISPONIBLE');
+    }
+  }, []);
+
+  useEffect(() => {
+    relire();
+    const abonnement = AppState.addEventListener('change', (e) => {
+      if (e === 'active') relire();
+    });
+    return () => abonnement.remove();
+  }, [relire]);
+
+  const demander = useCallback(async () => {
+    await demanderAutorisation();
+    await relire();
+  }, [relire]);
+
+  return { etat, demander };
+}
+
+/**
+ * Les rappels réellement programmés par l'application, dans l'ordre où ils
+ * arrivent. Cette liste est la description de ce que fait `programmerRappels` et
+ * `programmerRappelsCnib` — elle n'annonce rien d'autre.
+ */
+export const RAPPELS_ANNONCES: { titre: string; detail: string }[] = [
+  { titre: 'Rappels avant le départ', detail: "Jusqu'à l'heure de convocation, 30 minutes avant" },
+  { titre: 'Expiration du billet', detail: 'À 7 jours puis à 2 jours de la fin des 30 jours' },
+  { titre: "Expiration de la CNIB", detail: 'Un mois, une semaine, puis la veille — si la date est renseignée' },
+];

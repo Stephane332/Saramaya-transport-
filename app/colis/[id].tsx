@@ -237,9 +237,14 @@ export default function DetailColis() {
         <Carte style={{ borderColor: 'rgba(46,204,143,0.35)' }}>
           <View style={{ flexDirection: 'row', gap: espace.sm }}>
             <Ionicons name="checkmark-circle" size={18} color={couleurs.succes} />
+            {/*
+              Aucune promesse d'alerte automatique : le destinataire n'a pas cette
+              application, et seule la compagnie peut le prévenir. Le message qu'il
+              a reçu contient le numéro de la gare — c'est ce qui marche aujourd'hui.
+            */}
             <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
-              Le code a été transmis à {c.destinataireNom}. Il sera prévenu automatiquement
-              dès que le colis arrivera.
+              Le code a été transmis à {c.destinataireNom}, avec le numéro du guichet de{' '}
+              {arrivee?.ville} pour qu'il puisse savoir quand le colis est arrivé.
             </Txt>
           </View>
           <MessageErreur texte={partage.erreur} />

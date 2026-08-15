@@ -60,7 +60,7 @@ export const CONFIDENTIALITE: SectionLegale[] = [
     ],
     points: [
       "**Les messages que vous envoyez vous-même.** Quand vous appelez la gare, envoyez une demande par SMS ou transmettez un code de retrait par WhatsApp, l'application prépare le texte et ouvre votre application de messages. C'est vous qui envoyez, depuis votre compte, à qui vous voulez. Rien ne part sans ce geste.",
-      "**L'état du service.** L'application demande régulièrement à une adresse publique si les réservations sont ouvertes et si des départs ont été ajoutés. Cette requête ne transmet aucune information vous concernant : elle ne fait que lire un fichier. Comme pour toute connexion, le serveur voit votre adresse IP.",
+      "**L'état du service.** Lorsqu'une adresse d'état est configurée, l'application y lit régulièrement si les réservations sont ouvertes et si des départs ont été ajoutés. Cette requête ne transmet aucune information vous concernant : elle ne fait que lire un fichier. Comme pour toute connexion, le serveur voit votre adresse IP. Si aucune adresse n'est configurée, aucune requête n'est faite.",
       "**Les mises à jour de l'application.** Elles sont téléchargées depuis les serveurs d'Expo (Expo, société américaine), qui reçoivent à cette occasion les informations techniques nécessaires à la mise à jour : version de l'application, système et modèle d'appareil. Aucune donnée de voyage ni d'identité n'y figure.",
     ],
   },

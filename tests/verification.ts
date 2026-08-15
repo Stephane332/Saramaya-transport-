@@ -32,6 +32,7 @@ import {
   relanceNecessaire,
 } from '../src/lib/colis';
 import { migrerEtat } from '../src/store/migration';
+import { creerVerrou } from '../src/lib/verrou';
 import { calculerFidelite, phraseHabitue } from '../src/lib/fidelite';
 import {
   depuisBase64Url,
@@ -611,6 +612,61 @@ verifier('sa date de dépôt est conservée', colisMigres[1]?.deposeLe, '2026-07
 // Repasser la migration sur un contenu déjà converti ne doit rien changer.
 const deuxiemePassage = migrerEtat(migre, 3);
 verifier('migration déjà faite : rien ne bouge', (deuxiemePassage.colis ?? [])[0]?.statut, 'A_DEPOSER');
+
+/* ── Le verrou : deux appuis ne font jamais deux réservations ─────────────── */
+
+groupe('Verrou — la même action ne part jamais deux fois');
+
+await (async () => {
+  // Une opération volontairement lente : c'est exactement la fenêtre pendant
+  // laquelle un voyageur impatient tape une seconde fois.
+  let executions = 0;
+  const lente = () =>
+    new Promise<void>((resoudre) => {
+      executions += 1;
+      setTimeout(resoudre, 20);
+    });
+
+  const verrou = creerVerrou();
+  const [premier, second] = await Promise.all([verrou.executer(lente), verrou.executer(lente)]);
+
+  verifier('deux appuis simultanés, une seule exécution', executions, 1);
+  verifier('le premier appui est lancé', premier, true);
+  verifier('le second est ignoré, pas mis en attente', second, false);
+  verifier('le verrou est rendu après coup', verrou.occupe, false);
+
+  // Une fois terminée, l'action redevient disponible : le verrou protège du
+  // double appui, il ne condamne pas le bouton.
+  const troisieme = await verrou.executer(lente);
+  verifier('un appui ultérieur repasse', troisieme, true);
+  verifier('et exécute réellement', executions, 2);
+})();
+
+await (async () => {
+  /*
+   * Le cas qui compte le plus : une opération qui échoue doit **rendre** le
+   * verrou. Sans le `finally`, un seul réseau coupé condamnerait le bouton
+   * « Réserver » pour toute la session, et le voyageur ne pourrait plus rien faire.
+   */
+  const verrou = creerVerrou();
+  let leve: string | null = null;
+  try {
+    await verrou.executer(async () => {
+      throw new Error('réseau coupé');
+    });
+  } catch (e) {
+    leve = e instanceof Error ? e.message : String(e);
+  }
+
+  verifier("l'erreur est propagée à l'appelant", leve, 'réseau coupé');
+  verifier('et le verrou est libéré malgré l’échec', verrou.occupe, false);
+
+  let reprise = false;
+  await verrou.executer(async () => {
+    reprise = true;
+  });
+  verifier('un nouvel essai est possible après un échec', reprise, true);
+})();
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
 process.exit(echoues > 0 ? 1 : 0);

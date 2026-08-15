@@ -18,6 +18,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
+import { creerVerrou } from './verrou';
 
 export interface Action<T extends unknown[]> {
   /** Lance l'action. Ignore l'appel si la précédente n'est pas terminée. */
@@ -37,20 +38,23 @@ export function useAction<T extends unknown[]>(
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   /*
-   * Un verrou par référence, et non par état : `enCours` ne change qu'au rendu
+   * Le verrou est une référence, et non un état : `enCours` ne change qu'au rendu
    * suivant, si bien que deux appuis rapprochés passeraient tous les deux la garde.
    * La référence, elle, est à jour immédiatement.
+   *
+   * Sa mécanique vit dans `verrou.ts`, où `npm test` la vérifie — ici, on ne fait
+   * que l'habiller de ce qu'il faut pour l'écran : un indicateur d'attente et un
+   * message d'échec.
    */
-  const verrou = useRef(false);
+  const verrou = useRef(creerVerrou());
 
   const lancer = useCallback(
     async (...args: T) => {
-      if (verrou.current) return;
-      verrou.current = true;
+      if (verrou.current.occupe) return;
       setEnCours(true);
       setErreur(null);
       try {
-        await operation(...args);
+        await verrou.current.executer(() => operation(...args));
       } catch (e) {
         // Le message du code métier est plus utile que le nôtre quand il existe :
         // « Aucun compte : créez votre compte avant de scanner » vaut mieux qu'un
@@ -58,7 +62,6 @@ export function useAction<T extends unknown[]>(
         const detail = e instanceof Error && e.message ? e.message : null;
         setErreur(detail ?? messageEchec);
       } finally {
-        verrou.current = false;
         setEnCours(false);
       }
     },
