@@ -14,7 +14,7 @@ claire de ce qui dépend de la compagnie.
   (`appVersionSource: "remote"`, `autoIncrement` en production) : plus de conflit
   de `versionCode`.
 - **`app.json`** — identité de l'app : nom, `bundleIdentifier` iOS
-  (`com.siraba.app`), `package` Android, icône (le kangourou et son petit sur
+  (`com.saramaya.transport`), `package` Android, icône (le kangourou et son petit sur
   fond rouge), écran de démarrage, permissions Android (caméra, vibration,
   notifications, alarme exacte, démarrage), et les plugins natifs
   (`expo-router`, `expo-camera`, `expo-notifications`).
@@ -174,16 +174,34 @@ Les canaux (`channel`) sont déjà nommés dans `eas.json` (`production`,
 builds de production dès que `expo-updates` sera installé. On l'ajoute après le
 premier build, pour ne pas mélanger les étapes.
 
-## Web (déjà en place)
+## Web — et pourquoi ce n'est pas GitHub Pages
 
-La version web se construit et se publie sur GitHub Pages via le workflow
-existant :
+Ce document a longtemps affirmé que la version web « se publie sur GitHub Pages via
+le workflow existant ». **C'était faux.** Le workflow a tourné 51 fois et échoué 51
+fois, toujours sur la même erreur :
 
-```bash
-npx expo export --platform web
+```
+Failed to create deployment (status: 404)
+Ensure GitHub Pages has been enabled
 ```
 
-C'est ce qui alimente le lien de démonstration en ligne, sans installation.
+Pages n'est pas activé sur le dépôt, et ne peut pas l'être : Pages sur dépôt privé
+exige un abonnement payant, et rendre le dépôt public exposerait l'argumentaire de
+vente et la note sur les failles de la compagnie. L'adresse
+`stephane332.github.io/Saramaya-transport-/` a toujours répondu « Site not found ».
+
+Le workflow est donc passé en déclenchement manuel — il coûtait une croix rouge à
+chaque envoi et laissait croire à une publication qui n'existait pas.
+
+**La voie qui marche :**
+
+```bash
+npm run web:publier      # vérification complète, export, puis eas deploy --prod
+```
+
+Elle publie chez Expo depuis un code qui reste privé, et rend une adresse à envoyer
+par WhatsApp. C'est aussi elle qui fournit le lien de politique de confidentialité à
+déclarer aux boutiques.
 
 ## Vérifications avant chaque build de production
 

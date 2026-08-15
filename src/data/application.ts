@@ -6,17 +6,26 @@
  * toujours par diverger, et c'est précisément le genre d'écart qu'un utilisateur
  * remarque — un écran qui annonce 1.0.0 dans une application qui en est à 1.2.
  *
- * Le reste — nom de l'application, nom de la compagnie, concepteur — est écrit une
- * fois et repris partout : bas de l'écran Profil, conditions d'utilisation, page de
- * confidentialité. C'est ce qui garantit que les trois racontent la même chose.
+ * Le reste — nom de la compagnie, concepteur — est écrit une fois et repris partout :
+ * bas de l'écran Profil, conditions d'utilisation, page de confidentialité. C'est ce
+ * qui garantit que les trois racontent la même chose.
+ *
+ * ## Il n'y a plus de nom d'application distinct
+ *
+ * L'application s'appelait « Siraba ». Elle porte désormais le nom de la compagnie,
+ * partout : icône du téléphone, écrans, identifiant d'installation.
+ *
+ * Une conséquence à ne pas manquer : les textes légaux ne peuvent plus dire « Siraba
+ * n'a pas de serveur ». Écrite avec le nom de la compagnie, la phrase deviendrait
+ * fausse — Saramaya Transport a un système, c'est justement celui auquel
+ * l'application veut se brancher un jour. Ces textes disent donc **« cette
+ * application »**, qui désigne le logiciel sans jamais parler au nom de la
+ * compagnie. La distinction a disparu du nom, elle reste dans les mots.
  */
 
 import Constants from 'expo-constants';
 
-/** Nom d'usage de l'application, distinct de celui de la compagnie. */
-export const NOM_APPLICATION = 'Siraba';
-
-/** La compagnie dont l'application accompagne les voyages. */
+/** La compagnie dont l'application accompagne les voyages, et dont elle porte le nom. */
 export const NOM_COMPAGNIE = 'Saramaya Transport';
 
 /**

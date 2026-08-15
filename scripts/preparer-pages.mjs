@@ -24,8 +24,10 @@ const base = (process.argv[3] ?? process.env.EXPO_BASE_URL ?? '').replace(/\/$/,
 const FOND = '#0A070E';
 
 const manifeste = {
-  name: 'Siraba',
-  short_name: 'Siraba',
+  name: 'Saramaya Transport',
+  // Sous l'icône, l'écran d'accueil coupe au-delà d'une douzaine de caractères :
+  // « Saramaya » entier vaut mieux que « Saramaya Tra… ».
+  short_name: 'Saramaya',
   description: 'Vos voyages Saramaya Transport : billet hors ligne, rappels et réservation.',
   start_url: `${base}/`,
   scope: `${base}/`,
@@ -43,7 +45,7 @@ const manifeste = {
 const balises = `
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Siraba" />
+    <meta name="apple-mobile-web-app-title" content="Saramaya" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="${FOND}" />
     <meta name="description" content="Vos voyages Saramaya Transport : billet hors ligne, rappels de départ et réservation." />

@@ -18,7 +18,7 @@
  * change dans le même commit — c'est ce qui distingue une politique d'un décor.
  */
 
-import { CONCEPTEUR, NOM_APPLICATION } from './application';
+import { CONCEPTEUR, NOM_COMPAGNIE } from './application';
 
 /** Dernière révision du texte, à mettre à jour à chaque modification de fond. */
 export const REVISION_MENTIONS = '2026-08-15';
@@ -39,7 +39,15 @@ export const CONFIDENTIALITE: SectionLegale[] = [
   {
     titre: 'En une phrase',
     paragraphes: [
-      `${NOM_APPLICATION} n'a pas de serveur. Vos informations sont enregistrées sur votre téléphone, et elles y restent : nous ne les recevons pas, nous ne les stockons pas ailleurs, et nous ne pouvons donc ni les consulter, ni les revendre, ni les perdre.`,
+      /*
+       * « Cette application », et non le nom de la compagnie.
+       *
+       * L'application porte désormais le nom de Saramaya Transport, mais écrire
+       * « Saramaya Transport n'a pas de serveur » serait faux : la compagnie en a
+       * un, c'est celui auquel on veut se brancher. La phrase doit parler du
+       * logiciel, pas de l'entreprise.
+       */
+      "Cette application n'a pas de serveur. Vos informations sont enregistrées sur votre téléphone, et elles y restent : nous ne les recevons pas, nous ne les stockons pas ailleurs, et nous ne pouvons donc ni les consulter, ni les revendre, ni les perdre.",
     ],
   },
   {
@@ -122,7 +130,7 @@ export const CONFIDENTIALITE: SectionLegale[] = [
      */
     titre: 'Qui est responsable de cette application',
     paragraphes: [
-      `${NOM_APPLICATION} est conçu et publié par **${CONCEPTEUR}**, voyageur et client de Saramaya Transport. L'application n'est ni éditée, ni exploitée, ni approuvée par la compagnie.`,
+      `Cette application est conçue et publiée par **${CONCEPTEUR}**, voyageur et client de ${NOM_COMPAGNIE}. Bien qu'elle porte le nom de la compagnie, elle n'est ni éditée, ni exploitée, ni approuvée par elle.`,
       "Il n'y a personne d'autre : aucune société, aucun sous-traitant, aucun prestataire d'hébergement — puisqu'il n'y a rien à héberger. Vos données ne sont détenues par personne, pas même par le concepteur.",
       // Ce texte se lit aussi bien dans l'application installée que sur le web, où
       // il n'y a aucune « boutique » : la formule doit tenir dans les deux cas.
@@ -134,9 +142,9 @@ export const CONFIDENTIALITE: SectionLegale[] = [
 
 export const CONDITIONS: SectionLegale[] = [
   {
-    titre: `Ce qu'est ${NOM_APPLICATION}`,
+    titre: "Ce qu'est cette application",
     paragraphes: [
-      `${NOM_APPLICATION} est une application indépendante, conçue par ${CONCEPTEUR}, client de Saramaya Transport, pour ses propres voyages. **Elle n'est ni éditée, ni exploitée, ni approuvée par Saramaya Transport**, dont le nom et les horaires sont cités à titre d'information sur les services de la compagnie.`,
+      `Cette application est indépendante, conçue par ${CONCEPTEUR}, client de ${NOM_COMPAGNIE}, pour ses propres voyages. **Elle n'est ni éditée, ni exploitée, ni approuvée par ${NOM_COMPAGNIE}**, dont le nom, le logo et les horaires sont repris à titre d'information sur les services de la compagnie.`,
       "Pour toute question sur un voyage, un billet ou un colis, la gare reste votre interlocuteur : les numéros figurent sur chaque écran concerné.",
     ],
   },

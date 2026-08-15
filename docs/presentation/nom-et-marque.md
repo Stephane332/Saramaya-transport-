@@ -1,5 +1,16 @@
 # Le nom et la marque
 
+> **Décision prise : l'application porte le nom de la compagnie.**
+>
+> Elle s'appelait « Siraba ». Depuis la version 1.1.0, elle s'appelle « Saramaya
+> Transport » partout — icône, écrans, identifiant `com.saramaya.transport`.
+>
+> Ce document est conservé tel qu'il a été écrit, parce qu'il expose l'argumentaire
+> **contraire** et que celui-ci ne devient pas faux du fait qu'on ait tranché
+> autrement. Il reste la meilleure note à relire si la question se rouvre — le jour
+> où Saramaya tarde à répondre, ou dit non. Rien n'est irréversible tant que rien
+> n'est publié sur une boutique.
+
 ## Pourquoi l'application ne doit pas s'appeler « Saramaya »
 
 Trois raisons, et la troisième est la plus importante.

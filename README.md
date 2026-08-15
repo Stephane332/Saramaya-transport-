@@ -280,13 +280,30 @@ colis avec code de retrait, rappels locaux, fidélité calculée sur l'appareil.
 L'application est conçue et publiée par **Ange Stéphane Sawadogo**, voyageur et client de
 Saramaya Transport. Elle n'est ni éditée, ni exploitée, ni approuvée par la compagnie.
 
-Le pied de l'écran Profil porte les deux noms — Saramaya Transport, Siraba —, la signature du
-concepteur et le numéro de version. Quatre lignes courtes : un pied de page n'est pas
-l'endroit d'un paragraphe.
+Le pied de l'écran Profil porte le nom de la compagnie, la signature du concepteur et le
+numéro de version. Trois lignes courtes : un pied de page n'est pas l'endroit d'un paragraphe.
 
 Le rappel complet — application indépendante, ni éditée ni exploitée par la compagnie — est
 dans les **conditions d'utilisation** et la **politique de confidentialité**, à un bouton du
 profil. C'est là qu'il a sa place, et c'est là que les boutiques le cherchent.
 
-Le nom et le logo Saramaya Transport lui appartiennent. **Toute publication publique de
-l'application sous ce nom exige leur autorisation écrite.**
+### L'application porte le nom de la compagnie
+
+Elle s'est d'abord appelée « Siraba ». Elle porte désormais le nom de Saramaya Transport
+partout : icône du téléphone, écrans, identifiant d'installation (`com.saramaya.transport`).
+C'est un choix du concepteur, pris en connaissance de ce qu'il coûte — `docs/presentation/
+nom-et-marque.md` conserve l'argumentaire inverse, qui reste valable si la question se
+rouvre.
+
+Deux conséquences à ne pas perdre de vue :
+
+1. **Les textes légaux ne peuvent plus employer le nom comme sujet.** « Saramaya Transport
+   n'a pas de serveur » serait faux : la compagnie en a un, c'est celui auquel l'application
+   veut se brancher. Ils disent donc « cette application », qui désigne le logiciel sans
+   parler au nom de l'entreprise.
+2. **L'autorisation écrite devient nécessaire plus tôt.** Une application qui porte leur nom
+   et leur logo ne se publie pas sans leur accord — les builds internes et la démonstration,
+   eux, ne l'exigent pas.
+
+Le nom et le logo Saramaya Transport appartiennent à la compagnie. **Toute publication
+publique exige leur autorisation écrite.**

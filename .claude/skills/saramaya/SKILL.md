@@ -1,14 +1,25 @@
 ---
 name: saramaya
-description: Règles et invariants de l'application Saramaya/Siraba. À charger avant toute modification du code de ce dépôt — écrans, règles métier, tests, données. Contient les invariants qui ne doivent jamais être cassés (billet après paiement, rien de simulé, aucune donnée perdue), les conventions de nommage et de commentaire, et la façon de vérifier son travail.
+description: Règles et invariants de l'application Saramaya Transport. À charger avant toute modification du code de ce dépôt — écrans, règles métier, tests, données. Contient les invariants qui ne doivent jamais être cassés (billet après paiement, rien de simulé, aucune donnée perdue), les conventions de nommage et de commentaire, et la façon de vérifier son travail.
 ---
 
-# Saramaya / Siraba — les règles du projet
+# Saramaya Transport — les règles du projet
 
 Application compagnon pour les voyageurs de **Saramaya Transport** (Burkina Faso),
 écrite par un client de la compagnie, pas par la compagnie. Elle doit être utile
 **dès le premier jour, sans que personne n'ait à dire oui** — c'est ce qui la rend
 réalisable, et c'est aussi ce qui rendra la présentation à la société convaincante.
+
+> **Elle porte le nom de la compagnie, et ce n'est pas anodin.** Elle s'est appelée
+> « Siraba » jusqu'à la 1.1.0. Deux conséquences permanentes :
+>
+> · **Les textes légaux ne prennent jamais ce nom pour sujet.** « Saramaya Transport
+>   n'a pas de serveur » serait faux — la compagnie en a un, c'est celui auquel on
+>   veut se brancher. Écrire **« cette application »**, toujours.
+> · **Deux constantes gardent l'ancien nom, exprès** : la clé de signature
+>   (`billetQr.ts`) et le préfixe `SB` des références (`identifiants.ts`). Les
+>   changer invaliderait des billets et des réservations déjà enregistrés. Un nom
+>   invisible ne vaut pas une donnée perdue.
 
 Ce document existe parce que les défauts les plus graves de ce projet n'ont pas été
 des erreurs de syntaxe : ce sont des règles connues, contournées par une porte de

@@ -71,6 +71,14 @@ const VERSION = 'SB1';
  * l'agent qui contrôle : `SIGNATURE_DE_PROJET` le lui dit à l'écran, et le message
  * du verdict le dit aussi.
  */
+/*
+ * Cette valeur ne se change pas pour des raisons cosmétiques.
+ *
+ * Elle porte le premier nom du projet, abandonné depuis. La renommer invaliderait
+ * la signature de **tous les billets déjà émis** : les QR enregistrés sur les
+ * téléphones seraient refusés à la porte du bus. Un nom dans une chaîne que
+ * personne ne voit ne vaut pas un billet perdu.
+ */
 const CLE_PAR_DEFAUT = 'siraba-cle-de-projet-v1';
 const CLE = versOctets(process.env.EXPO_PUBLIC_CLE_BILLET ?? CLE_PAR_DEFAUT);
 

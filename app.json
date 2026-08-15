@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Siraba",
-    "slug": "siraba",
+    "name": "Saramaya Transport",
+    "slug": "saramaya-transport",
     "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "siraba",
+    "scheme": "saramaya",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.siraba.app",
+      "bundleIdentifier": "com.saramaya.transport",
       "infoPlist": {
         "NSCameraUsageDescription": "La caméra sert à scanner le code-barres de vos tickets papier et, si vous le souhaitez, à photographier votre CNIB pour remplir votre profil. Les photos restent sur cet appareil et ne sont jamais envoyées.",
         "ITSAppUsesNonExemptEncryption": false
@@ -31,7 +31,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png",
         "backgroundColor": "#FFFFFF"
       },
-      "package": "com.siraba.app",
+      "package": "com.saramaya.transport",
       "edgeToEdgeEnabled": true,
       "permissions": [
         "CAMERA",

@@ -45,8 +45,12 @@ export function identifiant(prefixe: string): string {
 /**
  * Référence lisible, affichée sur le billet et dictée au guichet.
  *
- * Le préfixe `SB` (Siraba) garantit qu'on ne la confondra jamais avec le numéro
- * à cinq chiffres de leur billetterie. Format : `SB-7K2Q4M`.
+ * Le préfixe `SB` garantit qu'on ne la confondra jamais avec le numéro à cinq
+ * chiffres de leur billetterie. Format : `SB-7K2Q4M`.
+ *
+ * Il vient du premier nom du projet et lui a survécu : le changer invaliderait
+ * `estReferenceApplication` pour toutes les réservations déjà enregistrées, qui
+ * cesseraient d'être reconnues comme nôtres. Deux lettres ne valent pas cela.
  */
 export function referenceBillet(): string {
   return `SB-${aleatoire(6)}`;

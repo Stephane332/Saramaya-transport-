@@ -1,4 +1,4 @@
-﻿# Lancement de l'application Siraba - Saramaya Transport
+﻿# Lancement de l'application Saramaya Transport
 #
 # Ce fichier fait tout ce qu'il faut pour demarrer proprement : il recupere les
 # dernieres corrections, remet les dependances a niveau, verifie que rien n'est
@@ -36,7 +36,7 @@ function Abandonner($titre, $conseil) {
 }
 
 Write-Host ''
-Write-Host '  SIRABA - Saramaya Transport' -ForegroundColor Red
+Write-Host '  SARAMAYA TRANSPORT' -ForegroundColor Red
 Write-Host '  Preparation et lancement' -ForegroundColor DarkGray
 
 # --- 1. Les outils sont-ils installes ? -------------------------------------
