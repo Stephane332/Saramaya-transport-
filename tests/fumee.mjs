@@ -431,7 +431,7 @@ async function jouerLeParcours() {
   await page.screenshot({ path: join(RACINE, 'fumee-billet-paye.png') });
 
   /*
-   * 7. Le pied de l'application : les deux noms et la version.
+   * 7. Le pied de l'application : les deux noms, le concepteur, la version.
    *
    * La version est la première chose qu'on demande quand quelque chose ne va pas ;
    * elle doit être lisible sans rien installer ni chercher. Le contrôle vérifie
@@ -446,12 +446,14 @@ async function jouerLeParcours() {
   await page.waitForTimeout(800);
   const profil = await page.innerText('body');
   await controler(
-    'le pied porte les deux noms et la version',
-    profil.includes('SARAMAYA TRANSPORT · SIRABA') && /VERSION \d+\.\d+\.\d+/.test(profil),
+    'le pied porte les deux noms, le concepteur et la version',
+    profil.includes('SARAMAYA TRANSPORT · SIRABA') &&
+      profil.includes('Conçu par Ange Stéphane Sawadogo') &&
+      /VERSION \d+\.\d+\.\d+/.test(profil),
   );
   await controler(
-    'et rien d’autre — aucune description n’y est revenue',
-    !profil.includes('Conçu par') && !profil.includes('application indépendante'),
+    'et rien de plus — aucune description n’y est revenue',
+    !profil.includes('application indépendante'),
   );
   await page.screenshot({ path: join(RACINE, 'fumee-profil-pied.png') });
 }

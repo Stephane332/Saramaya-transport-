@@ -20,14 +20,14 @@ export const NOM_APPLICATION = 'Siraba';
 export const NOM_COMPAGNIE = 'Saramaya Transport';
 
 /**
- * Le concepteur, nommé.
+ * Le concepteur, nommé — une signature, pas une explication.
  *
- * Il n'apparaît plus au bas des écrans — le pied de l'application porte les deux
- * noms qui intéressent le voyageur, celui de la compagnie et celui de l'application.
- * Mais il reste nommé dans les conditions d'utilisation et dans la politique de
- * confidentialité, et ce n'est pas une formalité : les deux boutiques refusent une
- * application dont on ne sait pas qui la publie, et un texte qui explique vos droits
- * sans dire à qui les adresser ne vaut rien.
+ * Elle tient sur une ligne au bas du profil et de la page de confidentialité. Le
+ * paragraphe qui l'accompagnait (« application indépendante, ni éditée ni exploitée
+ * par la compagnie… ») a été retiré de ces pieds de page : il alourdissait un
+ * endroit fait pour des noms. Il n'a pas disparu pour autant — il est dans les
+ * conditions d'utilisation et dans la politique, où les deux boutiques le cherchent,
+ * et où un lecteur qui veut savoir à qui s'adresser va effectivement le lire.
  */
 export const CONCEPTEUR = 'Ange Stéphane Sawadogo';
 

@@ -16,7 +16,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Carte, Ecran, EnTeteRetour, Section, Trait, Txt } from '../src/components/base';
-import { NOM_APPLICATION, NOM_COMPAGNIE, VERSION } from '../src/data/application';
+import { CONCEPTEUR, NOM_APPLICATION, NOM_COMPAGNIE, VERSION } from '../src/data/application';
 import {
   CONDITIONS,
   CONFIDENTIALITE,
@@ -87,6 +87,9 @@ export default function Confidentialite() {
         </Txt>
         <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
           {NOM_COMPAGNIE.toUpperCase()} · {NOM_APPLICATION.toUpperCase()} VERSION {VERSION}
+        </Txt>
+        <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
+          CONÇU PAR {CONCEPTEUR.toUpperCase()}
         </Txt>
       </View>
     </Ecran>
