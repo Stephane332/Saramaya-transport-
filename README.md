@@ -111,9 +111,14 @@ npm run web             # ou dans le navigateur
 Vérifications :
 
 ```bash
-npx tsc --noEmit                        # types
-npx expo export --platform web          # build web
+npm run verifier                        # versions des paquets, types, 119 tests
+npx expo export --platform web          # le bundle se produit sans erreur
 ```
+
+`npm run verifier` est la commande à lancer avant tout partage ou toute mise en
+production : elle enchaîne le contrôle d'alignement des paquets (une version
+d'`babel-preset-expo` désalignée a déjà coûté une soirée), `tsc --noEmit`, et les
+tests.
 
 ## Tester sur un téléphone
 
@@ -121,20 +126,26 @@ npx expo export --platform web          # build web
 (gratuit sur l'App Store et le Play Store). L'application s'ouvre sur le téléphone, en
 natif, avec les animations et la 3D.
 
-**Sans ordinateur** — la version web est publiée automatiquement sur GitHub Pages à
-chaque push :
+**Sans ordinateur, et pour faire tester à des amis** — publier la version web :
 
+```bash
+npm run web:publier      # verifier + export + eas deploy --prod
 ```
-https://stephane332.github.io/Saramaya-transport-/
-```
 
-Ouverte dans Safari puis ajoutée à l'écran d'accueil (Partager → *Sur l'écran d'accueil*),
-elle s'ouvre en plein écran, avec son icône et sans barre de navigateur.
+Cela demande un compte Expo (gratuit) et un `eas init` fait une fois. La commande
+renvoie une adresse publique. Ouverte dans Safari puis ajoutée à l'écran d'accueil
+(Partager → *Sur l'écran d'accueil*), la page s'ouvre en plein écran, avec son icône
+et sans barre de navigateur — et c'est aussi l'adresse à déclarer aux boutiques pour
+la politique de confidentialité (`…/confidentialite`).
 
-**À activer une seule fois** dans le dépôt : `Settings` → `Pages` → `Source` :
-**GitHub Actions**. Sans ce réglage, le workflow construit le site mais ne le publie pas.
+> **Pourquoi pas GitHub Pages ?** Le workflow existe (`.github/workflows/pages.yml`)
+> et fonctionne, mais **ce dépôt est privé**, et GitHub Pages sur dépôt privé exige un
+> plan payant. Le rendre public n'est pas une solution : l'historique contient
+> `docs/presentation/securite-et-ethique.md` et `argumentaire.md`, qu'il vaut mieux ne
+> pas exposer avant d'avoir parlé à la compagnie. `eas deploy` est gratuit et ne pose
+> aucun de ces deux problèmes.
 
-Pour reproduire ce build en local :
+Pour reproduire le build Pages en local, si le dépôt devient public un jour :
 
 ```bash
 EXPO_BASE_URL=/Saramaya-transport- npx expo export --platform web --output-dir dist
@@ -168,34 +179,58 @@ Il vient généralement d'un `npm install` lancé par erreur dans le dossier per
 
 ## Écrans
 
+### Côté voyageur
+
 | Écran | Route | Rôle |
 |---|---|---|
+| Bienvenue | `/bienvenue` | Ouverture de compte à partir d'une photo de la CNIB |
 | Accueil | `/` | Prochain voyage, compte à rebours, statistiques, bus 3D |
 | Réserver | `/reserver` | Trajet → date → départ → siège → résumé |
 | Scanner | `/reserver?scan=1` | Import d'un ticket papier |
+| Colis | `/colis` | Préparer un envoi ; suivi et code de retrait sur `/colis/[id]` |
 | Mes voyages | `/voyages` | Historique complet, « refaire ce trajet » |
-| Profil | `/profil` | Identité présentable au guichet, réglages des rappels |
-| Billet | `/billet/[id]` | Billet avec QR hors ligne, paiement, report, annulation |
+| Profil | `/profil` | Identité présentable au guichet, état réel des rappels |
+| Ma CNIB | `/cnib` | Pièce d'identité, décodage de la bande, rappel d'expiration |
+| Billet | `/billet/[id]` | QR hors ligne **une fois payé**, paiement, report, annulation |
 | Confirmation | `/confirmation/[id]` | L'alarme — « je viens » ou « j'annule » |
-| Gare | `/gare` | Aperçu côté agent : manifeste, statuts, remboursements |
+| Confidentialité | `/confidentialite` | Politique et conditions, lisibles hors ligne |
+
+### Côté agent — **absents de l'application publique**
+
+Ils ne sont compilés que dans la version agent (`EXPO_PUBLIC_MODE_AGENT=1`) ; ailleurs,
+chacun renvoie à l'accueil et aucun bouton n'y mène. Voir `src/lib/modeAgent.ts`.
+
+| Écran | Route | Rôle |
+|---|---|---|
+| Gare | `/gare` | Manifeste d'un départ, statuts, appels à passer |
+| Contrôle | `/controle` | Scan du QR à la porte du bus, verdict hors ligne |
+| Caisse | `/caisse` | Numéro Orange Money du guichet — chaque caisse a le sien |
 
 ## Organisation du code
 
 ```
 app/                    écrans (expo-router)
 src/
-  components/           base.tsx (thème appliqué), PlanSieges, Bus3D (+ .web)
-  data/                 reseau.ts (lignes, gares, tarifs réels), seed.ts, passagers.ts
-  lib/                  confirmation.ts, annulation.ts, disponibilite.ts, format.ts
-  store/                useApp.ts (zustand + AsyncStorage)
+  components/           base.tsx (thème appliqué), PlanSieges, Bus3D (+ .web), ScannerCamera
+  data/                 reseau.ts (lignes, gares, tarifs réels), colis.ts, mentionsLegales.ts
+  lib/                  parcours.ts, action.ts, verrou.ts, billetQr.ts, cnib.ts, colis.ts…
+  store/                useApp.ts (zustand + AsyncStorage), migration.ts
   sync/                 types.ts (SyncProvider), localProvider.ts
   theme/                couleurs, typographie, espacements
+tests/                  verification.ts — 119 contrôles sur le vrai code source
 docs/presentation/      argumentaire, chiffres à collecter, déroulé de démonstration
+docs/production/        état de préparation, mise en production, partage et mises à jour
 docs/integration/       comment se brancher sur la billetterie Digiparc de la compagnie
 ```
 
-**Fichiers à lire en premier** : `src/lib/confirmation.ts` porte toute la logique de
-confirmation, `src/sync/types.ts` définit la frontière avec le système de la compagnie.
+**Fichiers à lire en premier** :
+
+- `src/lib/parcours.ts` — l'ordre des choses, et ce qui n'a pas le droit d'arriver.
+  C'est lui qui interdit un billet avant paiement.
+- `src/lib/action.ts` et `src/lib/verrou.ts` — pourquoi deux appuis ne font jamais
+  deux réservations, et pourquoi aucun échec ne disparaît en silence.
+- `src/sync/types.ts` — la frontière avec le système de la compagnie.
+- `src/lib/disponibilite.ts` — ce qui attend leur feu vert, et comment on le dit.
 
 ## Données
 
@@ -212,11 +247,24 @@ sur place.
 
 ## Ce qui n'est pas encore fait
 
+L'état complet — ce qui est prêt, ce qui dépend de vous, ce qui dépend de la
+compagnie — est dans **`docs/production/etat-de-preparation.md`**. En résumé :
+
 - **Paiement Orange Money réel** : exige un compte marchand au nom de la compagnie. Le
-  parcours est complet, seuls les identifiants manquent.
-- **Envoi de SMS** : le repli SMS suppose un fournisseur d'envoi.
-- **Transport de colis**, aller-retour en une réservation, achat pour un tiers, programme de
-  fidélité, mooré et dioula, suivi GPS.
+  parcours est complet, seuls les identifiants manquent. En attendant, l'application
+  n'encaisse rien et ne prétend pas le contraire.
+- **Lecture automatique de la photo de CNIB** : le décodage de la bande est écrit et
+  testé ; la reconnaissance de caractères demande un module natif absent d'Expo Go.
+  Recopier la bande donne exactement le même résultat, par le même chemin.
+- **Places réellement occupées, confirmation de paiement, manifeste complet, suivi de
+  colis** : branchés et annoncés comme indisponibles tant que la compagnie n'a pas
+  ouvert son système.
+- **Suivi GPS, écran verrouillé, aller-retour en une réservation, achat pour un tiers,
+  mooré et dioula** : à reprendre après le premier build natif.
+
+Ce qui **existe** et fonctionne aujourd'hui, sans permission de personne : compte à
+partir de la CNIB, réservation, billet hors ligne signé, import d'un ticket papier,
+colis avec code de retrait, rappels locaux, fidélité calculée sur l'appareil.
 
 ## Marque
 
