@@ -88,8 +88,6 @@ export default function Bienvenue() {
 
   useRetourMateriel(etape === 'IDENTITE', () => setEtape('ACCUEIL'));
 
-  if (voyageurExistant) return <Redirect href="/" />;
-
   const telOk = telephone.replace(/\D/g, '').length >= 8;
   const complet = prenom.trim().length >= 2 && nom.trim().length >= 2 && telOk;
 
@@ -179,6 +177,21 @@ export default function Bienvenue() {
     if (DATE_ISO.test(expiration)) await programmerRappelsCnib(expiration).catch(() => undefined);
     router.replace('/');
   }, "Le compte n'a pas pu être créé. Réessayez dans un instant.");
+
+  /*
+   * Cette sortie **doit** rester après le dernier crochet.
+   *
+   * Elle était placée plus haut, avant les trois `useAction` ci-dessus, et c'était
+   * un plantage franc au pire moment qui soit : à la seconde où le compte est créé,
+   * `voyageurExistant` devient vrai, le composant se redessine, sort ici — et rend
+   * trois crochets de moins qu'au rendu précédent. React refuse (erreur #300) et
+   * fait tomber tout l'arbre. Le nouveau venu voyait un écran d'erreur en guise de
+   * bienvenue, juste après avoir saisi son identité.
+   *
+   * Trouvé par `npm run fumee`, qui joue l'inscription dans un vrai navigateur :
+   * ni les types ni les tests de règles ne peuvent voir ce défaut.
+   */
+  if (voyageurExistant) return <Redirect href="/" />;
 
   /* ── Caméra plein écran ─────────────────────────────────────────────────── */
 

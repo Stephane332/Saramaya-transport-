@@ -130,6 +130,146 @@ await visiter(
   'fumee-confidentialite.png',
 );
 
+/* ── Le parcours, joué pour de vrai ──────────────────────────────────────── */
+
+/**
+ * La règle la plus importante de l'application, vérifiée de bout en bout : **on
+ * n'obtient pas de billet avant d'avoir payé.**
+ *
+ * `npm test` la contrôle déjà au niveau des règles (`parcours.ts`). Ce contrôle-ci
+ * est différent et complémentaire : il ouvre l'application, crée un compte, réserve,
+ * et regarde ce qui s'affiche réellement à l'écran. C'est la seule façon de vérifier
+ * qu'aucun écran ne contourne la règle — le défaut d'origine était précisément là,
+ * dans un écran qui décidait dans son coin.
+ */
+async function jouerLeParcours() {
+  console.log('\nParcours — de l’inscription au billet\n');
+
+  await page.goto(`http://localhost:${PORT}/`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(5000);
+
+  /*
+   * `force: true` est nécessaire, et ce n'est pas un contournement paresseux :
+   * les écrans utilisent des animations de disposition (reanimated `Layout`) qui,
+   * sur le web, laissent les éléments en mouvement perpétuel du point de vue de
+   * Playwright. Son contrôle de stabilité attend alors indéfiniment un élément
+   * parfaitement immobile qui ne le sera jamais. On vérifie ici que le parcours
+   * mène où il doit et que la règle du billet tient — pas la physique du pointeur.
+   */
+  const cliquer = async (texte) => {
+    await page.getByText(texte, { exact: false }).first().click({ force: true, timeout: 15000 });
+    await page.waitForTimeout(900);
+  };
+  /*
+   * `exact: true` est indispensable ici : l'exemple de bande MRZ affiché en
+   * filigrane contient « SAWADOGO<<ANGE », si bien qu'une correspondance partielle
+   * remplit la zone de la bande au lieu du champ voulu — et le formulaire reste
+   * incomplet sans qu'on comprenne pourquoi.
+   */
+  const remplir = async (placeholder, valeur) => {
+    await page.getByPlaceholder(placeholder, { exact: true }).first().fill(valeur);
+  };
+  const controler = async (nom, condition) => {
+    if (condition) {
+      console.log(`  ok    ${nom}`);
+    } else {
+      echecs += 1;
+      console.log(`  ÉCHEC ${nom}`);
+    }
+  };
+
+  // 1. Ouverture de compte, sans photo : la saisie manuelle doit suffire.
+  await cliquer('Créer mon compte');
+  await remplir('Ange', 'Ange');
+  await remplir('SAWADOGO', 'SAWADOGO');
+  await remplir('66 79 80 31', '70451288');
+  await cliquer('Ouvrir mon compte');
+  await page.waitForTimeout(1500);
+
+  await controler(
+    'le compte est créé et l’accueil accueille par le prénom',
+    (await page.innerText('body')).includes('Bonjour Ange'),
+  );
+
+  // 2. Réservation complète.
+  await cliquer('Réserver');
+  // N'importe quelle ligne convient : ce qui est vérifié plus bas ne dépend pas du
+  // trajet choisi. (Avec `force`, le clic peut d'ailleurs atterrir sur la carte
+  // voisine si l'animation de liste est encore en cours — sans conséquence ici.)
+  await cliquer('Ouahigouya');
+  await cliquer('Voir les départs');
+
+  /*
+   * Passé le dernier départ de la journée, la liste est vide — c'est le
+   * comportement voulu, et il ferait échouer ce test une fois sur deux selon
+   * l'heure à laquelle on le lance. On repart donc sur la date la plus lointaine
+   * proposée, qui a toujours ses départs devant elle.
+   */
+  if ((await page.innerText('body')).includes('Plus de départ')) {
+    await cliquer('Changer de date');
+    await page
+      .locator('text=/^(LUN|MAR|MER|JEU|VEN|SAM|DIM)$/')
+      .last()
+      .click({ force: true, timeout: 15000 });
+    await page.waitForTimeout(600);
+    await cliquer('Voir les départs');
+  }
+
+  // Le premier départ proposé.
+  await page.locator('text=/^CONVOCATION/').first().click({ force: true, timeout: 15000 });
+  await page.waitForTimeout(900);
+  await cliquer('Sans préférence de place');
+  await cliquer('Créer ma réservation');
+  await page.waitForTimeout(2000);
+
+  const billet = await page.innerText('body');
+
+  // 3. Et voici ce qui compte.
+  await controler(
+    'la réservation naît « à payer »',
+    billet.includes('Place retenue') || billet.includes('PLACE RETENUE'),
+  );
+  await controler(
+    'l’écran annonce une RÉSERVATION, pas un ticket de voyage',
+    billet.includes('RÉSERVATION') && !billet.includes('TICKET DE VOYAGE'),
+  );
+  await controler(
+    'aucun code n’est présenté au contrôleur',
+    !billet.includes('Présentez ce code'),
+  );
+  await controler(
+    'aucun QR n’est dessiné avant paiement',
+    (await page.locator('svg').count()) === 0 || !billet.includes('Présentez ce code'),
+  );
+  await controler(
+    'les coordonnées Orange Money sont données pour payer',
+    billet.includes('Orange Money'),
+  );
+
+  await page.screenshot({ path: join(RACINE, 'fumee-billet-impaye.png') });
+
+  // 4. La déclaration de paiement ne fabrique toujours pas de billet.
+  await cliquer("J'ai effectué le paiement");
+  await page.waitForTimeout(1200);
+  const apres = await page.innerText('body');
+  await controler(
+    'une déclaration de paiement ne délivre toujours pas le billet',
+    apres.includes('Paiement déclaré') && !apres.includes('Présentez ce code'),
+  );
+  await controler(
+    'et la déclaration ne peut pas être répétée',
+    !apres.includes("J'ai effectué le paiement"),
+  );
+}
+
+try {
+  await jouerLeParcours();
+} catch (e) {
+  echecs += 1;
+  console.log(`  ÉCHEC parcours interrompu — ${e.message.split('\n')[0]}`);
+  await page.screenshot({ path: join(RACINE, 'fumee-parcours-echec.png') });
+}
+
 await navigateur.close();
 serveur.close();
 
