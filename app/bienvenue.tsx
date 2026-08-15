@@ -45,6 +45,7 @@ import {
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Bus3D } from '../src/components/Bus3D';
+import { CarteVirtuelle } from '../src/components/CarteVirtuelle';
 import {
   Bouton,
   Carte,
@@ -81,6 +82,20 @@ import { couleurs, espace, rayon } from '../src/theme';
 
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
+/**
+ * Exemple de bande, affiché en filigrane dans la zone de saisie.
+ *
+ * Volontairement **fictif** : il a d'abord été rempli avec une vraie carte, et le
+ * résultat était trompeur — on croyait que l'application avait déjà lu quelque
+ * chose, alors qu'elle montrait un exemple. Un exemple doit se reconnaître comme
+ * tel.
+ */
+const EXEMPLE_BANDE = [
+  'I<BFAB987654323<<<<<<<<<<<<<<<',
+  '9005145F3203112BFA<<<<<<<<<<<2',
+  'OUEDRAOGO<<FATIMATA<ADIZA<<<<<',
+].join('\n');
+
 const SOURCES_VIDES = Object.fromEntries(CHAMPS.map((c) => [c, 'AUCUNE'])) as Record<
   ChampCarte,
   SourceChamp
@@ -105,14 +120,18 @@ export default function Bienvenue() {
 
   /** Le seul champ absent de la carte. */
   const [telephone, setTelephone] = useState('');
+  const [correctionOuverte, setCorrectionOuverte] = useState(false);
+  const [bandeOuverte, setBandeOuverte] = useState(false);
 
   useRetourMateriel(etape === 'IDENTITE', () => setEtape('ACCUEIL'));
 
   const telOk = telephone.replace(/\D/g, '').length >= 8;
-  const complet = carteSuffisante(carte) && telOk;
+  const carteLue = carteSuffisante(carte);
+  const complet = carteLue && telOk;
 
   const recto = useMemo(() => lectures.find((l) => l.face === 'RECTO'), [lectures]);
   const verso = useMemo(() => lectures.find((l) => l.face === 'VERSO'), [lectures]);
+  const faceManquante = !recto ? 'RECTO' : !verso ? 'DOS' : null;
 
   /**
    * Range une lecture et reporte le résultat sur le formulaire.
@@ -148,6 +167,22 @@ export default function Bienvenue() {
     setDesaccords((d) => d.filter((c) => c !== champ));
   };
 
+  /*
+   * Une fonction qui rend du JSX, et non un composant défini ici : un composant
+   * déclaré dans le corps du rendu est recréé à chaque passage, et React démonte
+   * alors le champ de saisie — le clavier se referme à chaque lettre tapée.
+   */
+  const champEditable = (champ: ChampCarte, libelle: string) => (
+    <Champ
+      libelle={libelle}
+      valeur={carte[champ]}
+      source={sources[champ]}
+      enDesaccord={desaccords.includes(champ)}
+      onChange={(v) => corriger(champ, v)}
+      majuscule={champ === 'nom' || champ === 'prenoms' || champ === 'lieuNaissance'}
+    />
+  );
+
   const importer = useAction(async (origine: 'APPAREIL' | 'GALERIE') => {
     const uri = origine === 'APPAREIL' ? await photographier() : await choisirDepuisGalerie();
     if (!uri) return; // Annulé : ce n'est pas un échec.
@@ -164,8 +199,10 @@ export default function Bienvenue() {
       uri: '',
       texte: bandeManuelle,
       bande: decodee.identite,
+      bandeBrute: bandeManuelle,
       avertissements: decodee.avertissements,
     });
+    setBandeManuelle('');
   }, "La bande n'a pas pu être décodée. Vérifiez les trois lignes de trente caractères.");
 
   const ouverture = useAction(async () => {
@@ -233,39 +270,72 @@ export default function Bienvenue() {
           <EnTeteRetour onRetour={() => setEtape('ACCUEIL')} titre="Votre identité" />
 
           <Txt v="petit" couleur={couleurs.texteFaible}>
-            Ajoutez une image de votre CNIB : tout se remplit. Le dos est le plus fiable — sa
-            bande porte des clés de contrôle. Vos informations restent sur ce téléphone.
+            {carteLue
+              ? 'Voici votre carte, telle que l’application l’a lue. Vérifiez-la d’un coup d’œil.'
+              : 'Ajoutez une image de votre CNIB : tout se remplit. Le dos est le plus fiable — sa bande porte des clés de contrôle. Vos informations restent sur ce téléphone.'}
           </Txt>
 
-          <Section>Votre carte</Section>
+          {/*
+            Une carte lue s'affiche **comme une carte**, et non comme un formulaire.
+            L'écran montrait auparavant des champs vides dès l'ouverture, remplis
+            d'exemples grisés qu'on prenait pour des données déjà saisies : on ne
+            savait plus si l'application avait lu quelque chose ou attendait qu'on
+            tape. Tant que rien n'est lu, il n'y a donc rien à voir qu'un bouton.
+          */}
+          {carteLue ? (
+            <CarteVirtuelle
+              carte={carte}
+              sources={sources}
+              desaccords={desaccords}
+              photoUri={recto?.uri ?? null}
+              bande={verso?.bandeBrute ?? null}
+            />
+          ) : null}
+
           <View style={{ gap: espace.md }}>
-            <View style={{ flexDirection: 'row', gap: espace.md }}>
-              <VignetteFace titre="RECTO" lecture={recto} />
-              <VignetteFace titre="DOS" lecture={verso} />
-            </View>
+            {!carteLue ? (
+              <View style={{ flexDirection: 'row', gap: espace.md }}>
+                <VignetteFace titre="RECTO" lecture={recto} />
+                <VignetteFace titre="DOS" lecture={verso} />
+              </View>
+            ) : null}
 
             <MessageErreur texte={importer.erreur} />
 
             <Bouton
-              titre={importer.enCours ? 'Lecture…' : 'Photographier ma carte'}
-              sousTitre="Le dos de préférence — reste sur ce téléphone"
+              titre={
+                importer.enCours
+                  ? 'Lecture…'
+                  : carteLue
+                    ? 'Ajouter une autre face'
+                    : 'Photographier ma carte'
+              }
+              sousTitre={
+                carteLue
+                  ? faceManquante
+                    ? `Le ${faceManquante.toLowerCase()} complétera ce qui manque`
+                    : 'Les deux faces sont lues'
+                  : 'Le dos de préférence — reste sur ce téléphone'
+              }
+              variante={carteLue ? 'secondaire' : 'principal'}
               desactive={importer.enCours}
-              icone={<Ionicons name="camera-outline" size={18} color={couleurs.texte} />}
+              icone={
+                <Ionicons
+                  name="camera-outline"
+                  size={18}
+                  color={carteLue ? couleurs.texteDoux : couleurs.texte}
+                />
+              }
               onPress={() => importer.lancer('APPAREIL')}
             />
             <Bouton
               titre="Choisir une image existante"
-              sousTitre="Une photo de la carte déjà dans votre téléphone"
+              sousTitre={carteLue ? undefined : 'Une photo de la carte déjà dans votre téléphone'}
               variante="secondaire"
               desactive={importer.enCours}
               icone={<Ionicons name="images-outline" size={18} color={couleurs.texteDoux} />}
               onPress={() => importer.lancer('GALERIE')}
             />
-            {lectures.length === 1 ? (
-              <Txt v="minuscule" couleur={couleurs.texteFaible}>
-                AJOUTEZ L'AUTRE FACE : ELLE COMPLÈTE CE QUI MANQUE ET CONFIRME LE RESTE
-              </Txt>
-            ) : null}
           </View>
 
           {messageLecture ? (
@@ -313,105 +383,112 @@ export default function Bienvenue() {
             </Carte>
           ) : null}
 
-          <Section>Vos informations</Section>
-          <Carte style={{ gap: espace.md }}>
-            <Champ
-              libelle="NOM"
-              valeur={carte.nom}
-              source={sources.nom}
-              enDesaccord={desaccords.includes('nom')}
-              onChange={(v) => corriger('nom', v)}
-              placeholder="SAWADOGO"
-              majuscule
-            />
-            <Trait />
-            <Champ
-              libelle="PRÉNOMS"
-              valeur={carte.prenoms}
-              source={sources.prenoms}
-              enDesaccord={desaccords.includes('prenoms')}
-              onChange={(v) => corriger('prenoms', v)}
-              placeholder="ANGE STEPHANE"
-              majuscule
-            />
-            <Trait />
-            <Champ
-              libelle="TÉLÉPHONE"
-              valeur={telephone}
-              source="AUCUNE"
-              onChange={setTelephone}
-              placeholder="70 45 12 88"
-              clavier="phone-pad"
-              note="NE FIGURE PAS SUR LA CARTE"
-            />
-            <Trait />
-            <Champ
-              libelle="NUMÉRO CNIB"
-              valeur={carte.numeroCarte}
-              source={sources.numeroCarte}
-              enDesaccord={desaccords.includes('numeroCarte')}
-              onChange={(v) => corriger('numeroCarte', v)}
-              placeholder="B13654737"
-              majuscule
-            />
-            <Trait />
-            <Champ
-              libelle="EXPIRE LE (AAAA-MM-JJ)"
-              valeur={carte.dateExpiration}
-              source={sources.dateExpiration}
-              enDesaccord={desaccords.includes('dateExpiration')}
-              onChange={(v) => corriger('dateExpiration', v)}
-              placeholder="2031-08-30"
-            />
-            <Trait />
-            <Champ
-              libelle="NÉ(E) LE (AAAA-MM-JJ)"
-              valeur={carte.dateNaissance}
-              source={sources.dateNaissance}
-              enDesaccord={desaccords.includes('dateNaissance')}
-              onChange={(v) => corriger('dateNaissance', v)}
-              placeholder="2004-10-01"
-            />
-            {carte.lieuNaissance ? (
-              <>
-                <Trait />
+          {/*
+            Le téléphone est le seul renseignement qui ne figure pas sur la carte :
+            il est donc demandé à part, et seulement une fois la carte lue — avant,
+            il n'aurait aucun sens de le réclamer.
+          */}
+          {carteLue ? (
+            <>
+              <Section>Votre numéro</Section>
+              <Carte>
                 <Champ
-                  libelle="LIEU DE NAISSANCE"
-                  valeur={carte.lieuNaissance}
-                  source={sources.lieuNaissance}
-                  onChange={(v) => corriger('lieuNaissance', v)}
-                  placeholder="OUAHIGOUYA"
-                  majuscule
+                  libelle="TÉLÉPHONE"
+                  valeur={telephone}
+                  source="AUCUNE"
+                  onChange={setTelephone}
+                  placeholder="70 00 00 00"
+                  clavier="phone-pad"
+                  note="NE FIGURE PAS SUR LA CARTE — C'EST PAR LÀ QUE LA GARE VOUS JOINT"
                 />
-              </>
-            ) : null}
-          </Carte>
+              </Carte>
+
+              <Bouton
+                titre={correctionOuverte ? 'Masquer la correction' : 'Corriger une information'}
+                sousTitre={
+                  desaccords.length > 0
+                    ? `${desaccords.length} champ${desaccords.length > 1 ? 's' : ''} à vérifier`
+                    : undefined
+                }
+                variante="fantome"
+                icone={
+                  <Ionicons
+                    name={correctionOuverte ? 'chevron-up' : 'create-outline'}
+                    size={18}
+                    color={desaccords.length > 0 ? couleurs.danger : couleurs.texteDoux}
+                  />
+                }
+                onPress={() => setCorrectionOuverte((o) => !o)}
+              />
+            </>
+          ) : null}
+
+          {correctionOuverte ? (
+            <Animated.View entering={FadeInDown}>
+              <Carte style={{ gap: espace.md }}>
+                {champEditable('nom', 'NOM')}
+                <Trait />
+                {champEditable('prenoms', 'PRÉNOMS')}
+                <Trait />
+                {champEditable('numeroCarte', 'NUMÉRO CNIB')}
+                <Trait />
+                {champEditable('dateExpiration', 'EXPIRE LE (AAAA-MM-JJ)')}
+                <Trait />
+                {champEditable('dateNaissance', 'NÉ(E) LE (AAAA-MM-JJ)')}
+                <Trait />
+                {champEditable('lieuNaissance', 'LIEU DE NAISSANCE')}
+              </Carte>
+            </Animated.View>
+          ) : null}
 
           {/*
             Voie de secours, et non version dégradée : recopier la bande donne
             exactement le même résultat que la lecture d'image — mêmes champs, même
-            décodage, mêmes clés de contrôle.
+            décodage, mêmes clés de contrôle. Repliée tant qu'aucune carte n'est
+            lue, pour ne pas faire croire qu'il faut taper trente caractères.
           */}
-          <Section>Ou recopiez la bande du dos</Section>
-          <Carte style={{ gap: espace.md }}>
-            <TextInput
-              value={bandeManuelle}
-              onChangeText={setBandeManuelle}
-              placeholder={'I<BFAB136547379<<<<<<<<<<<<<<<\n0410014M3108309BFA<<<<<<<<<<<0\nSAWADOGO<<ANGE<STEPHANE<<<<<<<'}
-              placeholderTextColor="rgba(255,255,255,0.18)"
-              multiline
-              autoCapitalize="characters"
-              autoCorrect={false}
-              style={styles.bande}
-            />
-            <MessageErreur texte={saisirBande.erreur} />
-            <Bouton
-              titre="Remplir depuis la bande"
-              variante="secondaire"
-              desactive={bandeManuelle.trim().length < 30 || saisirBande.enCours}
-              onPress={saisirBande.lancer}
-            />
-          </Carte>
+          <Bouton
+            titre={bandeOuverte ? 'Masquer la saisie manuelle' : 'Recopier la bande du dos à la main'}
+            sousTitre={bandeOuverte ? undefined : "Si la lecture d'image n'est pas disponible"}
+            variante="fantome"
+            icone={
+              <Ionicons
+                name={bandeOuverte ? 'chevron-up' : 'keypad-outline'}
+                size={18}
+                color={couleurs.texteDoux}
+              />
+            }
+            onPress={() => setBandeOuverte((o) => !o)}
+          />
+
+          {bandeOuverte ? (
+            <Animated.View entering={FadeInDown}>
+              <Carte style={{ gap: espace.md }}>
+                <Txt v="petit" couleur={couleurs.texteDoux}>
+                  Les trois lignes de trente caractères imprimées au dos contiennent tout.
+                  Recopiez-les : chaque champ y porte une clé de contrôle, donc une faute de
+                  frappe est repérée au lieu d'être enregistrée.
+                </Txt>
+                <TextInput
+                  value={bandeManuelle}
+                  onChangeText={setBandeManuelle}
+                  placeholder={EXEMPLE_BANDE}
+                  placeholderTextColor="rgba(255,255,255,0.18)"
+                  multiline
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  style={styles.bande}
+                />
+                <MessageErreur texte={saisirBande.erreur} />
+                <Bouton
+                  titre="Remplir depuis la bande"
+                  variante="secondaire"
+                  desactive={bandeManuelle.trim().length < 30 || saisirBande.enCours}
+                  onPress={saisirBande.lancer}
+                />
+              </Carte>
+            </Animated.View>
+          ) : null}
 
           <View style={styles.note}>
             <Ionicons name="shield-checkmark-outline" size={18} color={couleurs.succes} />

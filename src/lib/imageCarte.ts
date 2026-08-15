@@ -42,6 +42,8 @@ export interface LectureFace {
   raisonIndisponible?: string;
   /** Identité décodée depuis la bande, quand la face lue est le dos. */
   bande?: IdentiteLue;
+  /** Les trois lignes brutes de la bande, pour les réafficher telles quelles. */
+  bandeBrute?: string;
   /** Avertissements des clés de contrôle. */
   avertissements: string[];
   /** Champs lus au recto. */
@@ -126,10 +128,11 @@ export async function lireImageCarte(uri: string): Promise<LectureFace> {
         uri,
         texte,
         bande: decodee.identite,
+        bandeBrute: bandeTrouvee,
         avertissements: decodee.avertissements,
       };
     }
-    return { face: 'VERSO', uri, texte, avertissements: [decodee.raison] };
+    return { face: 'VERSO', uri, texte, bandeBrute: bandeTrouvee, avertissements: [decodee.raison] };
   }
 
   // Sinon le recto, par ses étiquettes.

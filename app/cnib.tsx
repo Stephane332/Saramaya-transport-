@@ -33,6 +33,7 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { CarteVirtuelle } from '../src/components/CarteVirtuelle';
 import {
   Bouton,
   Carte,
@@ -66,6 +67,19 @@ import { useApp } from '../src/store/useApp';
 import { couleurs, espace, rayon } from '../src/theme';
 
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Exemple de bande, affiché en filigrane.
+ *
+ * Volontairement **fictif**. Un exemple tiré d'une vraie carte se prend pour une
+ * donnée déjà lue : on ne sait plus si l'application a compris quelque chose ou
+ * attend qu'on tape.
+ */
+const EXEMPLE_BANDE = [
+  'I<BFAB987654323<<<<<<<<<<<<<<<',
+  '9005145F3203112BFA<<<<<<<<<<<2',
+  'OUEDRAOGO<<FATIMATA<ADIZA<<<<<',
+].join('\n');
 
 const SOURCES_VIDES = Object.fromEntries(CHAMPS.map((c) => [c, 'AUCUNE'])) as Record<
   ChampCarte,
@@ -146,8 +160,10 @@ export default function EcranCnib() {
       uri: '',
       texte: bandeManuelle,
       bande: decodee.identite,
+      bandeBrute: bandeManuelle,
       avertissements: decodee.avertissements,
     });
+    setBandeManuelle('');
   }, "La bande n'a pas pu être décodée. Vérifiez les trois lignes de trente caractères.");
 
   const enregistrement = useAction(async () => {
@@ -167,6 +183,9 @@ export default function EcranCnib() {
   const jours = DATE_ISO.test(carte.dateExpiration)
     ? joursAvantExpirationCnib(carte.dateExpiration)
     : null;
+  // Une carte se montre dès qu'elle a de quoi être reconnue ; sinon il n'y a rien
+  // à afficher qu'un bouton.
+  const carteLue = Boolean(carte.numeroCarte || carte.nom);
 
   return (
     <View style={[styles.fond, { paddingTop: insets.top }]}>
@@ -179,24 +198,49 @@ export default function EcranCnib() {
           <EnTeteRetour onRetour={() => router.back()} titre="Ma pièce d'identité" />
 
           <Txt v="petit" couleur={couleurs.texteFaible}>
-            Ajoutez une image de votre carte : tout se remplit. Renseignée une fois, présentée
-            au guichet. Vos informations restent sur ce téléphone — rien n'est envoyé.
+            {carteLue
+              ? 'Votre carte, telle que l’application la connaît. Présentez cet écran au guichet.'
+              : 'Ajoutez une image de votre carte : tout se remplit. Vos informations restent sur ce téléphone — rien n’est envoyé.'}
           </Txt>
 
-          <Section>Votre carte</Section>
+          {carteLue ? (
+            <CarteVirtuelle
+              carte={carte}
+              sources={sources}
+              desaccords={desaccords}
+              photoUri={recto?.uri ?? photo}
+              bande={verso?.bandeBrute ?? null}
+            />
+          ) : null}
+
           <View style={{ gap: espace.md }}>
-            <View style={{ flexDirection: 'row', gap: espace.md }}>
-              <VignetteFace titre="RECTO" lecture={recto} repli={photo} />
-              <VignetteFace titre="DOS" lecture={verso} />
-            </View>
+            {!carteLue ? (
+              <View style={{ flexDirection: 'row', gap: espace.md }}>
+                <VignetteFace titre="RECTO" lecture={recto} repli={photo} />
+                <VignetteFace titre="DOS" lecture={verso} />
+              </View>
+            ) : null}
 
             <MessageErreur texte={importer.erreur} />
 
             <Bouton
-              titre={importer.enCours ? 'Lecture…' : 'Photographier ma carte'}
-              sousTitre="Le dos de préférence — reste sur ce téléphone"
+              titre={
+                importer.enCours
+                  ? 'Lecture…'
+                  : carteLue
+                    ? 'Mettre à jour depuis une photo'
+                    : 'Photographier ma carte'
+              }
+              sousTitre={carteLue ? undefined : 'Le dos de préférence — reste sur ce téléphone'}
+              variante={carteLue ? 'secondaire' : 'principal'}
               desactive={importer.enCours}
-              icone={<Ionicons name="camera-outline" size={18} color={couleurs.texte} />}
+              icone={
+                <Ionicons
+                  name="camera-outline"
+                  size={18}
+                  color={carteLue ? couleurs.texteDoux : couleurs.texte}
+                />
+              }
               onPress={() => importer.lancer('APPAREIL')}
             />
             <Bouton
@@ -259,7 +303,7 @@ export default function EcranCnib() {
               source={sources.numeroCarte}
               enDesaccord={desaccords.includes('numeroCarte')}
               onChange={(v) => corriger('numeroCarte', v)}
-              placeholder="B13654737"
+              placeholder="B98765432"
             />
             <Trait />
             <Champ
@@ -268,7 +312,7 @@ export default function EcranCnib() {
               source={sources.dateExpiration}
               enDesaccord={desaccords.includes('dateExpiration')}
               onChange={(v) => corriger('dateExpiration', v)}
-              placeholder="2031-08-30"
+              placeholder="2032-03-11"
             />
             {jours !== null ? (
               <Txt
@@ -287,7 +331,7 @@ export default function EcranCnib() {
               source={sources.dateNaissance}
               enDesaccord={desaccords.includes('dateNaissance')}
               onChange={(v) => corriger('dateNaissance', v)}
-              placeholder="2004-10-01"
+              placeholder="1990-05-14"
             />
           </Carte>
 
@@ -301,7 +345,7 @@ export default function EcranCnib() {
             <TextInput
               value={bandeManuelle}
               onChangeText={setBandeManuelle}
-              placeholder={'I<BFAB136547379<<<<<<<<<<<<<<<\n0410014M3108309BFA<<<<<<<<<<<0\nSAWADOGO<<ANGE<STEPHANE<<<<<<<'}
+              placeholder={EXEMPLE_BANDE}
               placeholderTextColor="rgba(255,255,255,0.18)"
               multiline
               autoCapitalize="characters"

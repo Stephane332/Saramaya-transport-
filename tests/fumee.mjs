@@ -116,6 +116,19 @@ async function visiter(route, attendus, capture) {
   console.log(`        vu : ${texte.slice(0, 300).replace(/\s+/g, ' ')}`);
 }
 
+/**
+ * Bande d'une CNIB **fictive**, avec des clés de contrôle valides.
+ *
+ * Aucune vraie pièce d'identité n'a sa place dans un dépôt de code, fût-ce dans un
+ * test. Celle-ci est fabriquée : numéro B98765432, née le 14/05/1990, carte
+ * expirant le 11/03/2032.
+ */
+const BANDE_EXEMPLE = [
+  'I<BFAB987654323<<<<<<<<<<<<<<<',
+  '9005145F3203112BFA<<<<<<<<<<<2',
+  'OUEDRAOGO<<FATIMATA<ADIZA<<<<<',
+].join('\n');
+
 console.log('\nTest de fumée — l’application se charge et s’affiche\n');
 
 // Sans compte enregistré, l'application doit ouvrir sur l'accueil d'inscription.
@@ -179,24 +192,52 @@ async function jouerLeParcours() {
   };
 
   /*
-   * 1. Ouverture de compte.
+   * 1. Ouverture de compte à partir de la bande du dos.
    *
    * Le chemin normal est l'image de la CNIB, que ce test ne peut pas emprunter :
-   * il n'a ni appareil photo ni galerie. On vérifie donc la voie de secours, qui
-   * doit rester praticable de bout en bout — c'est elle qui garantit que personne
-   * ne reste bloqué faute de pouvoir photographier sa carte.
+   * il n'a ni appareil photo ni galerie. Il emprunte donc la voie de secours — qui
+   * traverse **exactement le même décodage**, les mêmes clés de contrôle et la même
+   * fusion. C'est donc bien le vrai chemin de lecture qui est vérifié ici, de la
+   * bande brute jusqu'à la carte affichée.
    */
   await cliquer('Créer mon compte');
+  await page.screenshot({ path: join(RACINE, 'fumee-identite-vide.png') });
+
+  // Avant toute lecture, l'écran ne doit montrer aucun formulaire : c'était le
+  // défaut signalé — des champs d'exemple grisés qu'on prenait pour des données.
+  const avantLecture = await page.innerText('body');
+  await controler(
+    'aucun formulaire tant qu’aucune carte n’est lue',
+    !avantLecture.includes('NUMÉRO CNIB') && !avantLecture.includes('EXPIRE LE'),
+  );
+
+  await cliquer('Recopier la bande du dos à la main');
+  await page.locator('textarea').first().fill(BANDE_EXEMPLE);
+  await cliquer('Remplir depuis la bande');
+  await page.waitForTimeout(1200);
+
+  const apresLecture = await page.innerText('body');
+  await controler(
+    'la carte lue s’affiche comme une carte',
+    apresLecture.includes('COPIE NUMÉRIQUE') && apresLecture.includes('OUEDRAOGO'),
+  );
+  await controler(
+    'la carte porte les champs décodés de la bande',
+    apresLecture.includes('B98765432') && apresLecture.includes('11/03/2032'),
+  );
+  await controler(
+    'et rappelle qu’elle ne remplace pas la carte physique',
+    apresLecture.includes('PRÉSENTEZ LA CARTE ORIGINALE AU CONTRÔLE'),
+  );
   await page.screenshot({ path: join(RACINE, 'fumee-identite.png') });
-  await remplir('SAWADOGO', 'SAWADOGO');
-  await remplir('ANGE STEPHANE', 'ANGE STEPHANE');
-  await remplir('70 45 12 88', '70451288');
+
+  await remplir('70 00 00 00', '70451288');
   await cliquer('Ouvrir mon compte');
   await page.waitForTimeout(1500);
 
   await controler(
     'le compte est créé et l’accueil accueille par le prénom',
-    (await page.innerText('body')).includes('Bonjour Ange'),
+    (await page.innerText('body')).includes('Bonjour Fatimata'),
   );
 
   // 2. Réservation complète.
