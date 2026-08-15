@@ -18,9 +18,41 @@ Ce qui relève de Saramaya est branché et attend leur feu vert.
 
 ## 1. Ce qui est fini et vérifié
 
-**14 écrans, 21 modules de règles, 11 700 lignes, 119 contrôles automatiques.**
-`npm run verifier` enchaîne les trois vérifications — versions des paquets alignées,
-types sans erreur, tests au vert — et le bundle web se produit sans avertissement.
+**14 écrans, 23 modules de règles, 11 900 lignes, 119 contrôles automatiques**, plus
+un parcours joué de bout en bout dans un vrai navigateur.
+
+```bash
+npm run verifier    # versions des paquets, types, 119 tests
+npm run fumee       # l'application s'ouvre dans Chromium et se laisse utiliser
+```
+
+Les deux sont complémentaires, et le second n'est pas un luxe : il a trouvé deux
+défauts que **rien d'autre ne pouvait voir**.
+
+Le premier : un plantage franc à la seconde où l'on crée son compte. Une sortie
+anticipée placée au-dessus de trois crochets React faisait tomber tout l'arbre au
+second rendu — un nouveau venu voyait un écran d'erreur en guise de bienvenue. La
+compilation était parfaitement valide, les 119 tests au vert.
+
+Le second : la version web contactait `cdn.jsdelivr.net` **à chaque chargement de
+page**, y compris sur la page de politique de confidentialité qui affirme le
+contraire. `expo-camera` y crée, dès l'import, un worker qui va chercher un
+décodeur de QR sur ce CDN. Cacher le bouton de la caméra ne suffisait pas ; le
+module est désormais absent du bundle web.
+
+Le test rejoue le parcours complet et vérifie à l'écran ce qui compte :
+
+```
+ok  le compte est créé et l'accueil accueille par le prénom
+ok  la réservation naît « à payer »
+ok  l'écran annonce une RÉSERVATION, pas un ticket de voyage
+ok  aucun code n'est présenté au contrôleur
+ok  aucun QR n'est dessiné avant paiement
+ok  une déclaration de paiement ne délivre toujours pas le billet
+ok  le colis est « à remettre au guichet », pas déposé
+ok  aucun code de retrait n'est montré avant le dépôt
+ok  et rien ne prétend que le colis est payé
+```
 
 ### Le parcours complet, dans le bon ordre
 
@@ -152,7 +184,7 @@ Le détail est dans `mise-en-production.md`. En deux lignes :
 
 ```bash
 npm run verifier      # versions, types, 119 tests
-npx expo export --platform web
+npm run fumee         # l'application s'ouvre et se laisse utiliser pour de vrai
 ```
 
 Puis le parcours à la main sur un vrai téléphone — la liste des enchaînements à
