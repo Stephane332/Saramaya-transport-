@@ -18,8 +18,10 @@
  * change dans le même commit — c'est ce qui distingue une politique d'un décor.
  */
 
+import { CONCEPTEUR, NOM_APPLICATION } from './application';
+
 /** Dernière révision du texte, à mettre à jour à chaque modification de fond. */
-export const REVISION_MENTIONS = '2026-08-14';
+export const REVISION_MENTIONS = '2026-08-15';
 
 export interface SectionLegale {
   titre: string;
@@ -37,7 +39,7 @@ export const CONFIDENTIALITE: SectionLegale[] = [
   {
     titre: 'En une phrase',
     paragraphes: [
-      "Siraba n'a pas de serveur. Vos informations sont enregistrées sur votre téléphone, et elles y restent : nous ne les recevons pas, nous ne les stockons pas ailleurs, et nous ne pouvons donc ni les consulter, ni les revendre, ni les perdre.",
+      `${NOM_APPLICATION} n'a pas de serveur. Vos informations sont enregistrées sur votre téléphone, et elles y restent : nous ne les recevons pas, nous ne les stockons pas ailleurs, et nous ne pouvons donc ni les consulter, ni les revendre, ni les perdre.`,
     ],
   },
   {
@@ -111,13 +113,30 @@ export const CONFIDENTIALITE: SectionLegale[] = [
       "Le jour où l'application se connectera au système de la compagnie, des informations devront nécessairement lui être transmises pour réserver une place — c'est le principe même d'une réservation. Ce document sera mis à jour **avant** que cela n'arrive, et l'application vous le dira clairement au lieu de le faire en silence.",
     ],
   },
+  {
+    /*
+     * Une politique de confidentialité doit dire **qui répond**. Sans cela elle est
+     * incomplète aux yeux des deux boutiques, et surtout inutile à qui voudrait
+     * poser une question : un texte qui explique vos droits sans indiquer à qui les
+     * adresser ne sert à rien.
+     */
+    titre: 'Qui est responsable de cette application',
+    paragraphes: [
+      `${NOM_APPLICATION} est conçu et publié par **${CONCEPTEUR}**, voyageur et client de Saramaya Transport. L'application n'est ni éditée, ni exploitée, ni approuvée par la compagnie.`,
+      "Il n'y a personne d'autre : aucune société, aucun sous-traitant, aucun prestataire d'hébergement — puisqu'il n'y a rien à héberger. Vos données ne sont détenues par personne, pas même par le concepteur.",
+      // Ce texte se lit aussi bien dans l'application installée que sur le web, où
+      // il n'y a aucune « boutique » : la formule doit tenir dans les deux cas.
+      "Pour une question sur l'application elle-même, l'adresse de contact du concepteur est publiée à l'endroit d'où vous l'avez obtenue — fiche de la boutique ou page de téléchargement. Pour une question sur un voyage, un billet ou un colis, c'est la gare qu'il faut appeler : ses numéros figurent sur les écrans concernés.",
+      "Et pour exercer un droit d'accès, de rectification ou de suppression, il n'y a personne à contacter — tout est dans votre téléphone, et l'écran Profil vous y donne accès directement.",
+    ],
+  },
 ];
 
 export const CONDITIONS: SectionLegale[] = [
   {
-    titre: "Ce qu'est Siraba",
+    titre: `Ce qu'est ${NOM_APPLICATION}`,
     paragraphes: [
-      "Siraba est une application indépendante, conçue par un client de Saramaya Transport pour ses propres voyages. **Elle n'est ni éditée, ni exploitée, ni approuvée par Saramaya Transport**, dont le nom et les horaires sont cités à titre d'information sur les services de la compagnie.",
+      `${NOM_APPLICATION} est une application indépendante, conçue par ${CONCEPTEUR}, client de Saramaya Transport, pour ses propres voyages. **Elle n'est ni éditée, ni exploitée, ni approuvée par Saramaya Transport**, dont le nom et les horaires sont cités à titre d'information sur les services de la compagnie.`,
       "Pour toute question sur un voyage, un billet ou un colis, la gare reste votre interlocuteur : les numéros figurent sur chaque écran concerné.",
     ],
   },

@@ -14,6 +14,18 @@ export function jourLong(iso: string): string {
   return format(parseISO(iso), 'EEEE d MMMM yyyy', { locale: fr });
 }
 
+/**
+ * « 2031-08-30 » devient « 30/08/2031 » — l'écriture des cartes et des tickets.
+ *
+ * Les dates circulent en ISO dans le code, parce que c'est la seule forme qui se
+ * compare et se trie sans ambiguïté. Elles ne doivent jamais s'afficher ainsi : un
+ * voyageur qui lit « 2031-08-30 » sur son profil et « 30/08/2031 » sur sa carte se
+ * demande s'il regarde la même chose.
+ */
+export function jourFrancais(iso: string): string {
+  return /^\d{4}-\d{2}-\d{2}/.test(iso) ? format(parseISO(iso), 'dd/MM/yyyy') : iso;
+}
+
 export function jourEtMois(iso: string): string {
   return format(parseISO(iso), 'd MMMM', { locale: fr });
 }

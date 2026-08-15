@@ -14,11 +14,18 @@ import {
   Trait,
   Txt,
 } from '../../src/components/base';
+import { LogoSaramaya } from '../../src/components/LogoSaramaya';
+import {
+  CONCEPTEUR,
+  MENTION_INDEPENDANCE,
+  NOM_APPLICATION,
+  VERSION,
+} from '../../src/data/application';
 import { useAction } from '../../src/lib/action';
 import { etatFonction } from '../../src/lib/disponibilite';
 import { RAPPELS_ANNONCES, useEtatNotifications } from '../../src/lib/notifications';
 import { calculerFidelite, phraseHabitue } from '../../src/lib/fidelite';
-import { initiales, montant, telephone } from '../../src/lib/format';
+import { initiales, jourFrancais, montant, telephone } from '../../src/lib/format';
 import { useApp, voyagesEffectues } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
@@ -189,7 +196,9 @@ export default function Profil() {
         titre={voyageur.cnib ? 'Ma CNIB' : 'Renseigner ma CNIB'}
         sousTitre={
           voyageur.cnibExpireLe
-            ? `Expire le ${voyageur.cnibExpireLe} · rappel programmé`
+            ? // La date se lit comme partout ailleurs dans l'application, et comme
+              // sur la carte elle-même : « 30/08/2031 », et non « 2031-08-30 ».
+              `Expire le ${jourFrancais(voyageur.cnibExpireLe)} · rappel programmé`
             : 'Exigée dès 18 ans à la gare — reste sur ce téléphone'
         }
         variante="secondaire"
@@ -235,6 +244,26 @@ export default function Profil() {
           />
         </Animated.View>
       )}
+
+      {/*
+        Le pied de l'application : qui l'a faite, quelle version, et surtout ce
+        qu'elle n'est pas. Un voyageur qui rencontre un problème doit savoir à quelle
+        porte frapper — la gare pour un voyage, le concepteur pour l'application —
+        et la compagnie ne doit pas se voir imputer un logiciel qu'elle n'édite pas.
+      */}
+      <Trait />
+      <View style={styles.pied}>
+        <LogoSaramaya hauteur={22} />
+        <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
+          {NOM_APPLICATION.toUpperCase()} · VERSION {VERSION}
+        </Txt>
+        <Txt v="petit" couleur={couleurs.texteDoux} style={{ textAlign: 'center' }}>
+          Conçu par {CONCEPTEUR}
+        </Txt>
+        <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
+          {MENTION_INDEPENDANCE}
+        </Txt>
+      </View>
     </Ecran>
   );
 }
@@ -345,4 +374,5 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
   },
   grilleIdentite: { flexDirection: 'row', justifyContent: 'space-between' },
+  pied: { alignItems: 'center', gap: 6, paddingVertical: espace.md },
 });

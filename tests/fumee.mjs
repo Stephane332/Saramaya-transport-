@@ -107,8 +107,42 @@ await new Promise((r) => serveur.listen(PORT, r));
 
 /* ── Le navigateur ───────────────────────────────────────────────────────── */
 
-const executablePath = process.env.PLAYWRIGHT_CHROMIUM;
-const navigateur = await chromium.launch(executablePath ? { executablePath } : {});
+/**
+ * Playwright réclame le Chromium **de sa version** : mettre à jour le paquet sans
+ * relancer `playwright install` rend le test injouable, alors que la machine a
+ * souvent déjà un Chromium utilisable. Plutôt que d'abandonner la seule
+ * vérification qui exécute vraiment l'application, on retombe sur celui qu'on
+ * trouve. `PLAYWRIGHT_CHROMIUM` reste prioritaire pour imposer un binaire précis.
+ */
+const CHROMIUM_CONNUS = [
+  process.env.PLAYWRIGHT_CHROMIUM,
+  '/opt/pw-browsers/chromium',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/usr/bin/google-chrome',
+].filter((chemin) => chemin && existsSync(chemin));
+
+async function ouvrirNavigateur() {
+  try {
+    if (!process.env.PLAYWRIGHT_CHROMIUM) return await chromium.launch();
+  } catch (e) {
+    if (CHROMIUM_CONNUS.length === 0) throw e;
+  }
+  for (const executablePath of CHROMIUM_CONNUS) {
+    try {
+      const lance = await chromium.launch({ executablePath });
+      console.log(`Chromium : ${executablePath}`);
+      return lance;
+    } catch {
+      /* binaire suivant */
+    }
+  }
+  throw new Error(
+    'Aucun Chromium utilisable. Installez-le :  npx playwright install chromium',
+  );
+}
+
+const navigateur = await ouvrirNavigateur();
 const page = await navigateur.newPage({ viewport: { width: 390, height: 844 } });
 
 const erreurs = [];
@@ -361,6 +395,63 @@ async function jouerLeParcours() {
     !/\bPayé\b/.test(colis),
   );
   await page.screenshot({ path: join(RACINE, 'fumee-colis-a-deposer.png') });
+
+  /*
+   * 6. Un billet **payé**, et donc un vrai titre de transport.
+   *
+   * Tous les contrôles précédents portent sur ce qui ne doit *pas* s'afficher avant
+   * paiement. Celui-ci vérifie le contraire, qui compte tout autant : une fois le
+   * paiement établi, le billet doit exister pour de bon. Une règle qui interdit
+   * sans jamais autoriser ne serait pas une règle, seulement une panne.
+   *
+   * On y arrive par l'import d'un ticket papier — le seul chemin qui, sans le
+   * système de la compagnie, constate un paiement : le voyageur a déjà réglé au
+   * guichet, son ticket le prouve.
+   */
+  await page.goto(`http://localhost:${PORT}/reserver?scan=1`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(3000);
+  await cliquer('Saisir le ticket');
+  await remplir('66456', '66456');
+  await cliquer('Ajouter à mes voyages');
+  await page.waitForTimeout(2000);
+
+  const billetPaye = await page.innerText('body');
+  await controler(
+    'un ticket payé délivre un vrai titre de transport',
+    billetPaye.includes('TICKET DE VOYAGE') && billetPaye.includes('Présentez ce code'),
+  );
+  await controler(
+    'et le QR est réellement dessiné',
+    (await page.locator('svg').count()) > 0,
+  );
+  await controler(
+    'la référence du guichet est conservée telle quelle',
+    billetPaye.includes('66456'),
+  );
+  await page.screenshot({ path: join(RACINE, 'fumee-billet-paye.png') });
+
+  /*
+   * 7. Le pied de l'application : version et concepteur.
+   *
+   * Un voyageur doit pouvoir dire à qui il a affaire, et sur quelle version — c'est
+   * la première chose qu'on demande quand quelque chose ne va pas.
+   */
+  await page.goto(`http://localhost:${PORT}/profil`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(3000);
+  // On descend avant de capturer : une capture qui ne montre pas la partie
+  // vérifiée n'est d'aucune aide le jour où le contrôle échoue.
+  await page.mouse.wheel(0, 4000);
+  await page.waitForTimeout(800);
+  const profil = await page.innerText('body');
+  await controler(
+    'le profil nomme le concepteur et la version',
+    profil.includes('Conçu par') && /VERSION \d+\.\d+\.\d+/.test(profil),
+  );
+  await controler(
+    'et rappelle que l’application n’est pas éditée par la compagnie',
+    profil.includes("n'est ni éditée ni exploitée par la compagnie"),
+  );
+  await page.screenshot({ path: join(RACINE, 'fumee-profil-pied.png') });
 }
 
 /**
@@ -374,11 +465,25 @@ async function jouerLeParcours() {
 async function verifierEcransAgentAbsents() {
   console.log('\nApplication publique — les écrans du personnel sont hors d’atteinte\n');
 
-  for (const route of ['/gare', '/controle', '/caisse']) {
+  /*
+   * Un repère **propre à chaque écran**, et non une liste commune.
+   *
+   * Le contrôle utilisait deux repères pour les trois écrans : `/controle`, qui n'en
+   * portait aucun, passait donc toujours — y compris le jour où le paquet public a
+   * réellement embarqué les écrans du personnel. Un test qui ne peut pas échouer ne
+   * teste rien.
+   */
+  const REPERES = {
+    '/gare': 'APERÇU — CÔTÉ GARE',
+    '/controle': 'Scannez le QR du billet',
+    '/caisse': 'CÔTÉ AGENT',
+  };
+
+  for (const [route, repere] of Object.entries(REPERES)) {
     await page.goto(`http://localhost:${PORT}${route}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(3500);
     const texte = await page.innerText('body');
-    const renvoye = !texte.includes('CÔTÉ AGENT') && !texte.includes('APERÇU — CÔTÉ GARE');
+    const renvoye = !texte.includes(repere);
     if (renvoye) {
       console.log(`  ok    ${route} renvoie le voyageur ailleurs`);
     } else {

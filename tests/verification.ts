@@ -14,6 +14,7 @@ import {
   decalerHeure,
   departsAVenir,
   estAujourdhui,
+  jourFrancais,
   joursAvantExpiration,
   prenomAffiche,
 } from '../src/lib/format';
@@ -753,6 +754,15 @@ groupe('Orange Money — ne jamais deviner la caisse');
 verifier('Ouagadougou : coordonnées connues', Boolean(paiementPourVille('Ouagadougou')), true);
 verifier('Bobo-Dioulasso : coordonnées connues', Boolean(paiementPourVille('Bobo-Dioulasso')), true);
 verifier('Ouahigouya : rien plutôt qu’un mauvais numéro', paiementPourVille('Ouahigouya'), undefined);
+
+/* ── Dates affichées ─────────────────────────────────────────────────────── */
+
+groupe('jourFrancais — les dates ISO ne s’affichent jamais telles quelles');
+// Le profil montrait « 2031-08-30 » là où la carte du voyageur dit « 30/08/2031 ».
+verifier('date ISO convertie', jourFrancais('2031-08-30'), '30/08/2031');
+verifier('horodatage complet accepté', jourFrancais('2026-09-08T06:00:00.000Z'), '08/09/2026');
+// Ce qui n'est pas une date reste tel quel plutôt que de devenir « Invalid Date ».
+verifier('valeur non datée rendue intacte', jourFrancais('—'), '—');
 
 /* ── Code-barres ─────────────────────────────────────────────────────────── */
 

@@ -318,7 +318,7 @@ export default function Billet() {
             />
             <View style={{ flex: 1 }}>
               <Txt v="corpsFort" couleur={jours <= 7 ? couleurs.attention : couleurs.texte}>
-                {jours > 0 ? `Valide encore ${jours} jours` : 'Billet expiré'}
+                {jours > 0 ? `Valide encore ${jours} jour${jours > 1 ? 's' : ''}` : 'Billet expiré'}
               </Txt>
               <Txt v="petit" couleur={couleurs.texteFaible}>
                 Jusqu'au {format(parseISO(r.expireLe), 'd MMMM yyyy', { locale: fr })}
@@ -365,7 +365,14 @@ export default function Billet() {
                 <Txt v="petit" couleur={couleurs.texteFaible}>
                   {r.paiementDeclareLe
                     ? "Vous avez indiqué avoir payé. Le paiement sera confirmé au guichet à la récupération de votre billet."
-                    : "Payez par Orange Money aux coordonnées ci-dessous, puis présentez-vous au guichet 30 minutes avant le départ pour retirer votre billet."}
+                    : paiement
+                      ? 'Payez par Orange Money aux coordonnées ci-dessous, puis présentez-vous au guichet 30 minutes avant le départ pour retirer votre billet.'
+                      : /*
+                          Sans coordonnées publiées pour cette gare, il n'y a rien
+                          « ci-dessous » : renvoyer à des numéros absents laisserait
+                          le voyageur chercher ce qui n'existe pas.
+                        */
+                        'Réglez au guichet, ou demandez à votre gare le numéro Orange Money de sa caisse — il est propre à chacune. Présentez-vous 30 minutes avant le départ pour retirer votre billet.'}
                 </Txt>
               </Carte>
 

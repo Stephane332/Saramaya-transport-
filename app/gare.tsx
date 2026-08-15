@@ -130,13 +130,23 @@ export default function EcranGare() {
               style={styles.bandeauGain}
             >
               <Ionicons name="call-outline" size={22} color={couleurs.succes} />
+              {/*
+                Le chiffre qui compte pour la gare n'est pas le nombre d'appels
+                restants mais celui qu'elle n'a plus à passer. Quand il n'y en a
+                aucun à passer, c'est une bonne nouvelle, et la phrase doit le dire
+                au lieu d'annoncer platement « 0 appel ».
+              */}
               <View style={{ flex: 1 }}>
                 <Txt v="sousTitre" couleur={couleurs.succes}>
-                  {aTraiter} appel{aTraiter > 1 ? 's' : ''} à passer
+                  {aTraiter === 0
+                    ? 'Aucun appel à passer'
+                    : `${aTraiter} appel${aTraiter > 1 ? 's' : ''} à passer`}
                 </Txt>
                 <Txt v="petit" couleur={couleurs.texteDoux}>
-                  {ligne.origine} → {ligne.destination} · {prochain.heure} ·{' '}
-                  {confirmes} confirmé{confirmes > 1 ? 's' : ''} sans un appel
+                  {ligne.origine} → {ligne.destination} · {prochain.heure}
+                  {confirmes > 0
+                    ? ` · ${confirmes} voyageur${confirmes > 1 ? 's' : ''} confirmé${confirmes > 1 ? 's' : ''} sans appel`
+                    : ''}
                 </Txt>
               </View>
             </LinearGradient>

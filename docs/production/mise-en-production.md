@@ -54,6 +54,17 @@ où `<le-domaine-du-déploiement>` est l'adresse renvoyée par `eas deploy --pro
 > Une politique qui décrit une version antérieure du logiciel est pire que pas de
 > politique du tout.
 
+**Une adresse de contact reste à publier.** La politique indique au lecteur que
+l'adresse du concepteur figure « à l'endroit d'où vous avez obtenu l'application ».
+C'est la seule promesse du texte qui dépende d'une action hors du code : renseigner
+le champ « contact du développeur » dans les deux consoles, et le rappeler sur la
+page de téléchargement web. Sans cela, la phrase renvoie dans le vide — et une
+politique qui explique vos droits sans dire à qui les adresser ne vaut rien.
+
+Elle n'est volontairement pas écrite en dur dans l'application : une adresse gravée
+dans un paquet installé ne se change plus, alors qu'une fiche de boutique se corrige
+en une minute.
+
 Ce qu'il faudra déclarer dans les formulaires des stores, et qui correspond au texte :
 
 | Question du store | Réponse |

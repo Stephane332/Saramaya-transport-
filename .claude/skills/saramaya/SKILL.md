@@ -142,7 +142,7 @@ La garde vient **après** tous les crochets (voir §4).
 | Versions de paquets Expo | `node scripts/verifier-versions.mjs` — un `babel-preset-expo` désaligné a coûté une soirée. |
 | Modules à dépendance native dans les tests | Le runner Node ne charge ni `react-native` ni `.tsx`. Le calcul pur va dans `src/lib/*.ts`, la plateforme dans un module à part (`partage.ts`, `code39.ts`, `AppareilPhoto.tsx`). |
 | Routes typées et `tsc` | `.expo/types/router.d.ts` est généré et hors dépôt : absent, tout passe ; périmé, une route nouvelle est refusée. `npm run verifier` le régénère d'abord — sans quoi la vérification ne dit pas la même chose sur deux machines. |
-| `EXPO_PUBLIC_*` et le cache Metro | Leur valeur est figée dans les modules transformés. Changer `EXPO_PUBLIC_MODE_AGENT` sans `--clear` produit un paquet **identique au bit près** au précédent. |
+| `EXPO_PUBLIC_*` et le cache Metro | Leur valeur est figée dans les modules transformés, **dans les deux sens**. Sans `--clear` : un export agent redonne le paquet voyageur, et un export voyageur qui suit un export agent **embarque les écrans du personnel**. Constaté. Tout export porte donc `--clear`. |
 
 ---
 
@@ -155,11 +155,17 @@ npm run verifier   # paquets, types de routes régénérés, tsc, exemples, inva
 npm run fumee      # les deux paquets s'ouvrent dans un vrai navigateur
 ```
 
-> **Un paquet agent ne se construit pas sans vider le cache.** Metro fige la valeur
-> des variables `EXPO_PUBLIC_*` dans ses modules transformés : sans `--clear`,
-> `EXPO_PUBLIC_MODE_AGENT=1` n'a **aucun effet** et l'export produit un paquet
-> voyageur identique au bit près. Vérifié. C'est un risque de livraison réel — on
-> croirait expédier l'application des guichets.
+> **Tout export porte `--clear`, sans exception.** Metro fige la valeur des
+> variables `EXPO_PUBLIC_*` dans ses modules transformés, et la contamination va
+> dans les deux sens :
+>
+> · un export agent qui suit un export voyageur redonne le paquet **voyageur** —
+>   identique au bit près ;
+> · un export voyageur qui suit un export agent **embarque les écrans du
+>   personnel**, manifeste des passagers compris.
+>
+> Les deux ont été constatés sur ce projet. Le second est une fuite : l'application
+> publique exposerait la liste des voyageurs d'un départ.
 
 `npm run verifier` seul ne suffit pas : il ne dit pas si l'application **s'exécute**.
 Une sortie anticipée mal placée ou un import circulaire passent la compilation et

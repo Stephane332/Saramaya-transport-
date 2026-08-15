@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { Carte, Ecran, EnTeteRetour, Section, Trait, Txt } from '../src/components/base';
+import { CONCEPTEUR, NOM_APPLICATION, VERSION } from '../src/data/application';
 import {
   CONDITIONS,
   CONFIDENTIALITE,
@@ -75,9 +76,19 @@ export default function Confidentialite() {
       </Animated.View>
 
       <Trait />
-      <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
-        DERNIÈRE MISE À JOUR · {REVISION_MENTIONS}
-      </Txt>
+      {/*
+        La version figure ici parce qu'un texte légal se lit toujours en regard de la
+        version du logiciel qu'il décrit : « ce que fait l'application aujourd'hui »
+        n'a de sens que si l'on sait de quelle application on parle.
+      */}
+      <View style={{ gap: 4, paddingBottom: espace.md }}>
+        <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
+          DERNIÈRE MISE À JOUR · {REVISION_MENTIONS}
+        </Txt>
+        <Txt v="minuscule" couleur={couleurs.texteFaible} style={{ textAlign: 'center' }}>
+          {NOM_APPLICATION.toUpperCase()} VERSION {VERSION} · CONÇU PAR {CONCEPTEUR.toUpperCase()}
+        </Txt>
+      </View>
     </Ecran>
   );
 }
