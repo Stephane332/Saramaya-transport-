@@ -15,12 +15,7 @@ import {
   Txt,
 } from '../../src/components/base';
 import { LogoSaramaya } from '../../src/components/LogoSaramaya';
-import {
-  CONCEPTEUR,
-  NOM_APPLICATION,
-  NOM_COMPAGNIE,
-  VERSION,
-} from '../../src/data/application';
+import { CONCEPTEUR, NOM_COMPAGNIE, VERSION } from '../../src/data/application';
 import { useAction } from '../../src/lib/action';
 import { etatFonction } from '../../src/lib/disponibilite';
 import { RAPPELS_ANNONCES, useEtatNotifications } from '../../src/lib/notifications';
@@ -246,8 +241,8 @@ export default function Profil() {
       )}
 
       {/*
-        Le pied de l'application : les deux noms, le concepteur, la version.
-        Quatre lignes courtes, et rien de plus. Le rappel de qui édite l'application
+        Le pied de l'application : la compagnie, le concepteur, la version.
+        Trois lignes courtes, et rien de plus. Le rappel de qui édite l'application
         est à sa place — conditions d'utilisation et politique de confidentialité,
         atteignables juste au-dessus : un pied de page n'est pas l'endroit d'un
         paragraphe.
@@ -256,7 +251,7 @@ export default function Profil() {
       <View style={styles.pied}>
         <LogoSaramaya hauteur={22} />
         <Txt v="petit" couleur={couleurs.texteDoux} style={styles.piedNoms}>
-          {NOM_COMPAGNIE.toUpperCase()} · {NOM_APPLICATION.toUpperCase()}
+          {NOM_COMPAGNIE.toUpperCase()}
         </Txt>
         <Txt v="petit" couleur={couleurs.texteDoux} style={{ textAlign: 'center' }}>
           Conçu par {CONCEPTEUR}

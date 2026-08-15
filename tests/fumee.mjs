@@ -223,10 +223,26 @@ async function jouerLeParcours() {
    * parfaitement immobile qui ne le sera jamais. On vérifie ici que le parcours
    * mène où il doit et que la règle du billet tient — pas la physique du pointeur.
    */
-  const cliquer = async (texte) => {
-    await page.getByText(texte, { exact: false }).first().click({ force: true, timeout: 15000 });
+  /*
+   * L'échec dit **sur quoi** il a échoué, et laisse une capture.
+   *
+   * Un « locator.click: Timeout 15000ms exceeded » nu ne dit ni quel bouton, ni ce
+   * que montrait l'écran : on repart à zéro à chaque fois. Le parcours compte une
+   * quinzaine de clics — le nom du texte cherché et l'image de l'écran à cet
+   * instant sont la différence entre un diagnostic d'une minute et une soirée.
+   */
+  const cliquerLocalisateur = async (localisateur, nom) => {
+    try {
+      await localisateur.click({ force: true, timeout: 15000 });
+    } catch (e) {
+      const capture = join(RACINE, `fumee-echec-${nom.slice(0, 30).replace(/\W+/g, '-')}.png`);
+      await page.screenshot({ path: capture, fullPage: true }).catch(() => undefined);
+      throw new Error(`clic sur « ${nom} » impossible — capture : ${capture}\n${e.message}`);
+    }
     await page.waitForTimeout(900);
   };
+  const cliquer = (texte) =>
+    cliquerLocalisateur(page.getByText(texte, { exact: false }).first(), texte);
   /*
    * `exact: true` est indispensable ici : l'exemple de bande MRZ affiché en
    * filigrane contient « SAWADOGO<<ANGE », si bien qu'une correspondance partielle
@@ -300,26 +316,31 @@ async function jouerLeParcours() {
   // trajet choisi. (Avec `force`, le clic peut d'ailleurs atterrir sur la carte
   // voisine si l'animation de liste est encore en cours — sans conséquence ici.)
   await cliquer('Ouahigouya');
-  await cliquer('Voir les départs');
 
   /*
-   * Passé le dernier départ de la journée, la liste est vide — c'est le
-   * comportement voulu, et il ferait échouer ce test une fois sur deux selon
-   * l'heure à laquelle on le lance. On repart donc sur la date la plus lointaine
-   * proposée, qui a toujours ses départs devant elle.
+   * On réserve pour **demain**, jamais pour aujourd'hui.
+   *
+   * Passé le dernier départ de la journée, la liste d'aujourd'hui est vide — c'est
+   * le comportement voulu, mais il fait dépendre le test de l'heure à laquelle on
+   * le lance. Demain a toujours tous ses départs devant lui.
+   *
+   * Il y avait ici une branche de repli qui ne se déclenchait qu'après le dernier
+   * bus : autant dire jamais. Le jour où elle a servi, elle était cassée depuis
+   * toujours — son sélecteur cherchait « SAM » quand les puces affichent « SAM. ».
+   * Un chemin qu'on n'emprunte pas est un chemin qui pourrit ; celui-ci est
+   * désormais le chemin normal, donc joué à chaque exécution.
    */
-  if ((await page.innerText('body')).includes('Plus de départ')) {
-    await cliquer('Changer de date');
-    await page
-      .locator('text=/^(LUN|MAR|MER|JEU|VEN|SAM|DIM)$/')
-      .last()
-      .click({ force: true, timeout: 15000 });
-    await page.waitForTimeout(600);
-    await cliquer('Voir les départs');
-  }
+  await cliquerLocalisateur(
+    page.getByText(/^(LUN|MAR|MER|JEU|VEN|SAM|DIM)\.$/).nth(1),
+    'le jour de demain dans le calendrier',
+  );
+  await cliquer('Voir les départs');
 
   // Le premier départ proposé.
-  await page.locator('text=/^CONVOCATION/').first().click({ force: true, timeout: 15000 });
+  await cliquerLocalisateur(
+    page.locator('text=/^CONVOCATION/').first(),
+    'le premier départ de la liste',
+  );
   await page.waitForTimeout(900);
   await cliquer('Sans préférence de place');
   await cliquer('Créer ma réservation');
@@ -446,8 +467,8 @@ async function jouerLeParcours() {
   await page.waitForTimeout(800);
   const profil = await page.innerText('body');
   await controler(
-    'le pied porte les deux noms, le concepteur et la version',
-    profil.includes('SARAMAYA TRANSPORT · SIRABA') &&
+    'le pied porte la compagnie, le concepteur et la version',
+    profil.includes('SARAMAYA TRANSPORT') &&
       profil.includes('Conçu par Ange Stéphane Sawadogo') &&
       /VERSION \d+\.\d+\.\d+/.test(profil),
   );
