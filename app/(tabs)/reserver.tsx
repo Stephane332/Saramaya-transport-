@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { addDays, format } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -369,7 +369,14 @@ export default function Reserver() {
               <BadgeClasse classe={classe} petit />
             </View>
             <Trait />
-            <Ligne gauche="Date" droite={format(new Date(date), 'EEEE d MMMM', { locale: fr })} />
+            {/*
+              `parseISO` et non `new Date` : sur une date seule (« 2026-08-15 »),
+              `new Date` lit minuit **UTC**, ce qui affiche la veille dans tout
+              fuseau situé à l'ouest de Greenwich. Le Burkina Faso est à UTC+0, mais
+              un ami qui teste depuis ailleurs verrait la mauvaise date sur le
+              résumé — juste avant de confirmer. `parseISO` lit minuit local.
+            */}
+            <Ligne gauche="Date" droite={format(parseISO(date), 'EEEE d MMMM', { locale: fr })} />
             <Ligne gauche="Départ" droite={heure} />
             <Ligne gauche="Convocation" droite={decalerHeure(heure, -30)} />
             <Ligne gauche="Siège" droite={siege ? String(siege) : 'Sans préférence'} />

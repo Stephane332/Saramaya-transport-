@@ -75,6 +75,48 @@ function provider(get: () => EtatApp, set: (p: Partial<EtatApp>) => void) {
   return new LocalProvider(get().reservations, (reservations) => set({ reservations }));
 }
 
+/**
+ * Filet contre un démarrage qui ne finit jamais.
+ *
+ * L'écran de lancement attend `charge`, et `charge` attend `onRehydrateStorage`.
+ * Zustand appelle ce rappel dans les deux cas, succès comme échec — sauf si la
+ * promesse du stockage ne se résout **jamais**. Cela arrive : un AsyncStorage
+ * bloqué sous Android suffit, et l'application resterait alors indéfiniment sur le
+ * kangourou, sans message et sans issue.
+ *
+ * Au bout de huit secondes — largement au-delà d'une relecture normale, qui prend
+ * quelques dizaines de millisecondes — on débloque, et l'application affiche
+ * l'écran prévu pour ce cas : « ne recréez pas de compte, redémarrez ». C'est le
+ * même écran que pour une lecture ratée, parce que la consigne est la même, et
+ * qu'elle est bien plus utile qu'un logo figé.
+ */
+const DELAI_RELECTURE_MS = 8000;
+
+const LECTURE_IMPOSSIBLE =
+  "Vos données enregistrées n'ont pas pu être relues. Ne recréez pas de compte : redémarrez l'application, elles sont probablement intactes.";
+
+/*
+ * Déclaré avant le magasin, et non après : `onRehydrateStorage` peut se déclencher
+ * pendant la création du magasin si le stockage répond immédiatement. Une constante
+ * définie plus bas serait alors dans sa zone morte, et l'annulation du minuteur
+ * ferait tomber le démarrage — l'exact contraire du but de ce filet.
+ */
+let minuteurRelecture: ReturnType<typeof setTimeout> | undefined;
+
+function armerFiletRelecture() {
+  minuteurRelecture = setTimeout(() => {
+    if (useApp.getState().charge) return;
+    useApp.setState({ charge: true, erreurChargement: LECTURE_IMPOSSIBLE });
+  }, DELAI_RELECTURE_MS);
+
+  /*
+   * Sous Node — et donc dans les tests — un minuteur en attente garderait le
+   * processus en vie. `unref` existe sur Node, pas dans React Native : on ne
+   * l'appelle que s'il est là.
+   */
+  (minuteurRelecture as unknown as { unref?: () => void }).unref?.();
+}
+
 export const useApp = create<EtatApp>()(
   persist(
     (set, get) => ({
@@ -260,16 +302,19 @@ export const useApp = create<EtatApp>()(
        * autorise enfin l'application à décider où envoyer le client.
        */
       onRehydrateStorage: () => (_etat, erreur) => {
+        if (minuteurRelecture !== undefined) clearTimeout(minuteurRelecture);
         useApp.setState({
           charge: true,
-          erreurChargement: erreur
-            ? "Vos données enregistrées n'ont pas pu être relues. Ne recréez pas de compte : redémarrez l'application, elles sont probablement intactes."
-            : null,
+          erreurChargement: erreur ? LECTURE_IMPOSSIBLE : null,
         });
       },
     },
   ),
 );
+
+// Le filet n'est armé qu'une fois le magasin construit : si la relecture a déjà
+// abouti pendant sa création, il n'y a plus rien à surveiller.
+if (!useApp.getState().charge) armerFiletRelecture();
 
 /** Prochain voyage à venir, celui qui pilote l'accueil et les rappels. */
 export function prochainVoyage(reservations: Reservation[], maintenant = new Date()): Reservation | null {
