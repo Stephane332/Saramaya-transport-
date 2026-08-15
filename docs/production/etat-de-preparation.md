@@ -81,6 +81,30 @@ seconde du clic, quatre interrupteurs de réglages qui ne commandaient rien, une
 promesse d'alerte automatique à un destinataire qui n'a pas l'application. Tout est
 parti. Ce qui reste marche vraiment, et ce qui attend la compagnie le dit.
 
+### L'inscription tient en une image
+
+Photographier sa CNIB, ou choisir une image déjà dans le téléphone, et tout se
+remplit. Une face ou les deux.
+
+Le **dos** porte la bande à lecture machine, la meilleure source qui soit : chaque
+champ y est suivi d'une clé de contrôle, si bien qu'une lecture fautive se détecte
+au lieu de s'enregistrer. Le **recto** porte ce que la bande n'a pas — lieu de
+naissance, profession, date de délivrance, numéro d'identification à dix-sept
+chiffres. Et quand les deux se contredisent, l'écran le dit et pointe le champ :
+aucun système ne peut deviner laquelle des deux lectures est fausse, mais il peut,
+et doit, le signaler.
+
+Chaque champ indique d'où il vient, et **une correction manuelle n'est jamais
+écrasée** par une relecture ultérieure.
+
+> **Où la lecture automatique fonctionne.** Elle utilise le moteur du système —
+> Vision chez Apple, ML Kit chez Google — via `expo-text-extractor`. Ce module est
+> **natif** : il est compilé dans l'application, et n'existe donc ni dans Expo Go ni
+> dans un navigateur. Pour la voir à l'œuvre, il faut une application construite :
+> `npm run apk` (Android, gratuit) est le chemin le plus court. Partout ailleurs,
+> l'écran le dit clairement et propose de recopier la bande — mêmes champs, même
+> décodage, mêmes clés de contrôle.
+
 ### Rien ne se perd
 
 Le point le plus surveillé, parce qu'aucune donnée n'existe ailleurs :
@@ -170,11 +194,8 @@ Pour que ce ne soit pas un oubli :
   finirait le projet. Le raisonnement complet est dans
   `docs/presentation/donnees-des-voyageurs.md`, avec ce qu'on fait à la place — qui
   donne presque tout ce qui était recherché.
-- **La lecture automatique de la photo de CNIB** — le décodage est écrit et testé
-  (bande ICAO 9303, clés de contrôle comprises), mais la reconnaissance de caractères
-  demande un module natif absent d'Expo Go. Elle s'allumera au premier build de
-  développement, sans changer l'écran. En attendant, recopier la bande donne
-  exactement le même résultat par le même chemin.
+- **Rien** n'a été écarté du côté de la CNIB : l'inscription par image est complète
+  (voir plus bas).
 - **Le car 3D suivant le trajet, l'écran verrouillé, les Live Activities** — tous
   demandent un build natif. À reprendre après le premier `eas build`.
 

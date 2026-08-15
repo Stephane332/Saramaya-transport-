@@ -253,9 +253,13 @@ compagnie — est dans **`docs/production/etat-de-preparation.md`**. En résumé
 - **Paiement Orange Money réel** : exige un compte marchand au nom de la compagnie. Le
   parcours est complet, seuls les identifiants manquent. En attendant, l'application
   n'encaisse rien et ne prétend pas le contraire.
-- **Lecture automatique de la photo de CNIB** : le décodage de la bande est écrit et
-  testé ; la reconnaissance de caractères demande un module natif absent d'Expo Go.
-  Recopier la bande donne exactement le même résultat, par le même chemin.
+- **Lecture automatique d'une image de CNIB** : entièrement écrite et testée — image
+  choisie ou photographiée, recto et dos, fusion des deux faces, désaccords
+  signalés. La reconnaissance de caractères elle-même passe par le moteur du
+  système (`expo-text-extractor` : Vision chez Apple, ML Kit chez Google), qui
+  **n'existe ni dans Expo Go ni dans un navigateur**. Elle fonctionne dans
+  l'application construite (`npm run apk`, ou un build iOS). Partout ailleurs,
+  recopier la bande du dos donne exactement le même résultat, par le même chemin.
 - **Places réellement occupées, confirmation de paiement, manifeste complet, suivi de
   colis** : branchés et annoncés comme indisponibles tant que la compagnie n'a pas
   ouvert son système.
