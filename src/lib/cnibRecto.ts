@@ -56,31 +56,118 @@ export interface IdentiteRecto {
   numeroIdentification?: string;
 }
 
-/** Enlève les accents et met en majuscules : « Délivrée le » devient « DELIVREE LE ». */
+/**
+ * Enlève les accents et met en majuscules, **caractère par caractère**.
+ *
+ * Le passage par `normalize('NFD')` sur la chaîne entière change sa longueur — « é »
+ * y devient deux caractères — et les positions ne correspondent alors plus au texte
+ * d'origine. Or c'est bien dans l'original qu'il faut découper la valeur, faute de
+ * quoi on renverrait un nom amputé de ses accents. On aplatit donc chaque caractère
+ * séparément, ce qui garantit une correspondance de position exacte.
+ */
 function aplatir(texte: string): string {
-  return texte
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toUpperCase();
+  return Array.from(texte)
+    .map((c) => {
+      const base = c.normalize('NFD').replace(/[̀-ͯ]/g, '');
+      return (base || c).toUpperCase();
+    })
+    .join('');
 }
 
 /**
- * Cherche une étiquette et renvoie ce qui la suit sur la même ligne.
+ * Toutes les étiquettes du recto, connues d'avance.
  *
- * Les variantes sont données dans l'ordre de préférence. La comparaison se fait sur
- * le texte aplati, mais **la valeur est découpée dans le texte d'origine** : on ne
- * veut pas renvoyer un nom dont les accents auraient été mangés au passage.
+ * Elles servent deux fois : à trouver une valeur, et à savoir **où elle s'arrête**
+ * quand deux champs partagent une ligne — « Sexe: M   Taille: 177 cm » est imprimé
+ * ainsi sur la carte.
+ */
+const ETIQUETTES_CONNUES = [
+  'PRENOMS',
+  'PRENOM',
+  'NOM',
+  'NE(E) LE',
+  'NEE LE',
+  'NE LE',
+  'NAISSANCE',
+  'SEXE',
+  'TAILLE',
+  'PROFESSION',
+  'DELIVREE LE',
+  'DELIVRE LE',
+  'EXPIRE LE',
+  'EXPIRATION',
+  "DATE D'EXPIRATION",
+  'SIGNATURE',
+  'RESIDENCE',
+  'PROVINCE',
+];
+
+interface Occurrence {
+  etiquette: string;
+  /** Position du premier caractère de la valeur, dans la ligne d'origine. */
+  debut: number;
+  /** Position du début de l'étiquette, pour borner la valeur précédente. */
+  debutEtiquette: number;
+}
+
+/**
+ * Repère toutes les étiquettes présentes sur une ligne.
+ *
+ * Deux conditions, et la première est celle qui manquait : l'étiquette doit
+ * commencer à une **frontière de mot**. Sans elle, « NOM » se trouvait à l'intérieur
+ * de « PRENOMS » — et dès que la reconnaissance rendait la ligne des prénoms avant
+ * celle du nom, ce qui dépend du seul cadrage de la photo, le nom revenait vide et
+ * l'ouverture de compte se bloquait sans explication.
+ */
+function etiquettesDeLaLigne(ligne: string): Occurrence[] {
+  const plat = aplatir(ligne);
+  const trouvees: Occurrence[] = [];
+
+  for (const etiquette of ETIQUETTES_CONNUES) {
+    let depuis = 0;
+    for (;;) {
+      const position = plat.indexOf(etiquette, depuis);
+      if (position === -1) break;
+      depuis = position + 1;
+
+      const avant = position > 0 ? plat[position - 1]! : ' ';
+      if (/[A-Z0-9]/.test(avant)) continue; // au milieu d'un mot : ce n'en est pas une
+
+      // L'étiquette doit être suivie du séparateur, sans quoi c'est un mot ordinaire.
+      const apres = plat.slice(position + etiquette.length);
+      const separateur = apres.match(/^\s*[:.]\s*/);
+      if (!separateur) continue;
+
+      trouvees.push({
+        etiquette,
+        debutEtiquette: position,
+        debut: position + etiquette.length + separateur[0].length,
+      });
+    }
+  }
+
+  return trouvees.sort((a, b) => a.debutEtiquette - b.debutEtiquette);
+}
+
+/**
+ * Cherche une étiquette et renvoie ce qui la suit, borné par l'étiquette suivante.
+ *
+ * Les variantes sont données dans l'ordre de préférence. La valeur est découpée dans
+ * le texte d'origine, accents compris.
  */
 function apresEtiquette(lignes: string[], etiquettes: string[]): string | undefined {
-  for (const etiquette of etiquettes) {
-    const cible = aplatir(etiquette);
+  const voulues = etiquettes.map(aplatir);
+
+  for (const voulue of voulues) {
     for (const ligne of lignes) {
-      const plat = aplatir(ligne);
-      const position = plat.indexOf(cible);
-      if (position === -1) continue;
-      // On saute l'étiquette, puis les deux-points et les espaces qui la suivent.
-      const reste = ligne.slice(position + etiquette.length).replace(/^[\s:.\-–—]+/, '');
-      if (reste.trim()) return reste.trim();
+      const occurrences = etiquettesDeLaLigne(ligne);
+      const index = occurrences.findIndex((o) => o.etiquette === voulue);
+      if (index === -1) continue;
+
+      // La valeur s'arrête où commence l'étiquette suivante de la même ligne.
+      const fin = occurrences[index + 1]?.debutEtiquette ?? ligne.length;
+      const valeur = ligne.slice(occurrences[index]!.debut, fin).trim();
+      if (valeur) return valeur;
     }
   }
   return undefined;

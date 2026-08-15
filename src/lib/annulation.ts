@@ -13,6 +13,7 @@
 import { differenceInHours, parseISO } from 'date-fns';
 import type { PolitiqueAnnulation, Reservation } from '../types';
 import { dateHeureConvocation, dateHeureDepart } from './confirmation';
+import { paiementEtabli } from './parcours';
 
 /** Seuil au-delà duquel un remboursement intégral reste envisageable. */
 const HEURES_REMBOURSEMENT_INTEGRAL = 24;
@@ -29,8 +30,15 @@ export function politiqueAnnulation(
   const heuresAvant = differenceInHours(depart, maintenant);
   const billetEncoreValide = maintenant < parseISO(r.expireLe);
 
-  // Rien n'a été payé : il n'y a rien à rembourser, et rien à traiter en caisse.
-  if (r.statut === 'OPTION') {
+  /*
+   * Rien n'a été payé : il n'y a rien à rembourser, et rien à traiter en caisse.
+   *
+   * La garde ne peut pas se contenter du statut `OPTION`. Une réservation impayée
+   * dont le voyageur a confirmé la venue passe en `CONFIRMEE`, sortait donc de ce
+   * cas, et repartait avec un remboursement à verser en caisse pour un billet
+   * jamais réglé. C'est le paiement qui décide, pas le statut.
+   */
+  if (!paiementEtabli(r)) {
     return {
       peutReporter: true,
       remboursement: 'AUCUN',

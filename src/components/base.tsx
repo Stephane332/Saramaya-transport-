@@ -166,10 +166,23 @@ export function EnTeteRetour({
 export function EnAttenteDeLaCompagnie({
   promesse,
   raison,
+  disponible = false,
 }: {
   promesse: string;
   raison: string;
+  /**
+   * Vrai une fois l'application reliée au système de la compagnie.
+   *
+   * Les écrans transmettent `etatFonction(...)` en bloc, qui porte ce drapeau — mais
+   * le composant ne le lisait pas. Les bandeaux « indisponible pour le moment »
+   * seraient donc restés affichés **après** la connexion, contredisant une
+   * application qui, elle, aurait marché. La promesse faite ici est que ces blocs
+   * « disparaîtront d'eux-mêmes le jour de la connexion » : c'est vrai maintenant.
+   */
+  disponible?: boolean;
 }) {
+  if (disponible) return null;
+
   return (
     <View style={styles.attente}>
       <View style={styles.enteteAttente}>

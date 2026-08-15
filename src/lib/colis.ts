@@ -60,9 +60,19 @@ export function messageDestinataire(colis: Colis, nomExpediteur: string): string
     .join('\n');
 }
 
-/** Numéro au format international attendu par WhatsApp (Burkina Faso : 226). */
+/**
+ * Numéro au format international attendu par WhatsApp (Burkina Faso : 226).
+ *
+ * Trois écritures circulent pour le même numéro — `70451288`, `22670451288` et
+ * `0022670451288` — et la troisième piégeait la conversion : ne commençant pas par
+ * « 226 », elle recevait l'indicatif une seconde fois. Le lien produit,
+ * `wa.me/22600226…`, est refusé par WhatsApp, et le code de retrait ne partait pas.
+ *
+ * On retire donc d'abord le préfixe international `00` ou `+`, puis on n'ajoute
+ * l'indicatif que s'il manque vraiment.
+ */
 export function numeroInternational(telephone: string): string {
-  const chiffres = telephone.replace(/\D/g, '');
+  const chiffres = telephone.replace(/\D/g, '').replace(/^00/, '');
   if (chiffres.startsWith('226')) return chiffres;
   return `226${chiffres}`;
 }

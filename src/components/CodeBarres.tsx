@@ -8,54 +8,7 @@
 
 import { View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-
-/** Chaque caractère : 5 barres et 4 espaces, larges (w) ou étroits (n). */
-const MOTIFS: Record<string, string> = {
-  '0': 'nnnwwnwnn',
-  '1': 'wnnwnnnnw',
-  '2': 'nnwwnnnnw',
-  '3': 'wnwwnnnnn',
-  '4': 'nnnwwnnnw',
-  '5': 'wnnwwnnnn',
-  '6': 'nnwwwnnnn',
-  '7': 'nnnwnnwnw',
-  '8': 'wnnwnnwnn',
-  '9': 'nnwwnnwnn',
-  '-': 'nnwnnnwnw',
-  '*': 'nnwnwwnwn',
-};
-
-const LARGE = 3;
-const ETROIT = 1;
-
-interface Barre {
-  x: number;
-  largeur: number;
-}
-
-function encoder(valeur: string): { barres: Barre[]; total: number } {
-  // Code 39 encadre toujours la donnée par le caractère de garde « * ».
-  const caracteres = ['*', ...valeur.toUpperCase().split(''), '*'];
-  const barres: Barre[] = [];
-  let x = 0;
-
-  caracteres.forEach((caractere, indexCaractere) => {
-    const motif = MOTIFS[caractere];
-    if (!motif) return;
-
-    motif.split('').forEach((element, index) => {
-      const largeur = element === 'w' ? LARGE : ETROIT;
-      // Les indices pairs sont des barres, les impairs des espaces.
-      if (index % 2 === 0) barres.push({ x, largeur });
-      x += largeur;
-    });
-
-    // Séparateur inter-caractère, sauf après le dernier.
-    if (indexCaractere < caracteres.length - 1) x += ETROIT;
-  });
-
-  return { barres, total: x };
-}
+import { encoder } from '../lib/code39';
 
 export function CodeBarres({
   valeur,

@@ -384,7 +384,38 @@ export default function Billet() {
                     APPELEZ LE NUMÉRO, SUIVEZ LES INSTRUCTIONS, PUIS ENTREZ LE CODE ET LE MONTANT.
                   </Txt>
                 </Carte>
-              ) : null}
+              ) : (
+                /*
+                  La compagnie n'a publié de compte Orange Money que pour Ouaga et
+                  Bobo. Pour les autres gares, on ne devine pas : donner un numéro
+                  approchant enverrait l'argent à la mauvaise agence. On renvoie donc
+                  vers le guichet concerné, dont le téléphone, lui, est exact.
+                */
+                <Carte style={{ borderColor: 'rgba(245,165,36,0.35)', gap: espace.sm }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.sm }}>
+                    <Ionicons name="call-outline" size={18} color={couleurs.attention} />
+                    <Txt v="corpsFort" couleur={couleurs.attention}>
+                      Demandez le numéro à votre gare
+                    </Txt>
+                  </View>
+                  <Txt v="petit" couleur={couleurs.texteDoux}>
+                    Saramaya ne publie pas de compte Orange Money pour {gare?.ville ?? 'cette gare'}.
+                    Chaque caisse a le sien : appelez {gare?.nom ?? 'la gare'} pour l'obtenir, ou
+                    réglez directement au guichet.
+                  </Txt>
+                  {gare?.telephones[0] ? (
+                    <Bouton
+                      titre={`Appeler ${gare.nom} · ${gare.telephones[0]}`}
+                      variante="secondaire"
+                      onPress={() =>
+                        Linking.openURL(`tel:${gare.telephones[0]?.replace(/\s/g, '')}`).catch(
+                          () => undefined,
+                        )
+                      }
+                    />
+                  ) : null}
+                </Carte>
+              )}
 
               {actions.declarerPaiement ? (
                 <>

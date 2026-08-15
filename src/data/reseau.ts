@@ -394,10 +394,19 @@ export const PAIEMENTS_ORANGE_MONEY: PaiementAgence[] = [
   },
 ];
 
-/** Coordonnées Orange Money correspondant à la ville d'une gare. */
+/**
+ * Coordonnées Orange Money correspondant à la ville d'une gare.
+ *
+ * **Aucun repli.** La fonction retombait auparavant sur l'agence de Ouagadougou
+ * pour toute ville non listée — or seules Ouaga et Bobo ont des comptes relevés.
+ * Un départ de Ouahigouya, qui est la ligne par défaut de l'application, affichait
+ * donc les numéros de Ouaga comme destination du paiement : le voyageur envoyait
+ * son argent à la mauvaise agence, en toute confiance, et se présentait au guichet
+ * avec un versement introuvable.
+ *
+ * Ne rien savoir se dit ; cela ne se devine pas. L'écran du billet renvoie alors
+ * vers le téléphone de la gare concernée, qui est, lui, exact.
+ */
 export function paiementPourVille(ville: Ville): PaiementAgence | undefined {
-  return (
-    PAIEMENTS_ORANGE_MONEY.find((p) => p.villes.includes(ville)) ??
-    PAIEMENTS_ORANGE_MONEY[1]
-  );
+  return PAIEMENTS_ORANGE_MONEY.find((p) => p.villes.includes(ville));
 }

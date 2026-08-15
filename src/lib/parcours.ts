@@ -35,10 +35,34 @@ export type Etape =
   | 'VOYAGE_EFFECTUE'
   | 'ANNULEE';
 
+/**
+ * Le paiement a-t-il été **constaté** ?
+ *
+ * C'est la question la plus importante de l'application, et elle n'a qu'une seule
+ * réponse valable ici — partout ailleurs on s'y réfère.
+ *
+ * ## « Je viens » n'est pas « j'ai payé »
+ *
+ * L'écran d'alarme demande au voyageur de confirmer sa présence, ce qui fait passer
+ * la réservation en `CONFIRMEE`. Ce statut était compté comme une preuve de
+ * paiement, et la conséquence était sérieuse : **appuyer sur « Oui, je viens » sur
+ * une réservation impayée fabriquait un billet valide**, QR signé compris, que le
+ * contrôleur acceptait à la porte du bus. Le même défaut ouvrait, du côté de
+ * l'annulation, un remboursement en caisse pour un billet jamais réglé.
+ *
+ * Confirmer sa venue reste utile — la gare a besoin de le savoir. Mais c'est une
+ * information sur la présence, pas sur l'argent. Seuls comptent ici le statut posé
+ * par la compagnie et la date d'encaissement.
+ */
+export function paiementEtabli(r: Reservation): boolean {
+  if (r.statut === 'PAYEE' || r.statut === 'EMBARQUE') return true;
+  return Boolean(r.payeLe);
+}
+
 export function etapeReservation(r: Reservation): Etape {
   if (r.statut === 'ANNULEE') return 'ANNULEE';
   if (r.statut === 'EMBARQUE' || r.statut === 'NO_SHOW') return 'VOYAGE_EFFECTUE';
-  if (r.statut === 'PAYEE' || r.statut === 'CONFIRMEE') return 'BILLET_EMIS';
+  if (paiementEtabli(r)) return 'BILLET_EMIS';
   return r.paiementDeclareLe ? 'PAIEMENT_DECLARE' : 'A_PAYER';
 }
 

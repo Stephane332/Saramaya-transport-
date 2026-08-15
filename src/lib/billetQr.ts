@@ -36,8 +36,8 @@ import {
   versOctets,
   versTexte,
 } from './sha256';
-import { billetEmis } from './parcours';
-import type { Classe, Reservation, StatutReservation, Voyageur } from '../types';
+import { billetEmis, paiementEtabli } from './parcours';
+import type { Classe, Reservation, Voyageur } from '../types';
 
 /** Préfixe de version : il permettra de faire évoluer le format sans casser l'ancien. */
 const VERSION = 'SB1';
@@ -69,8 +69,19 @@ export interface ContenuBillet {
   s: number | null;
   /** Montant en francs CFA. */
   m: number;
-  /** État de la réservation au moment de l'émission. */
-  p: StatutReservation;
+  /**
+   * État du **paiement** au moment de l'émission, et non le statut interne.
+   *
+   * Le statut brut y figurait auparavant, et le contrôleur devait deviner lesquels
+   * des huit valaient paiement. Il acceptait ainsi `CONFIRMEE` — c'est-à-dire
+   * « le voyageur a dit qu'il venait » — comme preuve d'encaissement.
+   *
+   * Le contrôleur n'a besoin que d'une chose à la porte du bus : est-ce payé ? Toute
+   * autre valeur que `PAYE`, y compris une valeur inconnue venue d'une version
+   * antérieure, est traitée comme impayée. La prudence va dans le bon sens : on
+   * encaisse une fois de trop plutôt que de laisser monter sans payer.
+   */
+  p: 'PAYE' | 'DU';
   /** Date d'expiration, AAAA-MM-JJ. */
   e: string;
 }
@@ -100,7 +111,7 @@ export function construireQrBillet(r: Reservation, voyageur: Voyageur): string {
     c: r.classe,
     s: r.siege,
     m: r.montant,
-    p: r.statut,
+    p: paiementEtabli(r) ? 'PAYE' : 'DU',
     e: r.expireLe.slice(0, 10),
   };
   const corps = `${VERSION}.${versBase64Url(versOctets(JSON.stringify(contenu)))}`;
@@ -157,9 +168,17 @@ export function verifierQrBillet(texte: string, maintenant = new Date()): Contro
 
   const jour = `${maintenant.getFullYear()}-${String(maintenant.getMonth() + 1).padStart(2, '0')}-${String(maintenant.getDate()).padStart(2, '0')}`;
 
-  if (billet.p === 'ANNULEE') {
-    return { verdict: 'ANNULE', billet, message: 'Réservation annulée.' };
-  }
+  /*
+   * Il n'y a pas de contrôle d'annulation ici, et ce n'est pas un oubli.
+   *
+   * Un QR annulé ne peut pas exister : `construireQrBillet` refuse d'en produire un
+   * pour une réservation annulée. Une annulation **postérieure** à l'affichage, en
+   * revanche, ne peut pas être connue d'un code déjà imprimé ou capturé en
+   * photo — c'est la limite d'une vérification hors ligne, et aucune signature ne
+   * la lève. Seule la compagnie, reliée à son système, peut trancher ce cas ; le
+   * verdict `ANNULE` reste donc dans la liste pour le jour où elle signera les
+   * billets elle-même.
+   */
   if (billet.e < jour) {
     return { verdict: 'EXPIRE', billet, message: `Billet expiré depuis le ${billet.e}.` };
   }
@@ -171,8 +190,9 @@ export function verifierQrBillet(texte: string, maintenant = new Date()): Contro
     };
   }
   // Le paiement déclaré par le voyageur n'est pas un paiement vérifié : tant que le
-  // système de la compagnie ne le confirme pas, l'agent doit encaisser au guichet.
-  if (billet.p !== 'PAYEE' && billet.p !== 'CONFIRMEE' && billet.p !== 'EMBARQUE') {
+  // système de la compagnie ne le constate pas, l'agent doit encaisser au guichet.
+  // Toute valeur autre que « PAYE » — inconnue comprise — est traitée comme impayée.
+  if (billet.p !== 'PAYE') {
     return { verdict: 'NON_PAYE', billet, message: 'Billet non payé — à régler au guichet.' };
   }
 

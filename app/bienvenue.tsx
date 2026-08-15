@@ -208,7 +208,15 @@ export default function Bienvenue() {
   const ouverture = useAction(async () => {
     if (!complet) return;
     creerCompte({
-      prenom: carte.prenoms.trim().split(/\s+/)[0] ?? carte.prenoms.trim(),
+      /*
+       * **Tous** les prénoms, et non le premier.
+       *
+       * Le nom porté sur le billet, dans le QR et dans le message à la gare est
+       * celui que l'agent compare à la CNIB. « ANGE STEPHANE » réduit à « Ange »
+       * ne correspond plus à la carte présentée — et c'est précisément la
+       * ressaisie au guichet que l'application prétend supprimer.
+       */
+      prenom: carte.prenoms.trim(),
       nom: carte.nom.trim().toUpperCase(),
       telephone: telephone.replace(/\D/g, ''),
       cnib: carte.numeroCarte.trim() || undefined,

@@ -30,7 +30,13 @@ import {
   joursAvantExpirationCnib,
   lireBandeTD1,
 } from '../src/lib/cnib';
-import { actionsPossibles, billetEmis, etapeReservation } from '../src/lib/parcours';
+import {
+  actionsPossibles,
+  billetEmis,
+  etapeReservation,
+  paiementEtabli,
+} from '../src/lib/parcours';
+import { politiqueAnnulation } from '../src/lib/annulation';
 import {
   etapeCourante,
   messageDestinataire,
@@ -39,6 +45,8 @@ import {
 } from '../src/lib/colis';
 import { migrerEtat } from '../src/store/migration';
 import { creerVerrou } from '../src/lib/verrou';
+import { encoder } from '../src/lib/code39';
+import { paiementPourVille } from '../src/data/reseau';
 import { dateFrancaiseVersIso, lireRectoCnib, rectoExploitable } from '../src/lib/cnibRecto';
 import { carteSuffisante, fusionnerCarte } from '../src/lib/carteIdentite';
 import { calculerFidelite, phraseHabitue } from '../src/lib/fidelite';
@@ -202,6 +210,34 @@ verifier(
   ),
   '60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54',
 );
+/*
+ * Les vecteurs officiels ci-dessus mesurent 0, 3 et 56 octets, et laissaient passer
+ * une faute de remplissage sur toute longueur congrue à 55 modulo 64 : le condensé
+ * divergeait de la référence, et avec lui la signature des billets de cette taille.
+ * On balaie donc les longueurs, au lieu d'espérer que trois cas suffisent.
+ */
+{
+  // Condensés de référence de « a » répété, calculés par une implémentation tierce.
+  const references: Record<number, string> = {
+    55: '9f4390f8d30c2dd92ec9f095b65e2b9ae9b0a925a5258e241c9f1e910f734318',
+    56: 'b35439a4ac6f0948b6d6f9e3c6af0f5f590ce20f1bde7090ef7970686ec6738a',
+    119: '31eba51c313a5c08226adf18d4a359cfdfd8d2e816b13f4af952f7ea6584dcfb',
+  };
+  for (const [longueur, attendu] of Object.entries(references)) {
+    verifier(
+      `SHA-256 sur ${longueur} octets`,
+      versHex(sha256(versOctets('a'.repeat(Number(longueur))))),
+      attendu,
+    );
+  }
+  // La signature d'un billet passe par HMAC : on vérifie la même frontière là aussi.
+  verifier(
+    'HMAC stable sur 55 octets',
+    versHex(hmacSha256(versOctets('cle'), versOctets('a'.repeat(55)))).length,
+    64,
+  );
+}
+
 verifier(
   'UTF-8 : les accents survivent à l\'aller-retour',
   versTexte(versOctets('Ouahigouya → Ouaga, 3 500 F, café')),
@@ -381,6 +417,34 @@ verifier('réservation payée : billet émis', etapeReservation(paye), 'BILLET_E
 verifier('aucun billet tant que ce n\'est pas payé', billetEmis(enAttente), false);
 verifier('une déclaration de paiement ne vaut pas un billet', billetEmis(declare), false);
 verifier('billet émis une fois le paiement établi', billetEmis(paye), true);
+
+/*
+ * « Je viens » n'est pas « j'ai payé ».
+ *
+ * L'écran d'alarme fait passer la réservation en CONFIRMEE. Ce statut valait
+ * paiement, et **appuyer sur « Oui, je viens » sur une réservation impayée
+ * fabriquait un billet valide** — QR signé compris, accepté par le contrôleur. Le
+ * même défaut ouvrait un remboursement en caisse pour un billet jamais réglé.
+ */
+const confirmeImpaye = { ...billetDeBase, statut: 'CONFIRMEE' as const };
+const confirmePaye = { ...confirmeImpaye, payeLe: '2026-08-09T07:00:00.000Z' };
+
+verifier('confirmer sa venue ne paie pas', paiementEtabli(confirmeImpaye), false);
+verifier('une réservation confirmée mais impayée reste à payer', etapeReservation(confirmeImpaye), 'A_PAYER');
+verifier('et ne délivre aucun billet', billetEmis(confirmeImpaye), false);
+verifier('confirmée après encaissement : payée', paiementEtabli(confirmePaye), true);
+verifier('et le billet est émis', billetEmis(confirmePaye), true);
+// Rien à rembourser sur ce qui n'a jamais été encaissé, quel que soit le statut.
+verifier(
+  'aucun remboursement pour une confirmée impayée',
+  politiqueAnnulation(confirmeImpaye, new Date('2026-08-09T06:00:00')).montantRembourse,
+  0,
+);
+verifier(
+  'et rien à traiter en caisse',
+  politiqueAnnulation(confirmeImpaye, new Date('2026-08-09T06:00:00')).actionAgentRequise,
+  false,
+);
 
 // Et la garde au niveau du QR lui-même : impossible de contourner par l'affichage.
 verifier(
@@ -574,6 +638,10 @@ verifier('le numéro de la gare est indiqué à la place', message.includes('Té
 
 verifier('numéro déjà international laissé intact', numeroInternational('22670451288'), '22670451288');
 verifier('indicatif ajouté sinon', numeroInternational('70 45 12 88'), '22670451288');
+// « 00226 » ne commençait pas par « 226 » et recevait l'indicatif une seconde fois :
+// le lien wa.me produit était refusé, et le code de retrait ne partait pas.
+verifier('préfixe 00 retiré', numeroInternational('0022670451288'), '22670451288');
+verifier('écriture avec +', numeroInternational('+226 70 45 12 88'), '22670451288');
 
 /* ── Migration : une mise à jour ne fait perdre aucun voyage ──────────────── */
 
@@ -676,6 +744,41 @@ await (async () => {
   verifier('un nouvel essai est possible après un échec', reprise, true);
 })();
 
+/* ── Coordonnées de paiement ─────────────────────────────────────────────── */
+
+groupe('Orange Money — ne jamais deviner la caisse');
+
+// Seules Ouaga et Bobo ont des comptes relevés. Un repli sur Ouaga envoyait
+// l'argent d'un voyageur de Ouahigouya à la mauvaise agence.
+verifier('Ouagadougou : coordonnées connues', Boolean(paiementPourVille('Ouagadougou')), true);
+verifier('Bobo-Dioulasso : coordonnées connues', Boolean(paiementPourVille('Bobo-Dioulasso')), true);
+verifier('Ouahigouya : rien plutôt qu’un mauvais numéro', paiementPourVille('Ouahigouya'), undefined);
+
+/* ── Code-barres ─────────────────────────────────────────────────────────── */
+
+groupe('Code 39 — le billet doit se scanner comme le papier');
+
+/*
+ * La table ne contenait que les chiffres : les lettres de nos références étaient
+ * silencieusement sautées, et « SB-7K2Q4M » se scannait « -724 ». Ces contrôles
+ * portent sur la structure de la table, qui est vérifiable — trois éléments larges
+ * sur neuf, ni plus ni moins — plutôt que sur des motifs recopiés.
+ */
+{
+  const reference = 'SB-7K2Q4M';
+  const { barres, total } = encoder(reference);
+  // 9 éléments par caractère + 1 séparateur, sauf après le dernier.
+  const caracteres = reference.length + 2; // les deux gardes « * »
+  verifier('une référence complète est encodée', barres.length, caracteres * 5);
+  verifier('largeur cohérente', total > 0, true);
+
+  // Un caractère hors table ne doit rien produire, plutôt qu'un dessin faux.
+  verifier('caractère inconnu : aucun code plutôt qu’un faux', encoder('SB#1').total, 0);
+
+  // Le vrai format de référence de l'application passe.
+  verifier('nos références sont encodables', encoder(referenceBillet()).total > 0, true);
+}
+
 /* ── Affichage du prénom ─────────────────────────────────────────────────── */
 
 groupe('prenomAffiche — la carte crie, l’accueil non');
@@ -722,6 +825,30 @@ verifier("date d'expiration", recto.dateExpiration, '2032-03-11');
 // Les numéros sont imprimés espacés : on les recolle.
 verifier('numéro de carte recollé', recto.numeroCarte, 'B98765432');
 verifier("numéro d'identification à 17 chiffres", recto.numeroIdentification, '20041200208008027');
+
+/*
+ * L'ordre des lignes dépend du cadrage de la photo, pas de l'impression. Avec les
+ * prénoms rendus en premier, l'étiquette « NOM » se trouvait à l'intérieur de
+ * « PRÉNOMS » : le nom revenait vide, et l'ouverture de compte se bloquait sans
+ * que rien ne l'explique.
+ */
+const rectoInverse = lireRectoCnib(
+  'Prénoms:  FATIMATA ADIZA\nNom:  OUEDRAOGO\nExpire le:  11/03/2032',
+);
+verifier('nom trouvé même si les prénoms viennent avant', rectoInverse.nom, 'OUEDRAOGO');
+verifier('et les prénoms restent entiers', rectoInverse.prenoms, 'FATIMATA ADIZA');
+
+// Deux champs sur une seule ligne, comme « Sexe: M   Taille: 177 cm » sur la carte.
+const rectoPartage = lireRectoCnib('Sexe: F     Taille: 165 cm');
+verifier('valeur bornée par l’étiquette suivante', rectoPartage.sexe, 'F');
+verifier('et la seconde valeur est lue', rectoPartage.tailleCm, 165);
+
+// Les accents survivent au découpage.
+verifier(
+  'accents conservés dans la valeur',
+  lireRectoCnib('Nom:  KABORÉ').nom,
+  'KABORÉ',
+);
 
 // Rien n'est deviné : un texte quelconque ne doit rien produire.
 const rectoVide = lireRectoCnib('Reçu de caisse\nMerci de votre visite\n15/08/2026');

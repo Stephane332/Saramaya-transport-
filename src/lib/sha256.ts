@@ -33,9 +33,23 @@ export function sha256(message: Uint8Array): Uint8Array {
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
   ]);
 
-  // Remplissage : un bit à 1, des zéros, puis la longueur en bits sur 64 bits.
+  /*
+   * Remplissage : un bit à 1, des zéros, puis la longueur en bits sur 64 bits.
+   *
+   * Il faut le plus petit multiple de 64 qui contienne `longueur + 1 + 8` octets,
+   * soit l'arrondi **supérieur** de (longueur + 9) au bloc. La formule précédente,
+   * `((longueur + 9) >> 6) + 1`, ajoutait un bloc dans tous les cas — juste sauf
+   * quand (longueur + 9) tombait pile sur une frontière de bloc, c'est-à-dire pour
+   * toute longueur congrue à 55 modulo 64. Le condensé divergeait alors de la
+   * référence, et avec lui toutes les signatures de billets de cette taille : un QR
+   * émis restait invalide au contrôle, sans que rien ne l'explique.
+   *
+   * Les vecteurs FIPS 180-4 du jeu de tests mesurent 0, 3 et 56 octets : aucun ne
+   * touchait ce cas. La vérification se fait désormais sur toutes les longueurs de
+   * 0 à 200.
+   */
   const longueurBits = message.length * 8;
-  const tailleTotale = (((message.length + 9) >> 6) + 1) << 6;
+  const tailleTotale = ((message.length + 9 + 63) >> 6) << 6;
   const bloc = new Uint8Array(tailleTotale);
   bloc.set(message);
   bloc[message.length] = 0x80;

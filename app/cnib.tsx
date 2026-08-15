@@ -168,10 +168,18 @@ export default function EcranCnib() {
 
   const enregistrement = useAction(async () => {
     const dateValide = DATE_ISO.test(carte.dateExpiration);
+    /*
+     * Chaque champ n'est transmis que s'il a une valeur.
+     *
+     * `mettreAJourProfil` fusionne par étalement : un `undefined` explicite écrase
+     * la valeur enregistrée au lieu de la laisser tranquille. Une date d'expiration
+     * momentanément mal formée — le temps d'une frappe — effaçait donc celle qui
+     * était déjà connue, et avec elle les rappels avant contrôle.
+     */
     mettreAJourProfil({
-      cnib: carte.numeroCarte.trim() || undefined,
-      cnibPhotoUri: photo ?? undefined,
-      cnibExpireLe: dateValide ? carte.dateExpiration : undefined,
+      ...(carte.numeroCarte.trim() ? { cnib: carte.numeroCarte.trim() } : {}),
+      ...(photo ? { cnibPhotoUri: photo } : {}),
+      ...(dateValide ? { cnibExpireLe: carte.dateExpiration } : {}),
       ...(carte.dateNaissance ? { dateNaissance: carte.dateNaissance } : {}),
     });
     // Le rappel est un confort : son échec ne doit pas empêcher l'enregistrement de

@@ -39,6 +39,17 @@ export function initiales(prenom: string, nom: string): string {
  *
  * Les prénoms composés gardent leur capitale : « JEAN-PAUL » devient « Jean-Paul ».
  */
+/**
+ * Le premier prénom seulement, pour s'adresser à quelqu'un.
+ *
+ * Le compte garde **tous** les prénoms, parce que c'est ce que l'agent compare à la
+ * CNIB. Mais on ne dit pas « Bonjour Ange Stephane » à quelqu'un : on dit
+ * « Bonjour Ange ».
+ */
+export function premierPrenom(prenom: string): string {
+  return prenomAffiche(prenom.trim().split(/\s+/)[0] ?? prenom);
+}
+
 export function prenomAffiche(prenom: string): string {
   return prenom
     .toLocaleLowerCase('fr')
