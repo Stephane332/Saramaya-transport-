@@ -260,6 +260,38 @@ async function jouerLeParcours() {
     'et la déclaration ne peut pas être répétée',
     !apres.includes("J'ai effectué le paiement"),
   );
+
+  /*
+   * 5. Le colis suit la même règle : préparer un envoi ne le dépose pas et ne le
+   *    paie pas. L'écran affichait auparavant « Payé » et « Déposé » à la seconde
+   *    du clic, après une fausse attente de paiement de 1,2 seconde.
+   */
+  await page.goto(`http://localhost:${PORT}/colis`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(2500);
+  await cliquer('Envoyer un colis');
+  await page.getByPlaceholder('OUEDRAOGO Fatimata', { exact: true }).first().fill('OUEDRAOGO Fatimata');
+  await page.getByPlaceholder('70 45 12 88', { exact: true }).first().fill('70451288');
+  await cliquer("Préparer l'envoi");
+  await page.waitForTimeout(2000);
+
+  const colis = await page.innerText('body');
+  await controler(
+    'le colis est « à remettre au guichet », pas déposé',
+    colis.includes('À REMETTRE AU GUICHET') || colis.includes('pas encore déposé'),
+  );
+  await controler(
+    'aucun code de retrait n’est montré avant le dépôt',
+    !colis.includes('CODE DE RETRAIT'),
+  );
+  await controler(
+    'le montant est annoncé comme restant à régler',
+    colis.includes('À régler au dépôt') || colis.includes('à confirmer au pesage'),
+  );
+  await controler(
+    'et rien ne prétend que le colis est payé',
+    !/\bPayé\b/.test(colis),
+  );
+  await page.screenshot({ path: join(RACINE, 'fumee-colis-a-deposer.png') });
 }
 
 try {
