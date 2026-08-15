@@ -18,16 +18,22 @@ Ce qui relève de Saramaya est branché et attend leur feu vert.
 
 ## 1. Ce qui est fini et vérifié
 
-**14 écrans, 23 modules de règles, 11 900 lignes, 119 contrôles automatiques**, plus
-un parcours joué de bout en bout dans un vrai navigateur.
+**14 écrans, 23 modules de règles, 11 900 lignes, 202 contrôles automatiques**, plus
+les parcours joués de bout en bout dans un vrai navigateur — voyageur et agent.
 
 ```bash
-npm run verifier    # versions des paquets, types, 119 tests
-npm run fumee       # l'application s'ouvre dans Chromium et se laisse utiliser
+npm run verifier    # paquets, types, 180 exemples, 22 invariants
+npm run fumee       # les deux paquets s'ouvrent dans Chromium : 33 contrôles
 ```
 
-Les deux sont complémentaires, et le second n'est pas un luxe : il a trouvé deux
-défauts que **rien d'autre ne pouvait voir**.
+Les 22 invariants ne sont pas des tests d'exemples : ils explorent **toutes** les
+suites de gestes possibles, confrontent le calcul à une référence indépendante, et
+altèrent les données au hasard pour voir ce qui passe. C'est la leçon la plus chère
+du projet — les trois défauts les plus graves étaient passés à travers 152 tests
+verts, parce qu'un test d'exemple ne trouve que ce à quoi on a déjà pensé.
+
+Les deux commandes sont complémentaires, et la seconde n'est pas un luxe : elle a
+trouvé trois défauts que **rien d'autre ne pouvait voir**.
 
 Le premier : un plantage franc à la seconde où l'on crée son compte. Une sortie
 anticipée placée au-dessus de trois crochets React faisait tomber tout l'arbre au
@@ -39,6 +45,17 @@ page**, y compris sur la page de politique de confidentialité qui affirme le
 contraire. `expo-camera` y crée, dès l'import, un worker qui va chercher un
 décodeur de QR sur ce CDN. Cacher le bouton de la caméra ne suffisait pas ; le
 module est désormais absent du bundle web.
+
+Le troisième, et le plus grave : **le paquet public embarquait les écrans du
+personnel**. Metro fige la valeur des variables `EXPO_PUBLIC_*` dans ses modules
+transformés ; l'export voyageur construit après un export agent réutilisait le
+cache de celui-ci. `/gare` et `/caisse` s'ouvraient donc dans l'application
+distribuée aux voyageurs, manifeste des passagers compris. Le code était juste, la
+garde `MODE_AGENT` en place, les tests au vert : c'est l'outil de construction qui
+livrait autre chose que ce qu'on croyait. Tout export porte désormais `--clear`, et
+chacune des trois routes du personnel a son propre marqueur de contrôle — l'ancien
+en cherchait deux pour trois routes, si bien que `/controle` était réputé isolé quoi
+qu'il arrive.
 
 Le test rejoue le parcours complet et vérifie à l'écran ce qui compte :
 
@@ -204,7 +221,7 @@ Pour que ce ne soit pas un oubli :
 Le détail est dans `mise-en-production.md`. En deux lignes :
 
 ```bash
-npm run verifier      # versions, types, 119 tests
+npm run verifier      # versions, types, 180 exemples, 22 invariants
 npm run fumee         # l'application s'ouvre et se laisse utiliser pour de vrai
 ```
 

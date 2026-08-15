@@ -111,14 +111,19 @@ npm run web             # ou dans le navigateur
 Vérifications :
 
 ```bash
-npm run verifier                        # versions des paquets, types, 119 tests
-npx expo export --platform web          # le bundle se produit sans erreur
+npm run verifier                        # paquets, types, 180 exemples, 22 invariants
+npm run fumee                           # les deux paquets, dans un vrai navigateur
 ```
 
-`npm run verifier` est la commande à lancer avant tout partage ou toute mise en
-production : elle enchaîne le contrôle d'alignement des paquets (une version
-d'`babel-preset-expo` désalignée a déjà coûté une soirée), `tsc --noEmit`, et les
-tests.
+`npm run verifier` enchaîne le contrôle d'alignement des paquets (une version
+d'`babel-preset-expo` désalignée a déjà coûté une soirée), la régénération des types
+de routes, `tsc --noEmit`, puis les tests.
+
+Elle ne suffit pas seule : elle ne dit pas si l'application **s'exécute**. Une sortie
+anticipée mal placée ou un import circulaire passent la compilation et donnent un
+écran blanc au lancement — c'est déjà arrivé, à la seconde de la création du compte.
+`npm run fumee` ouvre les deux paquets dans Chromium et joue les parcours pour de
+vrai. **Les deux avant tout partage ou toute mise en production.**
 
 ## Tester sur un téléphone
 
@@ -212,12 +217,12 @@ chacun renvoie à l'accueil et aucun bouton n'y mène. Voir `src/lib/modeAgent.t
 app/                    écrans (expo-router)
 src/
   components/           base.tsx (thème appliqué), PlanSieges, Bus3D (+ .web), ScannerCamera
-  data/                 reseau.ts (lignes, gares, tarifs réels), colis.ts, mentionsLegales.ts
+  data/                 reseau.ts (lignes, gares, tarifs réels), colis.ts, mentionsLegales.ts, application.ts
   lib/                  parcours.ts, action.ts, verrou.ts, billetQr.ts, cnib.ts, colis.ts…
   store/                useApp.ts (zustand + AsyncStorage), migration.ts
   sync/                 types.ts (SyncProvider), localProvider.ts
   theme/                couleurs, typographie, espacements
-tests/                  verification.ts — 119 contrôles sur le vrai code source
+tests/                  verification.ts (180 exemples), invariants.ts (22 propriétés), fumee.mjs (navigateur)
 docs/presentation/      argumentaire, chiffres à collecter, déroulé de démonstration
 docs/production/        état de préparation, mise en production, partage et mises à jour
 docs/integration/       comment se brancher sur la billetterie Digiparc de la compagnie
@@ -270,8 +275,13 @@ Ce qui **existe** et fonctionne aujourd'hui, sans permission de personne : compt
 partir de la CNIB, réservation, billet hors ligne signé, import d'un ticket papier,
 colis avec code de retrait, rappels locaux, fidélité calculée sur l'appareil.
 
-## Marque
+## Conception et marque
 
-Le nom et le logo Saramaya Transport appartiennent à la compagnie. Ce dépôt est un projet de
-démonstration, réalisé par un client. **Toute publication publique de l'application sous ce
-nom exige leur autorisation écrite.**
+L'application est conçue et publiée par **Ange Stéphane Sawadogo**, voyageur et client de
+Saramaya Transport. Elle n'est ni éditée, ni exploitée, ni approuvée par la compagnie — la
+même mention figure dans l'application, au bas de l'écran Profil et dans la politique de
+confidentialité, pour qu'aucun voyageur ne s'y trompe et qu'aucun incident logiciel ne soit
+imputé à la compagnie.
+
+Le nom et le logo Saramaya Transport lui appartiennent. **Toute publication publique de
+l'application sous ce nom exige leur autorisation écrite.**
