@@ -141,6 +141,8 @@ La garde vient **après** tous les crochets (voir §4).
 | Navigation impérative depuis la disposition racine | Échoue avant le montage du navigateur. Aiguillage **déclaratif** (`<Redirect>`) dans les écrans. |
 | Versions de paquets Expo | `node scripts/verifier-versions.mjs` — un `babel-preset-expo` désaligné a coûté une soirée. |
 | Modules à dépendance native dans les tests | Le runner Node ne charge ni `react-native` ni `.tsx`. Le calcul pur va dans `src/lib/*.ts`, la plateforme dans un module à part (`partage.ts`, `code39.ts`, `AppareilPhoto.tsx`). |
+| Routes typées et `tsc` | `.expo/types/router.d.ts` est généré et hors dépôt : absent, tout passe ; périmé, une route nouvelle est refusée. `npm run verifier` le régénère d'abord — sans quoi la vérification ne dit pas la même chose sur deux machines. |
+| `EXPO_PUBLIC_*` et le cache Metro | Leur valeur est figée dans les modules transformés. Changer `EXPO_PUBLIC_MODE_AGENT` sans `--clear` produit un paquet **identique au bit près** au précédent. |
 
 ---
 
@@ -149,9 +151,15 @@ La garde vient **après** tous les crochets (voir §4).
 Dans cet ordre, et **les trois** avant de livrer :
 
 ```bash
-npm run verifier   # versions des paquets, tsc --noEmit, tests unitaires et d'invariants
-npm run fumee      # l'application s'ouvre dans un vrai navigateur et se laisse utiliser
+npm run verifier   # paquets, types de routes régénérés, tsc, exemples, invariants
+npm run fumee      # les deux paquets s'ouvrent dans un vrai navigateur
 ```
+
+> **Un paquet agent ne se construit pas sans vider le cache.** Metro fige la valeur
+> des variables `EXPO_PUBLIC_*` dans ses modules transformés : sans `--clear`,
+> `EXPO_PUBLIC_MODE_AGENT=1` n'a **aucun effet** et l'export produit un paquet
+> voyageur identique au bit près. Vérifié. C'est un risque de livraison réel — on
+> croirait expédier l'application des guichets.
 
 `npm run verifier` seul ne suffit pas : il ne dit pas si l'application **s'exécute**.
 Une sortie anticipée mal placée ou un import circulaire passent la compilation et

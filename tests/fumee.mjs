@@ -5,8 +5,17 @@
  * **s'exécute** : une erreur au premier rendu, un import circulaire, une variable
  * lue dans sa zone morte passent la compilation et donnent un écran blanc au
  * lancement. C'est la panne la plus embarrassante qui soit — l'application ne
- * s'ouvre pas du tout — et aucun des 119 contrôles de `npm test` ne la voit,
+ * s'ouvre pas du tout — et ni `npm test` ni `npm run invariants` ne la voient,
  * puisqu'ils portent sur les règles de calcul, pas sur le rendu.
+ *
+ * Trois familles de parcours sont jouées :
+ *
+ *   · **le voyageur** — inscription à partir de la bande de sa carte, réservation,
+ *     billet, colis ; et la règle qui prime : rien avant paiement ;
+ *   · **l'application publique** — les écrans du personnel doivent être hors
+ *     d'atteinte, y compris en tapant l'adresse directement ;
+ *   · **l'agent** — manifeste, caisse, contrôle, dans le paquet construit avec
+ *     `EXPO_PUBLIC_MODE_AGENT=1`.
  *
  * Ce test comble ce trou : il sert le site exporté, l'ouvre dans un vrai
  * navigateur, attend la fin de l'animation de lancement, et vérifie que les écrans
@@ -27,6 +36,15 @@ import { existsSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 
 const RACINE = resolve(process.argv[2] ?? 'dist');
+/**
+ * Export du **mode agent**, facultatif.
+ *
+ * Les écrans du personnel — manifeste, caisse, contrôle — ne sont pas dans
+ * l'application publique : ils demandent un second paquet, construit avec
+ * `EXPO_PUBLIC_MODE_AGENT=1`. Sans lui, les parcours agent sont annoncés comme non
+ * joués plutôt que silencieusement omis.
+ */
+const RACINE_AGENT = process.argv[3] ? resolve(process.argv[3]) : null;
 const PORT = Number(process.env.PORT_FUMEE ?? 8099);
 
 if (!existsSync(join(RACINE, 'index.html'))) {
@@ -58,15 +76,17 @@ const TYPES = {
   '.woff2': 'font/woff2',
 };
 
+let racineServie = RACINE;
+
 const serveur = createServer(async (requete, reponse) => {
   const chemin = decodeURIComponent((requete.url ?? '/').split('?')[0] ?? '/');
   // expo-router produit un site à routes : tout chemin inconnu retombe sur la page
   // d'entrée, comme le ferait l'hébergeur.
   const candidats = [
-    join(RACINE, chemin),
-    join(RACINE, chemin, 'index.html'),
-    join(RACINE, `${chemin}.html`),
-    join(RACINE, 'index.html'),
+    join(racineServie, chemin),
+    join(racineServie, chemin, 'index.html'),
+    join(racineServie, `${chemin}.html`),
+    join(racineServie, 'index.html'),
   ];
   for (const candidat of candidats) {
     try {
@@ -343,12 +363,92 @@ async function jouerLeParcours() {
   await page.screenshot({ path: join(RACINE, 'fumee-colis-a-deposer.png') });
 }
 
+/**
+ * Les écrans du personnel ne doivent pas exister dans l'application publique.
+ *
+ * `modeAgent.ts` en fait la promesse ; ce contrôle la met à l'épreuve par le seul
+ * chemin qui compte — taper l'adresse directement, ce que la garde des écrans est
+ * censée intercepter. Un renvoi vers l'accueil est la bonne réponse ; afficher le
+ * manifeste des passagers en serait une très mauvaise.
+ */
+async function verifierEcransAgentAbsents() {
+  console.log('\nApplication publique — les écrans du personnel sont hors d’atteinte\n');
+
+  for (const route of ['/gare', '/controle', '/caisse']) {
+    await page.goto(`http://localhost:${PORT}${route}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(3500);
+    const texte = await page.innerText('body');
+    const renvoye = !texte.includes('CÔTÉ AGENT') && !texte.includes('APERÇU — CÔTÉ GARE');
+    if (renvoye) {
+      console.log(`  ok    ${route} renvoie le voyageur ailleurs`);
+    } else {
+      echecs += 1;
+      console.log(`  ÉCHEC ${route} affiche un écran réservé au personnel`);
+    }
+  }
+}
+
+/**
+ * Les parcours de l'agent, joués dans le paquet du mode agent.
+ *
+ * Le contrôle d'un QR à la porte du bus ne peut pas être joué ici : le scanner web
+ * n'a pas de caméra. Sa logique est en revanche couverte par les invariants — deux
+ * mille deux cent vingt-deux altérations d'un caractère, toutes refusées. Ce qui se
+ * vérifie ici est ce que les invariants ne voient pas : que les écrans s'ouvrent,
+ * s'affichent et s'enchaînent.
+ */
+async function jouerLesParcoursAgent() {
+  if (!RACINE_AGENT) {
+    console.log('\nParcours agent — non joués (aucun export en mode agent fourni)\n');
+    return;
+  }
+
+  console.log('\nParcours agent — manifeste, caisse, contrôle\n');
+  racineServie = RACINE_AGENT;
+
+  const controler = async (route, attendus, capture) => {
+    await page.goto(`http://localhost:${PORT}${route}`, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(4500);
+    if (capture) await page.screenshot({ path: join(RACINE_AGENT, capture) });
+    const texte = await page.innerText('body');
+    const manquants = attendus.filter((m) => !texte.includes(m));
+    if (manquants.length === 0) {
+      console.log(`  ok    ${route}`);
+    } else {
+      echecs += 1;
+      console.log(`  ÉCHEC ${route}\n        introuvable : ${manquants.join(' · ')}`);
+      console.log(`        vu : ${texte.slice(0, 260).replace(/\s+/g, ' ')}`);
+    }
+  };
+
+  // Les titres de section sont rendus en capitales par le composant `Section`.
+  await controler('/gare', ['APERÇU — CÔTÉ GARE', 'Départs', 'EMBARQUEMENT'], 'fumee-agent-gare.png');
+  await controler('/caisse', ['CÔTÉ AGENT', 'Ma caisse', 'Orange Money'], 'fumee-agent-caisse.png');
+  // Le repli quand la caméra refuse doit être annoncé : sans lui, l'agent est
+  // sans recours à la porte du car.
+  await controler('/controle', ['Contrôle', 'MANIFESTE DU DÉPART'], 'fumee-agent-controle.png');
+}
+
+try {
+  await verifierEcransAgentAbsents();
+} catch (e) {
+  echecs += 1;
+  console.log(`  ÉCHEC contrôle des écrans agent interrompu — ${e.message.split('\n')[0]}`);
+}
+
 try {
   await jouerLeParcours();
 } catch (e) {
   echecs += 1;
   console.log(`  ÉCHEC parcours interrompu — ${e.message.split('\n')[0]}`);
   await page.screenshot({ path: join(RACINE, 'fumee-parcours-echec.png') });
+}
+
+try {
+  await jouerLesParcoursAgent();
+} catch (e) {
+  echecs += 1;
+  console.log(`  ÉCHEC parcours agent interrompu — ${e.message.split('\n')[0]}`);
 }
 
 await navigateur.close();

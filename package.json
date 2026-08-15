@@ -51,7 +51,7 @@
     "web": "expo start --web",
     "export:web": "expo export --platform web",
     "test": "node --experimental-strip-types --no-warnings --import ./tests/hook.mjs tests/verification.ts",
-    "fumee": "npx expo export --platform web --output-dir dist && node tests/fumee.mjs dist",
+    "fumee": "npx expo export --platform web --output-dir dist && EXPO_PUBLIC_MODE_AGENT=1 npx expo export --platform web --output-dir dist-agent --clear && node tests/fumee.mjs dist dist-agent",
     "verifier": "node scripts/verifier-versions.mjs && node scripts/generer-types-routes.mjs && npx tsc --noEmit && npm test && npm run invariants",
     "web:construire": "expo export --platform web && node scripts/preparer-pages.mjs dist",
     "web:publier": "npm run verifier && npm run web:construire && npx eas-cli@latest deploy --prod",

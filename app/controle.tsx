@@ -59,7 +59,17 @@ export default function EcranControle() {
           Scannez le QR du billet. Le siège, le nom et l'état du paiement s'affichent
           immédiatement, même sans réseau.
         </Txt>
-        <ScannerCamera onScan={scanner} onSaisieManuelle={() => router.back()} />
+        {/*
+          Si la caméra refuse — permission, obscurité, matériel — le bouton de repli
+          renvoyait simplement en arrière : à la porte du car, l'agent se retrouvait
+          sans rien. Il mène maintenant au manifeste, qui est le vrai recours hors
+          ligne : le nom et le siège s'y retrouvent à partir de la référence
+          imprimée sur le billet.
+        */}
+        <ScannerCamera onScan={scanner} onSaisieManuelle={() => router.replace('/gare')} />
+        <Txt v="minuscule" couleur={couleurs.texteFaible}>
+          CAMÉRA INDISPONIBLE ? LE MANIFESTE DU DÉPART DONNE NOM ET SIÈGE PAR RÉFÉRENCE.
+        </Txt>
       </Ecran>
     );
   }

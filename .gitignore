@@ -42,3 +42,4 @@ yarn-error.*
 
 # Exports web locaux
 dist-pages/
+dist-agent/
