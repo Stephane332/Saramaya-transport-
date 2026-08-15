@@ -61,7 +61,25 @@ export function paiementEtabli(r: Reservation): boolean {
 
 export function etapeReservation(r: Reservation): Etape {
   if (r.statut === 'ANNULEE') return 'ANNULEE';
-  if (r.statut === 'EMBARQUE' || r.statut === 'NO_SHOW') return 'VOYAGE_EFFECTUE';
+
+  /*
+   * Un voyage passé ne se consulte comme billet **que s'il a été payé**.
+   *
+   * `NO_SHOW` — le voyageur ne s'est pas présenté — était rangé avec `EMBARQUE`
+   * parmi les voyages effectués, ce qui rendait un billet consultable. Or on peut
+   * être absent d'un départ qu'on n'a jamais réglé : l'application affichait alors
+   * un titre de transport pour une place jamais payée, que le contrôleur rejetait
+   * comme impayée. L'application se contredisait elle-même.
+   *
+   * `EMBARQUE` implique le paiement — on ne monte pas sans avoir réglé — et reste
+   * donc dans ce cas par `paiementEtabli`.
+   *
+   * Trouvé par l'exploration exhaustive des états (`tests/invariants.ts`), après
+   * la suite de gestes : déclarer un paiement, puis être porté absent.
+   */
+  const passe = r.statut === 'EMBARQUE' || r.statut === 'NO_SHOW';
+  if (passe && paiementEtabli(r)) return 'VOYAGE_EFFECTUE';
+
   if (paiementEtabli(r)) return 'BILLET_EMIS';
   return r.paiementDeclareLe ? 'PAIEMENT_DECLARE' : 'A_PAYER';
 }

@@ -27,7 +27,7 @@
  *    deux espaces larges pour le second. Le caractère de garde étant invalide,
  *    aucun lecteur ne pouvait décoder quoi que ce soit.
  */
-const MOTIFS: Record<string, string> = {
+export const MOTIFS: Record<string, string> = {
   '0': 'nnnwwnwnn',
   '1': 'wnnwnnnnw',
   '2': 'nnwwnnnnw',
