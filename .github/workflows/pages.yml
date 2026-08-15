@@ -1,18 +1,29 @@
-# Publie la version web de l'application sur GitHub Pages.
+# Publie la version web sur GitHub Pages — **hors service, et volontairement**.
 #
-# Le résultat est une adresse ouvrable depuis un téléphone, sans ordinateur et sans
-# passer par les stores :
+# Ce workflow ne se déclenche plus tout seul. Il a tourné 51 fois, il a échoué 51
+# fois, toujours au même endroit : `deploy-pages` répond 404 parce que GitHub Pages
+# n'est pas activé sur ce dépôt — et il ne peut pas l'être. Pages sur dépôt privé
+# exige un abonnement payant, et **rendre le dépôt public n'est pas une option** :
+# l'historique contient l'argumentaire de vente et la note sur les failles de la
+# compagnie, qui deviendraient lisibles par elle avant le premier rendez-vous.
 #
-#     https://stephane332.github.io/Saramaya-transport-/
+# Le coût de le laisser se déclencher n'était pas nul : une croix rouge à chaque
+# envoi, et surtout l'illusion qu'une version web était publiée quelque part. Elle
+# ne l'était pas — l'adresse ci-dessous n'a jamais rien servi.
 #
-# À activer une seule fois : Settings → Pages → Source : « GitHub Actions ».
-# Tant que ce réglage n'est pas fait, le job de publication échoue sans rien casser.
+#     https://stephane332.github.io/Saramaya-transport-/   (404)
+#
+# **La voie qui marche est `eas deploy --prod`** (`npm run web:publier`) : elle
+# publie chez Expo depuis un code qui reste privé. Voir `docs/feuille-de-route.md`.
+#
+# Ce fichier est conservé, prêt à servir, pour le jour où le dépôt deviendra public
+# ou le compte passera à une formule payante. Pour l'essayer : onglet Actions →
+# « Publier la version web » → Run workflow, après avoir fait
+# Settings → Pages → Source : « GitHub Actions ».
 
 name: Publier la version web
 
 on:
-  push:
-    branches: [claude/salut-t175hl, main]
   workflow_dispatch:
 
 permissions:
@@ -38,21 +49,26 @@ jobs:
       - name: Installer les dépendances
         run: npm ci
 
-      - name: Vérifier les types
-        run: npx tsc --noEmit
-
-      - name: Vérifier les règles de calcul
-        # Heures de convocation, départs atteignables, unicité des références :
-        # une erreur ici coûte une place à un voyageur. On ne publie pas sans.
-        run: npm test
+      - name: Vérifier
+        # `npm run verifier` et non `tsc` + `npm test` séparés : la vérification qui
+        # garde une publication doit être celle qu'on lance en local, pas une
+        # version allégée. Elle ajoute la régénération des types de routes — sans
+        # laquelle `tsc` ne dit pas la même chose ici et sur la machine du
+        # développeur — et les 22 invariants, dont ceux qui tiennent la règle du
+        # billet. Publier sans eux, c'est publier sans filet.
+        run: npm run verifier
 
       - name: Construire la version web
         # Le site est servi depuis un sous-dossier : sans ce préfixe, tous les
         # chemins vers /_expo/... pointeraient à la racine du domaine.
+        #
+        # `--clear` n'est pas décoratif : Metro fige la valeur des variables
+        # `EXPO_PUBLIC_*` dans ses modules transformés, et un cache réutilisé a déjà
+        # produit un paquet voyageur contenant les écrans du personnel.
         env:
           EXPO_BASE_URL: /${{ github.event.repository.name }}
           EXPO_NO_TELEMETRY: '1'
-        run: npx expo export --platform web --output-dir dist
+        run: npx expo export --platform web --output-dir dist --clear
 
       - name: Préparer pour l'hébergement statique
         # Balises d'installation sur l'écran d'accueil, repli des liens profonds

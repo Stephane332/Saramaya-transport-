@@ -50,6 +50,7 @@ import { encoder } from '../src/lib/code39';
 import { paiementPourVille } from '../src/data/reseau';
 import { dateFrancaiseVersIso, lireRectoCnib, rectoExploitable } from '../src/lib/cnibRecto';
 import { carteSuffisante, fusionnerCarte } from '../src/lib/carteIdentite';
+import { placerLecture, type FaceCarte, type LectureFace } from '../src/lib/facesCarte';
 import { calculerFidelite, phraseHabitue } from '../src/lib/fidelite';
 import {
   depuisBase64Url,
@@ -924,6 +925,70 @@ verifier(
   'une différence de casse n’est pas un désaccord',
   fusionnerCarte(lueDos.ok ? lueDos.identite : null, rectoCasse).desaccords,
   [],
+);
+
+/* ── Rangement des deux faces ────────────────────────────────────────────── */
+
+/*
+ * Le défaut d'origine : dans Expo Go, la reconnaissance de caractères n'existe pas,
+ * toute image revenait « recto », et la deuxième photo chassait la première. On
+ * pouvait appuyer dix fois sur « Photographier ma carte » sans jamais avoir deux
+ * images. Ces contrôles tiennent la règle qui l'empêche.
+ */
+groupe('Deux faces — une image illisible ne doit pas en chasser une autre');
+
+const face = (f: FaceCarte, faceDeduite: boolean, uri: string): LectureFace => ({
+  face: f,
+  faceDeduite,
+  uri,
+  texte: '',
+  avertissements: [],
+});
+
+// Le cas de l'utilisateur : rien n'est lisible, deux photos ajoutées à la suite.
+const premiere = placerLecture([], face('RECTO', false, 'photo-1'));
+verifier('la première image illisible prend la place du recto', premiere.map((l) => [l.face, l.uri]), [
+  ['RECTO', 'photo-1'],
+]);
+const deuxieme = placerLecture(premiere, face('RECTO', false, 'photo-2'));
+verifier(
+  'la seconde prend la place libre au lieu d’effacer la première',
+  deuxieme.map((l) => [l.face, l.uri]),
+  [
+    ['RECTO', 'photo-1'],
+    ['VERSO', 'photo-2'],
+  ],
+);
+
+// La face déduite garde son autorité : reprendre le dos remplace le dos.
+const dosLu = placerLecture(deuxieme, face('VERSO', true, 'dos-decode'));
+verifier(
+  'une face déduite remplace la place qu’elle nomme',
+  dosLu.map((l) => [l.face, l.uri]),
+  [
+    ['RECTO', 'photo-1'],
+    ['VERSO', 'dos-decode'],
+  ],
+);
+
+// Et l'inverse est la règle qui compte : une photo ratée ne doit pas effacer un
+// décodage réussi.
+const apresRate = placerLecture(dosLu, face('RECTO', false, 'photo-ratee'));
+verifier(
+  'une image illisible ne chasse jamais une face décodée',
+  apresRate.find((l) => l.face === 'VERSO')?.uri,
+  'dos-decode',
+);
+verifier('elle remplace celle qui n’était pas mieux établie', apresRate.length, 2);
+
+// Deux faces déduites : une troisième image illisible ne peut rien effacer d'utile.
+const deuxDeduites = [face('RECTO', true, 'recto-lu'), face('VERSO', true, 'dos-lu')];
+const intrus = placerLecture(deuxDeduites, face('RECTO', false, 'floue'));
+verifier('deux faces lues restent deux faces', intrus.length, 2);
+verifier(
+  'le dos décodé survit à une image floue',
+  intrus.find((l) => l.face === 'VERSO')?.uri,
+  'dos-lu',
 );
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);

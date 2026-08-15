@@ -111,11 +111,16 @@ export async function lireTexteImage(uri: string): Promise<Reconnaissance> {
     }
 
     return { disponible: false, texte: '', raison: raisonIndisponibilite() };
-  } catch (erreur) {
-    return {
-      disponible: false,
-      texte: '',
-      raison: erreur instanceof Error && erreur.message ? erreur.message : raisonIndisponibilite(),
-    };
+  } catch {
+    /*
+     * Le message d'origine ne remonte pas à l'écran.
+     *
+     * Ce que lève un module natif absent, c'est « Cannot find native module
+     * 'ExpoTextExtractor' » — de l'anglais technique, qui ne dit à personne quoi
+     * faire ensuite. La phrase de `raisonIndisponibilite()` le dit, elle, et dans la
+     * langue de l'application. Le détail technique reste dans la console du
+     * développeur, où il a son utilité.
+     */
+    return { disponible: false, texte: '', raison: raisonIndisponibilite() };
   }
 }

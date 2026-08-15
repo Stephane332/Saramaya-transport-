@@ -73,6 +73,7 @@ import {
   choisirDepuisGalerie,
   lireImageCarte,
   photographier,
+  placerLecture,
   type LectureFace,
 } from '../src/lib/imageCarte';
 import { programmerRappelsCnib } from '../src/lib/notifications';
@@ -141,7 +142,7 @@ export default function Bienvenue() {
    * contredisent, ce qu'un remplissage au fil de l'eau ne verrait jamais.
    */
   const integrer = (lecture: LectureFace) => {
-    const suivantes = [...lectures.filter((l) => l.face !== lecture.face), lecture];
+    const suivantes = placerLecture(lectures, lecture);
     setLectures(suivantes);
 
     const bande = suivantes.find((l) => l.bande)?.bande ?? null;
@@ -196,6 +197,8 @@ export default function Bienvenue() {
     if (!decodee.ok) throw new Error(decodee.raison);
     integrer({
       face: 'VERSO',
+      // Recopiée à la main depuis le dos : la face ne fait aucun doute.
+      faceDeduite: true,
       uri: '',
       texte: bandeManuelle,
       bande: decodee.identite,

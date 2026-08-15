@@ -59,6 +59,7 @@ import {
   choisirDepuisGalerie,
   lireImageCarte,
   photographier,
+  placerLecture,
   type LectureFace,
 } from '../src/lib/imageCarte';
 import { programmerRappelsCnib } from '../src/lib/notifications';
@@ -122,7 +123,7 @@ export default function EcranCnib() {
   const verso = useMemo(() => lectures.find((l) => l.face === 'VERSO'), [lectures]);
 
   const integrer = (lecture: LectureFace) => {
-    const suivantes = [...lectures.filter((l) => l.face !== lecture.face), lecture];
+    const suivantes = placerLecture(lectures, lecture);
     setLectures(suivantes);
     if (lecture.uri) setPhoto((p) => p ?? lecture.uri);
 
@@ -157,6 +158,8 @@ export default function EcranCnib() {
     if (!decodee.ok) throw new Error(decodee.raison);
     integrer({
       face: 'VERSO',
+      // Recopiée à la main depuis le dos : la face ne fait aucun doute.
+      faceDeduite: true,
       uri: '',
       texte: bandeManuelle,
       bande: decodee.identite,

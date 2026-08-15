@@ -27,28 +27,18 @@
 
 import * as ImagePicker from 'expo-image-picker';
 import { lireTexteImage } from './ocr';
-import { lireBandeTD1, extraireBandeDepuisTexte, type IdentiteLue } from './cnib';
-import { lireRectoCnib, rectoExploitable, type IdentiteRecto } from './cnibRecto';
+import { lireBandeTD1, extraireBandeDepuisTexte } from './cnib';
+import { lireRectoCnib, rectoExploitable } from './cnibRecto';
 
-export type FaceCarte = 'RECTO' | 'VERSO';
+/*
+ * Le type des lectures et leur rangement vivent dans `facesCarte.ts`, qui ne dépend
+ * d'aucun module natif et se teste donc. Ils sont réexportés ici pour que les écrans
+ * n'aient qu'un seul module à connaître.
+ */
+export { placerLecture, FACES } from './facesCarte';
+export type { FaceCarte, LectureFace } from './facesCarte';
 
-export interface LectureFace {
-  face: FaceCarte;
-  /** Chemin local de l'image retenue. Reste sur l'appareil. */
-  uri: string;
-  /** Texte brut rendu par la reconnaissance, conservé pour diagnostic. */
-  texte: string;
-  /** Renseigné quand la reconnaissance n'a pas pu avoir lieu. */
-  raisonIndisponible?: string;
-  /** Identité décodée depuis la bande, quand la face lue est le dos. */
-  bande?: IdentiteLue;
-  /** Les trois lignes brutes de la bande, pour les réafficher telles quelles. */
-  bandeBrute?: string;
-  /** Avertissements des clés de contrôle. */
-  avertissements: string[];
-  /** Champs lus au recto. */
-  recto?: IdentiteRecto;
-}
+import type { LectureFace } from './facesCarte';
 
 /**
  * Ouvre la galerie du téléphone. Les images ne sont jamais copiées ailleurs : on
@@ -106,9 +96,15 @@ export async function photographier(): Promise<string | null> {
 export async function lireImageCarte(uri: string): Promise<LectureFace> {
   const reconnaissance = await lireTexteImage(uri);
 
+  /*
+   * Rien n'a pu être lu : la face est **indéterminée**, et le dire est ce qui permet
+   * d'ajouter quand même les deux images. Prétendre « recto » ferait revendiquer la
+   * même place aux deux photos, et la seconde effacerait la première.
+   */
   if (!reconnaissance.disponible) {
     return {
       face: 'RECTO',
+      faceDeduite: false,
       uri,
       texte: '',
       raisonIndisponible: reconnaissance.raison,
@@ -125,6 +121,7 @@ export async function lireImageCarte(uri: string): Promise<LectureFace> {
     if (decodee.ok) {
       return {
         face: 'VERSO',
+        faceDeduite: true,
         uri,
         texte,
         bande: decodee.identite,
@@ -132,17 +129,26 @@ export async function lireImageCarte(uri: string): Promise<LectureFace> {
         avertissements: decodee.avertissements,
       };
     }
-    return { face: 'VERSO', uri, texte, bandeBrute: bandeTrouvee, avertissements: [decodee.raison] };
+    return {
+      face: 'VERSO',
+      faceDeduite: true,
+      uri,
+      texte,
+      bandeBrute: bandeTrouvee,
+      avertissements: [decodee.raison],
+    };
   }
 
   // Sinon le recto, par ses étiquettes.
   const recto = lireRectoCnib(texte);
   if (rectoExploitable(recto)) {
-    return { face: 'RECTO', uri, texte, recto, avertissements: [] };
+    return { face: 'RECTO', faceDeduite: true, uri, texte, recto, avertissements: [] };
   }
 
+  // Du texte, mais rien de reconnaissable : la face reste indéterminée.
   return {
     face: 'RECTO',
+    faceDeduite: false,
     uri,
     texte,
     avertissements: [
