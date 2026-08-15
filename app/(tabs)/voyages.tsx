@@ -26,8 +26,10 @@ export default function Voyages() {
   const reservations = useApp((e) => e.reservations);
   const [filtre, setFiltre] = useState<Filtre>('TOUS');
 
-  const maintenant = new Date();
   const liste = useMemo(() => {
+    // L'heure est relue à chaque recalcul, et non capturée au rendu : un « à venir »
+    // calculé une fois pour toutes finirait par proposer un départ déjà passé.
+    const maintenant = new Date();
     const trie = [...reservations].sort((a, b) =>
       `${b.date}T${b.heure}`.localeCompare(`${a.date}T${a.heure}`),
     );
@@ -144,13 +146,21 @@ export default function Voyages() {
         );
       })}
 
+      {/*
+        Le raccourci nommait un trajet précis puis ouvrait un formulaire vierge, où
+        il fallait rechoisir la ligne qu'on venait de désigner. Il la transmet
+        maintenant, et la réservation s'ouvre directement sur le choix du jour.
+      */}
       <Section>Refaire un trajet</Section>
       <Animated.View entering={FadeIn} style={{ gap: espace.md }}>
         {[...new Set(reservations.map((r) => r.ligneId))].slice(0, 3).map((ligneId) => {
           const l = ligneParId(ligneId);
           if (!l) return null;
           return (
-            <Pressable key={ligneId} onPress={() => router.push('/reserver')}>
+            <Pressable
+              key={ligneId}
+              onPress={() => router.push(`/reserver?ligne=${encodeURIComponent(ligneId)}`)}
+            >
               <View style={styles.raccourci}>
                 <Ionicons name="repeat" size={18} color={couleurs.marqueVif} />
                 <Txt v="corpsFort" style={{ flex: 1 }}>

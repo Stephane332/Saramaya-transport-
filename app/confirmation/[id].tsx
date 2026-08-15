@@ -47,22 +47,33 @@ import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
 export default function Confirmation() {
   const { id, action } = useLocalSearchParams<{ id: string; action?: string }>();
-  const router = useRouter();
   const reservations = useApp((e) => e.reservations);
   const r = reservations.find((x) => x.id === id);
 
-  if (!r) {
-    return (
-      <Ecran>
-        <Txt v="titre">Réservation introuvable</Txt>
-        <Bouton titre="Retour" variante="secondaire" onPress={() => router.back()} />
-      </Ecran>
-    );
-  }
+  if (!r) return <Introuvable />;
 
   if (action === 'annuler') return <Annulation reservationId={r.id} />;
   if (action === 'reporter') return <Report reservationId={r.id} />;
   return <Alarme reservationId={r.id} />;
+}
+
+/**
+ * Écran de repli quand la réservation n'existe pas ou plus.
+ *
+ * Un même écran pour les quatre cas : on ne laisse jamais l'utilisateur devant une
+ * page blanche, et surtout jamais devant un plantage.
+ */
+function Introuvable() {
+  const router = useRouter();
+  return (
+    <Ecran>
+      <Txt v="titre">Réservation introuvable</Txt>
+      <Txt v="corps" couleur={couleurs.texteDoux}>
+        Elle a peut-être été supprimée depuis cet appareil. Vos autres voyages sont intacts.
+      </Txt>
+      <Bouton titre="Retour à mes voyages" variante="secondaire" onPress={() => router.replace('/voyages')} />
+    </Ecran>
+  );
 }
 
 /* ── L'alarme ──────────────────────────────────────────────────────────────── */
@@ -71,8 +82,14 @@ function Alarme({ reservationId }: { reservationId: string }) {
   const router = useRouter();
   const reservations = useApp((e) => e.reservations);
   const confirmer = useApp((e) => e.confirmer);
-  const r = reservations.find((x) => x.id === reservationId)!;
-  const ligne = ligneParId(r.ligneId);
+  /*
+   * `find(...)!` promettait au compilateur une réservation qui peut disparaître —
+   * compte supprimé, données converties. La promesse tenue, l'écran affichait un
+   * champ vide ; la promesse rompue, il plantait. On lit sans mentir, et on gère
+   * l'absence quelques lignes plus bas.
+   */
+  const r = reservations.find((x) => x.id === reservationId);
+  const ligne = r ? ligneParId(r.ligneId) : null;
 
   const pulsation = useSharedValue(1);
   const lueur = useSharedValue(0.4);
@@ -95,9 +112,12 @@ function Alarme({ reservationId }: { reservationId: string }) {
   const animLueur = useAnimatedStyle(() => ({ opacity: lueur.value }));
 
   const reponse = useAction(async () => {
+    if (!r) return;
     await confirmer(r.id);
     router.replace(`/billet/${r.id}`);
   }, "Votre réponse n'a pas pu être enregistrée. Réessayez, ou appelez la gare.");
+
+  if (!r) return <Introuvable />;
 
   return (
     <Ecran defilant={false}>
@@ -181,9 +201,8 @@ function Annulation({ reservationId }: { reservationId: string }) {
   const router = useRouter();
   const reservations = useApp((e) => e.reservations);
   const annuler = useApp((e) => e.annuler);
-  const r = reservations.find((x) => x.id === reservationId)!;
-  const ligne = ligneParId(r.ligneId);
-  const politique = politiqueAnnulation(r);
+  const r = reservations.find((x) => x.id === reservationId);
+  const ligne = r ? ligneParId(r.ligneId) : null;
   const [confirmationDemandee, setConfirmationDemandee] = useState(false);
 
   /*
@@ -192,9 +211,13 @@ function Annulation({ reservationId }: { reservationId: string }) {
    * l'inverse. Elle doit dire ce qui s'est passé.
    */
   const annulation = useAction(async () => {
+    if (!r) return;
     await annuler(r.id);
     router.replace(`/billet/${r.id}`);
   }, "L'annulation n'a pas pu être enregistrée. Votre place est toujours retenue — réessayez.");
+
+  if (!r) return <Introuvable />;
+  const politique = politiqueAnnulation(r);
 
   return (
     <Ecran>
@@ -297,14 +320,17 @@ function Report({ reservationId }: { reservationId: string }) {
   const router = useRouter();
   const reservations = useApp((e) => e.reservations);
   const reporter = useApp((e) => e.reporter);
-  const r = reservations.find((x) => x.id === reservationId)!;
-  const ligne = ligneParId(r.ligneId);
+  const r = reservations.find((x) => x.id === reservationId);
+  const ligne = r ? ligneParId(r.ligneId) : null;
   const [date, setDate] = useState(format(addDays(new Date(), 1), 'yyyy-MM-dd'));
 
   const report = useAction(async (heure: string) => {
+    if (!r) return;
     await reporter(r.id, { date, heure });
     router.replace(`/billet/${r.id}`);
   }, "Le report n'a pas pu être enregistré. Votre départ initial reste valable — réessayez.");
+
+  if (!r) return <Introuvable />;
 
   return (
     <Ecran>

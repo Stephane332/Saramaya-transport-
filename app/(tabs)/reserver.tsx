@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { addDays, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, FadeOut, Layout } from 'react-native-reanimated';
 import {
@@ -52,7 +52,7 @@ const ETAPES: { cle: Etape; titre: string }[] = [
 
 export default function Reserver() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ scan?: string }>();
+  const params = useLocalSearchParams<{ scan?: string; ligne?: string }>();
   const creer = useApp((e) => e.creer);
   const voyageur = useApp((e) => e.voyageur);
   const statut = useStatutService();
@@ -67,6 +67,28 @@ export default function Reserver() {
 
   const ligne = ligneId ? ligneParId(ligneId) : null;
   const indexEtape = ETAPES.findIndex((e) => e.cle === etape);
+
+  /**
+   * « Refaire ce trajet » désigne déjà la ligne : on ouvre donc directement sur le
+   * choix du jour, gare de départ comprise.
+   *
+   * Un effet, et non une valeur initiale : cet écran est un onglet, il reste monté,
+   * si bien qu'un état initial ne serait lu qu'une fois dans la vie de
+   * l'application. Le paramètre est effacé dans la foulée — sinon, revenir à
+   * l'étape « Trajet » par le fil d'Ariane serait aussitôt annulé par cet effet.
+   */
+  useEffect(() => {
+    const demandee = params.ligne;
+    if (!demandee) return;
+    const cible = ligneParId(demandee);
+    router.setParams({ ligne: undefined });
+    if (!cible) return;
+    setLigneId(cible.id);
+    setGareId(garesDeLaVille(cible.origine)[0]?.id ?? null);
+    setHeure(null);
+    setSiege(null);
+    setEtape('DATE');
+  }, [params.ligne, router]);
 
   /**
    * Revenir d'une étape. Une seule définition, partagée par la flèche à l'écran et

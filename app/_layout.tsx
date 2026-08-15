@@ -63,7 +63,12 @@ export default function DispositionRacine() {
    */
 
   useEffect(() => {
-    initialiserNotifications();
+    /*
+     * Les canaux de notification et la demande d'autorisation dépendent du système :
+     * ils peuvent échouer. Ce n'est pas une raison de faire tomber le lancement —
+     * l'application reste entièrement utilisable sans rappels.
+     */
+    initialiserNotifications().catch(() => undefined);
   }, []);
 
   return (
@@ -80,6 +85,7 @@ export default function DispositionRacine() {
           <Stack.Screen name="bienvenue" options={{ animation: 'fade' }} />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="cnib" options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="confidentialite" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="billet/[id]" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen name="colis/[id]" options={{ animation: 'slide_from_bottom' }} />
           <Stack.Screen
