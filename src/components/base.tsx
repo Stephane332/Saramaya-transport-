@@ -300,8 +300,23 @@ export function Bouton({
   return (
     <PressableAnime
       onPress={presser}
-      onPressIn={() => (echelle.value = withSpring(0.96, { damping: 16 }))}
-      onPressOut={() => (echelle.value = withSpring(1, { damping: 12 }))}
+      // Un bouton désactivé ne doit pas non plus s'enfoncer : l'animation seule
+      // laissait croire que l'appui avait été pris en compte.
+      onPressIn={() => {
+        if (!desactive) echelle.value = withSpring(0.96, { damping: 16 });
+      }}
+      onPressOut={() => {
+        if (!desactive) echelle.value = withSpring(1, { damping: 12 });
+      }}
+      /*
+       * Sans ces trois attributs, un lecteur d'écran annonce le bouton comme du
+       * texte ordinaire : ni « bouton », ni « désactivé », et le sous-titre —
+       * souvent l'information décisive, « 3 500 F · à payer par Orange Money » —
+       * est lu séparément du titre. On les regroupe en un seul élément parlant.
+       */
+      accessibilityRole="button"
+      accessibilityState={{ disabled: desactive }}
+      accessibilityLabel={sousTitre ? `${titre}. ${sousTitre}` : titre}
       style={[
         anim,
         styles.bouton,

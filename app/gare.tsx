@@ -50,8 +50,19 @@ function etatAgent(r: Reservation): { texte: string; couleur: string; appel: boo
       return { texte: 'Annulé', couleur: couleurs.danger, appel: false };
     case 'EMBARQUE':
       return { texte: 'Embarqué', couleur: couleurs.neutre, appel: false };
-    default:
-      return { texte: r.statut, couleur: couleurs.neutre, appel: false };
+    /*
+     * Les trois derniers cas tombaient dans un `default` qui affichait le nom
+     * technique du statut — « SANS_REPONSE » en toutes lettres sur l'écran d'un
+     * agent. Ce sont pourtant les états qui demandent le plus d'attention : ils
+     * sont donc nommés, et « sans réponse » est précisément le cas où un appel
+     * reste nécessaire.
+     */
+    case 'SANS_REPONSE':
+      return { texte: 'Sans réponse', couleur: couleurs.danger, appel: true };
+    case 'REPORTEE':
+      return { texte: 'Reporté', couleur: couleurs.neutre, appel: false };
+    case 'NO_SHOW':
+      return { texte: 'Absent', couleur: couleurs.danger, appel: false };
   }
 }
 
