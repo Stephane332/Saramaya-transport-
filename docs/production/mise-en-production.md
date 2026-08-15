@@ -178,8 +178,16 @@ C'est ce qui alimente le lien de démonstration en ligne, sans installation.
 
 1. `npm run verifier` — versions des paquets alignées, `tsc --noEmit` propre, tests
    au vert. C'est la commande qui remplace les trois vérifications séparées.
-2. `npx expo export --platform web` — l'export réussit (bon indicateur que le
-   bundle est sain).
+2. `npm run fumee` — exporte le site **et l'ouvre dans un vrai navigateur**. Un
+   bundle qui se produit n'est pas un bundle qui s'exécute : une erreur au premier
+   rendu ou un import circulaire passent la compilation et donnent un écran blanc au
+   lancement, que `npm test` ne voit pas. Ce contrôle relève aussi toute requête
+   réseau qui échoue — c'est ainsi qu'a été découvert le contact vers un CDN
+   extérieur qu'`expo-camera` déclenchait sur le web à chaque chargement de page.
+
+   Playwright n'est pas une dépendance du projet ; s'il est absent le test le dit et
+   s'arrête sans échouer. Pour l'activer une fois :
+   `npm i -D playwright && npx playwright install chromium`.
 3. Version affichée : incrémenter `expo.version` dans `app.json` (le
    `versionCode`/`buildNumber`, lui, s'incrémente tout seul).
 4. `src/data/mentionsLegales.ts` décrit-il toujours ce que le logiciel fait ? Si

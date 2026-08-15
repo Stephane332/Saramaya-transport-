@@ -23,7 +23,6 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Redirect, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
@@ -37,6 +36,12 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  APPAREIL_DISPONIBLE,
+  VueAppareil,
+  usePermissionAppareil,
+  type CommandeAppareil,
+} from '../src/components/AppareilPhoto';
 import { Bus3D } from '../src/components/Bus3D';
 import {
   Bouton,
@@ -65,8 +70,8 @@ export default function Bienvenue() {
   const voyageurExistant = useApp((e) => e.voyageur);
 
   const [etape, setEtape] = useState<'ACCUEIL' | 'IDENTITE'>('ACCUEIL');
-  const [permission, demanderPermission] = useCameraPermissions();
-  const camera = useRef<CameraView>(null);
+  const permission = usePermissionAppareil();
+  const camera = useRef<CommandeAppareil>(null);
   const [appareilOuvert, setAppareilOuvert] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [lecture, setLecture] = useState<'attente' | 'encours' | 'reussie'>('attente');
@@ -114,31 +119,28 @@ export default function Bienvenue() {
    * sans réaction.
    */
   const acces = useAction(async () => {
-    if (!permission?.granted) {
-      const accord = await demanderPermission();
-      if (!accord.granted) {
-        throw new Error(
-          "L'accès à l'appareil photo a été refusé. Autorisez-le dans les réglages du téléphone, ou recopiez la bande du dos ci-dessous.",
-        );
-      }
+    if (!permission.accordee && !(await permission.demander())) {
+      throw new Error(
+        "L'accès à l'appareil photo a été refusé. Autorisez-le dans les réglages du téléphone, ou recopiez la bande du dos ci-dessous.",
+      );
     }
     setAppareilOuvert(true);
   }, "L'appareil photo n'a pas pu être ouvert. Recopiez la bande du dos ci-dessous.");
 
   const photographie = useAction(async () => {
-    let cliche: { uri?: string } | undefined;
+    let uri: string | null = null;
     try {
-      cliche = await camera.current?.takePictureAsync({ quality: 0.8 });
+      uri = (await camera.current?.prendre(0.8)) ?? null;
     } finally {
       // Quoi qu'il arrive — appareil occupé, mémoire pleine, permission retirée en
       // cours de route — on ne laisse personne coincé devant une caméra muette.
       setAppareilOuvert(false);
     }
-    if (!cliche?.uri) return;
-    setPhoto(cliche.uri);
+    if (!uri) return;
+    setPhoto(uri);
     setLecture('encours');
 
-    const reconnaissance = await lireTexteImage(cliche.uri);
+    const reconnaissance = await lireTexteImage(uri);
     if (!reconnaissance.disponible) {
       setLecture('attente');
       setMessageLecture(reconnaissance.raison ?? null);
@@ -183,7 +185,7 @@ export default function Bienvenue() {
   if (appareilOuvert) {
     return (
       <View style={styles.fondCamera}>
-        <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" />
+        <VueAppareil ref={camera} />
         {/* Repère aux proportions d'une carte : c'est le dos qu'il faut cadrer. */}
         <View style={styles.cadre} pointerEvents="none" />
         <View style={[styles.barreCamera, { paddingBottom: insets.bottom + espace.xl }]}>
@@ -247,12 +249,13 @@ export default function Bienvenue() {
             informations restent sur ce téléphone.
           </Txt>
 
-          {Platform.OS === 'web' ? (
+          {!APPAREIL_DISPONIBLE ? (
             /*
-              Sur le web, la caméra d'expo-camera charge un script de lecture depuis un
-              service extérieur. Puisque rien de ce projet ne doit sortir sans raison, on
-              ne la propose pas ici : la version web sert à découvrir l'application, et la
-              bande se recopie tout aussi bien. Sur téléphone, la photo est disponible.
+              Sur le web, la caméra d'expo-camera va chercher son décodeur de QR sur un
+              CDN extérieur — dès l'import, avant même qu'on l'affiche. Puisque rien de
+              ce projet ne doit sortir sans raison, le module n'est pas embarqué du tout
+              (voir `AppareilPhoto.web.tsx`) : la version web sert à découvrir
+              l'application, et la bande se recopie tout aussi bien.
             */
             <Carte>
               <Txt v="petit" couleur={couleurs.texteDoux}>

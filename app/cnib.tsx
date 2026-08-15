@@ -30,7 +30,6 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import {
@@ -44,6 +43,12 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  APPAREIL_DISPONIBLE,
+  VueAppareil,
+  usePermissionAppareil,
+  type CommandeAppareil,
+} from '../src/components/AppareilPhoto';
 import {
   Bouton,
   Carte,
@@ -66,8 +71,8 @@ export default function EcranCnib() {
   const voyageur = useApp((e) => e.voyageur);
   const mettreAJourProfil = useApp((e) => e.mettreAJourProfil);
 
-  const [permission, demanderPermission] = useCameraPermissions();
-  const camera = useRef<CameraView>(null);
+  const permission = usePermissionAppareil();
+  const camera = useRef<CommandeAppareil>(null);
   const [photo, setPhoto] = useState<string | null>(voyageur?.cnibPhotoUri ?? null);
   const [appareilOuvert, setAppareilOuvert] = useState(false);
 
@@ -95,21 +100,18 @@ export default function EcranCnib() {
   };
 
   const acces = useAction(async () => {
-    if (!permission?.granted) {
-      const accord = await demanderPermission();
-      if (!accord.granted) {
-        throw new Error(
-          "L'accès à l'appareil photo a été refusé. Autorisez-le dans les réglages du téléphone, ou recopiez la bande du dos ci-dessous.",
-        );
-      }
+    if (!permission.accordee && !(await permission.demander())) {
+      throw new Error(
+        "L'accès à l'appareil photo a été refusé. Autorisez-le dans les réglages du téléphone, ou recopiez la bande du dos ci-dessous.",
+      );
     }
     setAppareilOuvert(true);
   }, "L'appareil photo n'a pas pu être ouvert. Recopiez la bande du dos ci-dessous.");
 
   const photographie = useAction(async () => {
     try {
-      const cliche = await camera.current?.takePictureAsync({ quality: 0.7 });
-      if (cliche?.uri) setPhoto(cliche.uri);
+      const uri = await camera.current?.prendre(0.7);
+      if (uri) setPhoto(uri);
     } finally {
       // On referme la caméra dans tous les cas : un échec de capture ne doit pas
       // enfermer le voyageur dans un écran noir sans issue.
@@ -138,7 +140,7 @@ export default function EcranCnib() {
   if (appareilOuvert) {
     return (
       <View style={styles.fondCamera}>
-        <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" />
+        <VueAppareil ref={camera} />
         <View style={[styles.barreCamera, { paddingBottom: insets.bottom + espace.xl }]}>
           <Txt v="petit" couleur="#fff" style={{ textAlign: 'center' }}>
             Cadrez le dos de la carte, bien à plat et bien éclairé.
@@ -169,12 +171,12 @@ export default function EcranCnib() {
           </Txt>
 
           <Section>Photo de la carte</Section>
-          {Platform.OS === 'web' ? (
+          {!APPAREIL_DISPONIBLE ? (
             /*
-              Sur le web, la caméra d'expo-camera charge un script de lecture depuis un
-              service extérieur. Puisque rien de ce projet ne doit sortir sans raison, on
-              ne la propose pas ici : la version web sert à découvrir l'application, et la
-              bande se recopie tout aussi bien. Sur téléphone, la photo est disponible.
+              Sur le web, la caméra d'expo-camera va chercher son décodeur de QR sur un
+              CDN extérieur — dès l'import, avant même qu'on l'affiche. Le module n'est
+              donc pas embarqué du tout dans le bundle web (voir
+              `AppareilPhoto.web.tsx`), et la bande se recopie tout aussi bien.
             */
             <Carte>
               <Txt v="petit" couleur={couleurs.texteDoux}>
