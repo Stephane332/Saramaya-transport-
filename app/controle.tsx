@@ -21,7 +21,12 @@ import { ScannerCamera } from '../src/components/ScannerCamera';
 import { LIBELLES_CLASSE, libelleLigne } from '../src/data/reseau';
 import { montant } from '../src/lib/format';
 import { MODE_AGENT } from '../src/lib/modeAgent';
-import { verifierQrBillet, type Controle, type Verdict } from '../src/lib/billetQr';
+import {
+  SIGNATURE_DE_PROJET,
+  verifierQrBillet,
+  type Controle,
+  type Verdict,
+} from '../src/lib/billetQr';
 import { couleurs, espace, rayon } from '../src/theme';
 
 /** Habillage de chaque verdict : une couleur, une icône, une consigne. */
@@ -109,14 +114,27 @@ export default function EcranControle() {
       <Section>Suite</Section>
       <Bouton titre="Scanner le billet suivant" onPress={() => setControle(null)} />
 
-      <Carte>
+      {/*
+        Ce bloc disait à l'agent que « toute modification du QR est détectée
+        aussitôt ». C'était faux, et dangereusement : la clé de signature du projet
+        voyage en clair dans l'application livrée, si bien qu'un billet fabriqué
+        avec elle est indiscernable d'un vrai. Un agent qui s'y fiait laissait
+        monter en toute confiance.
+
+        On dit donc ce que le scan prouve — l'intégrité — et ce qu'il ne prouve pas
+        encore — l'authenticité, qui viendra de la compagnie.
+      */}
+      <Carte style={SIGNATURE_DE_PROJET ? { borderColor: 'rgba(245,165,36,0.4)' } : undefined}>
         <View style={{ flexDirection: 'row', gap: espace.sm }}>
-          <Ionicons name="information-circle-outline" size={18} color={couleurs.texteFaible} />
+          <Ionicons
+            name={SIGNATURE_DE_PROJET ? 'warning-outline' : 'shield-checkmark-outline'}
+            size={18}
+            color={SIGNATURE_DE_PROJET ? couleurs.attention : couleurs.succes}
+          />
           <Txt v="petit" couleur={couleurs.texteFaible} style={{ flex: 1 }}>
-            La vérification est entièrement hors ligne : le billet porte sa propre
-            signature. Une modification du QR — siège, date, paiement — est détectée
-            aussitôt. La signature par le système de la compagnie viendra s'y substituer
-            sans changer ce que voit l'agent.
+            {SIGNATURE_DE_PROJET
+              ? "La vérification fonctionne hors ligne et détecte un code abîmé, tronqué ou retouché. Elle ne prouve pas encore qu'un billet vient bien de Saramaya : tant que la compagnie ne signe pas elle-même, recoupez au guichet ce qui a de la valeur."
+              : "Vérification hors ligne avec la clé de la compagnie : un billet accepté vient bien de Saramaya, et toute retouche du code est détectée."}
           </Txt>
         </View>
       </Carte>

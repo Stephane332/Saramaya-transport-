@@ -44,7 +44,11 @@ import {
   paiementEtabli,
 } from '../src/lib/parcours';
 import { politiqueAnnulation } from '../src/lib/annulation';
-import { construireQrBillet, verifierQrBillet } from '../src/lib/billetQr';
+import {
+  SIGNATURE_DE_PROJET,
+  construireQrBillet,
+  verifierQrBillet,
+} from '../src/lib/billetQr';
 import { cleControle, lireBandeTD1 } from '../src/lib/cnib';
 import { lireRectoCnib } from '../src/lib/cnibRecto';
 import { MOTIFS, encoder } from '../src/lib/code39';
@@ -57,6 +61,7 @@ import {
   sha256,
   versBase64Url,
   versHex,
+  versOctets,
 } from '../src/lib/sha256';
 import type { Reservation, StatutReservation, Voyageur } from '../src/types';
 
@@ -533,6 +538,49 @@ groupe('Billet signé — inviolabilité sur toutes les altérations d’un cara
   verifier(
     'signature absente : refusée',
     verifierQrBillet(`${corpsA}.${corpsB}`, jour).verdict !== 'VALIDE',
+  );
+}
+
+groupe('Sécurité du billet — ce que la signature prouve, et ce qu’elle ne prouve pas');
+
+{
+  /*
+   * Exposition connue, épinglée ici pour qu'elle ne redevienne jamais implicite.
+   *
+   * Expo place toute variable `EXPO_PUBLIC_*` en clair dans le paquet livré : la
+   * clé de signature du projet se lit dans le bundle web d'un simple `grep`.
+   * Quiconque l'a lue fabrique un billet que le contrôle accepte — reproduit
+   * ci-dessous. Aucune clé embarquée dans un client ne peut faire mieux ; seule la
+   * compagnie, signant avec une clé qui ne quitte pas son système, y remédiera.
+   *
+   * Ce contrôle ne prétend donc pas que la faille est fermée. Il vérifie deux
+   * choses qui, elles, dépendent de nous :
+   *   · l'application **sait** qu'elle utilise la clé de projet ;
+   *   · et elle le **dit** à l'agent au lieu de lui promettre une authenticité
+   *     qu'elle ne peut pas tenir.
+   */
+  verifier(
+    'l’application sait qu’elle signe avec la clé de projet',
+    SIGNATURE_DE_PROJET === true,
+  );
+
+  const faux = {
+    r: 'SB-FAUX01', n: 'QUELQU UN', l: 'ligne-ouaga-bobo',
+    d: '2026-08-15', h: '08:30', c: 'VIP_1RE', s: 12, m: 8000,
+    p: 'PAYE', e: '2026-09-14',
+  };
+  const corps = `SB1.${versBase64Url(versOctets(JSON.stringify(faux)))}`;
+  const forge = `${corps}.${versBase64Url(hmacSha256(versOctets('siraba-cle-de-projet-v1'), versOctets(corps)).slice(0, 16))}`;
+  const verdict = verifierQrBillet(forge, new Date('2026-08-15T07:00:00'));
+
+  verifier(
+    'un billet forgé avec la clé publiée est accepté — exposition réelle, non résolue',
+    verdict.verdict === 'VALIDE',
+  );
+  verifier(
+    'mais le message ne promet pas l’authenticité à l’agent',
+    !verdict.message.includes('valide,') && verdict.message.includes('Recoupez'),
+    verdict.message,
   );
 }
 

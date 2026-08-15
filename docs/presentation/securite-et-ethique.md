@@ -94,6 +94,39 @@ vente — et elle est impossible à obtenir par la pression.
 
 ---
 
+## Notre propre faille, et pourquoi elle est écrite ici
+
+Il serait malvenu d'analyser les faiblesses d'autrui sans nommer la nôtre.
+
+**La clé qui signe les billets voyage en clair dans l'application livrée.** Expo
+place toute variable `EXPO_PUBLIC_*` dans le paquet distribué ; celle-ci se lit dans
+le bundle web d'un simple `grep`, et dans un APK décompilé aussi facilement. La
+manœuvre a été reproduite : avec cette clé, on fabrique en quelques lignes un billet
+VIP à 8 000 F que l'écran de contrôle juge valide.
+
+Ce n'est pas un oubli qu'on pourrait corriger dans un prochain commit : **aucune clé
+embarquée dans une application cliente ne peut être tenue secrète.** C'est vrai de
+toutes les applications, pas seulement de celle-ci.
+
+Ce qui se corrige, en revanche, c'est ce qu'on en dit. L'écran de contrôle
+promettait à l'agent que « toute modification du QR est détectée aussitôt » — faux,
+et dangereusement, puisqu'il l'aurait invité à laisser monter en confiance. Il dit
+désormais exactement ce que le scan prouve :
+
+- **l'intégrité** — un code abîmé, tronqué ou retouché à la main est refusé ;
+- **pas l'authenticité** — recouper au guichet ce qui a de la valeur.
+
+`tests/invariants.ts` épingle l'exposition : le test *fabrique* un faux billet et
+vérifie qu'il passe, pour que personne ne puisse un jour affirmer le contraire sans
+que la suite le contredise.
+
+**La sortie est connue et elle appartient à la compagnie.** Le jour où Saramaya
+signe ses billets avec une clé qui ne quitte pas son système, l'authenticité devient
+réelle et l'application le dit sans changer d'écran : la variable
+`EXPO_PUBLIC_CLE_BILLET` renseignée bascule le message. C'est un argument de plus à
+leur présenter — la partie qu'ils seuls peuvent apporter, et qui transforme un
+confort de lecture en preuve.
+
 ## En résumé
 
 - **Ne teste jamais leur API. Ne cherche jamais de failles. Ne menace jamais.**

@@ -43,11 +43,45 @@ import type { Classe, Reservation, Voyageur } from '../types';
 const VERSION = 'SB1';
 
 /**
- * Clé de signature. Fournie par la compagnie le jour où son système signe les
- * billets ; d'ici là, une clé de projet, qui protège de la retouche d'un QR mais
- * pas d'un faussaire déterminé (voir l'en-tête).
+ * Clé de signature — et la limite qu'il faut regarder en face.
+ *
+ * ## Une clé embarquée dans l'application est une clé publique
+ *
+ * Expo place toute variable `EXPO_PUBLIC_*` **en clair dans le paquet livré**. Elle
+ * se lit dans le bundle web d'un simple `grep`, et dans un APK décompilé aussi
+ * facilement. Vérifié sur l'export de ce projet : la clé par défaut y figure telle
+ * quelle.
+ *
+ * La conséquence est directe, et elle a été reproduite : avec cette clé, on
+ * fabrique en quelques lignes un billet VIP de 8 000 F que `verifierQrBillet` juge
+ * **VALIDE**. Aucun outil particulier n'est nécessaire.
+ *
+ * ## Ce que la signature protège donc réellement
+ *
+ * Elle garantit l'**intégrité** — un QR abîmé, tronqué, recopié de travers ou
+ * retouché à la main est refusé — et rien de plus. Elle ne prouve pas
+ * l'**authenticité** : un faussaire qui a lu la clé produit un billet indiscernable
+ * d'un vrai.
+ *
+ * Ce n'est pas un défaut réparable côté application : **aucune clé embarquée dans
+ * un client ne peut l'être.** L'authenticité viendra de la compagnie, qui signera
+ * ses billets avec une clé qui ne quitte jamais son système — c'est l'horizon 3.
+ *
+ * D'ici là, la seule chose honnête est de ne pas laisser croire le contraire à
+ * l'agent qui contrôle : `SIGNATURE_DE_PROJET` le lui dit à l'écran, et le message
+ * du verdict le dit aussi.
  */
-const CLE = versOctets(process.env.EXPO_PUBLIC_CLE_BILLET ?? 'siraba-cle-de-projet-v1');
+const CLE_PAR_DEFAUT = 'siraba-cle-de-projet-v1';
+const CLE = versOctets(process.env.EXPO_PUBLIC_CLE_BILLET ?? CLE_PAR_DEFAUT);
+
+/**
+ * Vrai tant que la compagnie n'a pas fourni sa propre clé.
+ *
+ * L'écran de contrôle s'en sert pour dire à l'agent ce que son scan prouve — et ce
+ * qu'il ne prouve pas.
+ */
+export const SIGNATURE_DE_PROJET =
+  (process.env.EXPO_PUBLIC_CLE_BILLET ?? CLE_PAR_DEFAUT) === CLE_PAR_DEFAUT;
 
 /** 16 octets suffisent : la signature reste courte, le QR reste lisible de loin. */
 const OCTETS_SIGNATURE = 16;
@@ -196,5 +230,20 @@ export function verifierQrBillet(texte: string, maintenant = new Date()): Contro
     return { verdict: 'NON_PAYE', billet, message: 'Billet non payé — à régler au guichet.' };
   }
 
-  return { verdict: 'VALIDE', billet, message: 'Billet valide.' };
+  /*
+   * « Cohérent », et non « authentique ».
+   *
+   * Tant que la clé de signature est celle du projet, elle est lisible dans le
+   * paquet livré : un billet fabriqué avec elle est indiscernable d'un vrai. Dire
+   * « valide » sans nuance à l'agent l'inviterait à s'y fier plus que le code ne le
+   * permet. Le verdict reste `VALIDE` — l'écran est bâti dessus — mais le message
+   * dit ce qu'il vaut.
+   */
+  return {
+    verdict: 'VALIDE',
+    billet,
+    message: SIGNATURE_DE_PROJET
+      ? 'Billet cohérent et intact. Recoupez au guichet en cas de doute.'
+      : 'Billet valide, signature de la compagnie vérifiée.',
+  };
 }
