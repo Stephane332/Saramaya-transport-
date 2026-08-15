@@ -1,30 +1,38 @@
 /**
  * Ouverture de compte — le tout premier écran d'un nouveau client.
  *
- * Le geste demandé est simple : **photographier sa CNIB**, et tout se remplit. Nom,
- * prénoms, numéro, date de naissance, date d'expiration : la bande à lecture machine
- * au dos les contient tous, et chacun y porte sa clé de contrôle, si bien qu'une
- * lecture fautive se détecte au lieu de s'enregistrer.
+ * Le geste demandé tient en un mot : **une image**. On photographie sa CNIB, ou on
+ * choisit une photo déjà prise, et tout se remplit — nom, prénoms, numéro, date de
+ * naissance, date d'expiration, lieu de naissance. Les deux faces peuvent être
+ * données ; chacune apporte ce que l'autre n'a pas.
  *
- *     photo → lecture → vérification par le voyageur → compte créé
+ *     image → lecture → vérification par le voyageur → compte créé
  *
- * Deux principes gouvernent cet écran :
+ * ## Ce que chaque face apporte
  *
- * 1. **Rien n'est affirmé.** Ce qui est lu pré-remplit ; le voyageur confirme. Le dos
- *    de leur propre ticket le dit : « nos agents peuvent se tromper ». Une machine
- *    aussi.
- * 2. **Rien ne sort du téléphone.** La photo et l'identité restent sur l'appareil.
- *    C'est ce qui permet de dire à la compagnie : nous ne détenons pas les pièces
- *    d'identité de vos clients, donc nous ne pouvons pas les perdre.
+ * Le **dos** porte la bande à lecture machine, et c'est la meilleure source qui
+ * soit : chaque champ y est suivi d'une clé de contrôle, si bien qu'une lecture
+ * fautive **se détecte** au lieu de s'enregistrer en silence.
  *
- * Si la lecture automatique n'est pas disponible — c'est le cas dans Expo Go —
- * l'écran ne fait pas semblant : il propose de recopier la bande, ce qui remplit les
- * mêmes champs par le même chemin. Le compte peut toujours s'ouvrir.
+ * Le **recto** porte ce que la bande ne contient pas : le lieu de naissance, la
+ * profession, la date de délivrance, et le numéro d'identification à dix-sept
+ * chiffres. Quand les deux faces se contredisent, l'écran le dit et pointe le champ.
+ *
+ * ## Deux principes
+ *
+ * 1. **Rien n'est affirmé.** Ce qui est lu pré-remplit ; le voyageur confirme, et
+ *    chaque champ indique d'où il vient. Le dos de leur propre ticket le dit :
+ *    « nos agents peuvent se tromper ». Une machine aussi.
+ * 2. **Rien ne sort du téléphone.** Les images et l'identité restent sur
+ *    l'appareil. C'est ce qui permet de dire à la compagnie : nous ne détenons pas
+ *    les pièces d'identité de vos clients, donc nous ne pouvons pas les perdre.
+ *
+ * Seul le numéro de téléphone se saisit à la main — il ne figure pas sur la carte.
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { Redirect, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -36,12 +44,6 @@ import {
 } from 'react-native';
 import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import {
-  APPAREIL_DISPONIBLE,
-  VueAppareil,
-  usePermissionAppareil,
-  type CommandeAppareil,
-} from '../src/components/AppareilPhoto';
 import { Bus3D } from '../src/components/Bus3D';
 import {
   Bouton,
@@ -54,14 +56,35 @@ import {
 } from '../src/components/base';
 import { CONTACTS_COMPAGNIE } from '../src/data/reseau';
 import { useAction } from '../src/lib/action';
-import { extraireBandeDepuisTexte, lireBandeTD1 } from '../src/lib/cnib';
+import {
+  CARTE_VIDE,
+  CHAMPS,
+  appliquerFusion,
+  carteSuffisante,
+  fusionnerCarte,
+  libelleSource,
+  type CarteIdentite,
+  type ChampCarte,
+  type SourceChamp,
+} from '../src/lib/carteIdentite';
+import { lireBandeTD1 } from '../src/lib/cnib';
+import {
+  choisirDepuisGalerie,
+  lireImageCarte,
+  photographier,
+  type LectureFace,
+} from '../src/lib/imageCarte';
 import { programmerRappelsCnib } from '../src/lib/notifications';
-import { lireTexteImage } from '../src/lib/ocr';
 import { useRetourMateriel } from '../src/lib/retour';
 import { useApp } from '../src/store/useApp';
 import { couleurs, espace, rayon } from '../src/theme';
 
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+const SOURCES_VIDES = Object.fromEntries(CHAMPS.map((c) => [c, 'AUCUNE'])) as Record<
+  ChampCarte,
+  SourceChamp
+>;
 
 export default function Bienvenue() {
   const router = useRouter();
@@ -70,152 +93,103 @@ export default function Bienvenue() {
   const voyageurExistant = useApp((e) => e.voyageur);
 
   const [etape, setEtape] = useState<'ACCUEIL' | 'IDENTITE'>('ACCUEIL');
-  const permission = usePermissionAppareil();
-  const camera = useRef<CommandeAppareil>(null);
-  const [appareilOuvert, setAppareilOuvert] = useState(false);
-  const [photo, setPhoto] = useState<string | null>(null);
-  const [lecture, setLecture] = useState<'attente' | 'encours' | 'reussie'>('attente');
-  const [messageLecture, setMessageLecture] = useState<string | null>(null);
-  const [avertissements, setAvertissements] = useState<string[]>([]);
 
-  const [bande, setBande] = useState('');
-  const [prenom, setPrenom] = useState('');
-  const [nom, setNom] = useState('');
+  /** Les faces déjà lues, au plus une par face. */
+  const [lectures, setLectures] = useState<LectureFace[]>([]);
+  const [carte, setCarte] = useState<CarteIdentite>(CARTE_VIDE);
+  const [sources, setSources] = useState<Record<ChampCarte, SourceChamp>>(SOURCES_VIDES);
+  const [desaccords, setDesaccords] = useState<ChampCarte[]>([]);
+  const [avertissements, setAvertissements] = useState<string[]>([]);
+  const [messageLecture, setMessageLecture] = useState<string | null>(null);
+  const [bandeManuelle, setBandeManuelle] = useState('');
+
+  /** Le seul champ absent de la carte. */
   const [telephone, setTelephone] = useState('');
-  const [cnib, setCnib] = useState('');
-  const [expiration, setExpiration] = useState('');
-  const [naissance, setNaissance] = useState('');
 
   useRetourMateriel(etape === 'IDENTITE', () => setEtape('ACCUEIL'));
 
   const telOk = telephone.replace(/\D/g, '').length >= 8;
-  const complet = prenom.trim().length >= 2 && nom.trim().length >= 2 && telOk;
+  const complet = carteSuffisante(carte) && telOk;
 
-  /** Applique une bande décodée aux champs. Ne valide jamais à la place du voyageur. */
-  const appliquerBande = (texteBande: string): boolean => {
-    const resultat = lireBandeTD1(texteBande);
-    if (!resultat.ok) {
-      setMessageLecture(resultat.raison);
-      return false;
-    }
-    const { identite } = resultat;
-    setNom(identite.nom);
-    // La bande sépare les prénoms par des espaces ; le premier fait l'usuel.
-    setPrenom(identite.prenoms.split(' ')[0] ?? '');
-    setCnib(identite.numero);
-    setExpiration(identite.dateExpiration);
-    setNaissance(identite.dateNaissance);
-    setAvertissements(resultat.avertissements);
-    setMessageLecture(null);
-    setLecture('reussie');
-    return true;
+  const recto = useMemo(() => lectures.find((l) => l.face === 'RECTO'), [lectures]);
+  const verso = useMemo(() => lectures.find((l) => l.face === 'VERSO'), [lectures]);
+
+  /**
+   * Range une lecture et reporte le résultat sur le formulaire.
+   *
+   * La fusion est **recalculée depuis toutes les faces**, et non appliquée par
+   * incréments : c'est ce qui permet de détecter qu'un recto et un dos se
+   * contredisent, ce qu'un remplissage au fil de l'eau ne verrait jamais.
+   */
+  const integrer = (lecture: LectureFace) => {
+    const suivantes = [...lectures.filter((l) => l.face !== lecture.face), lecture];
+    setLectures(suivantes);
+
+    const bande = suivantes.find((l) => l.bande)?.bande ?? null;
+    const champsRecto = suivantes.find((l) => l.recto)?.recto ?? null;
+    const fusion = fusionnerCarte(
+      bande,
+      champsRecto,
+      suivantes.flatMap((l) => l.avertissements),
+    );
+
+    const applique = appliquerFusion(carte, sources, fusion);
+    setCarte(applique.carte);
+    setSources(applique.sources);
+    setDesaccords(fusion.desaccords);
+    setAvertissements(fusion.avertissements);
+    setMessageLecture(lecture.raisonIndisponible ?? null);
   };
 
-  /*
-   * Demander l'accès à l'appareil puis l'ouvrir : deux gestes du système, donc deux
-   * occasions d'échouer. Un refus se dit ; une erreur ne doit pas laisser le bouton
-   * sans réaction.
-   */
-  const acces = useAction(async () => {
-    if (!permission.accordee && !(await permission.demander())) {
-      throw new Error(
-        "L'accès à l'appareil photo a été refusé. Autorisez-le dans les réglages du téléphone, ou recopiez la bande du dos ci-dessous.",
-      );
-    }
-    setAppareilOuvert(true);
-  }, "L'appareil photo n'a pas pu être ouvert. Recopiez la bande du dos ci-dessous.");
+  /** Corriger un champ à la main : la correction ne sera plus jamais écrasée. */
+  const corriger = (champ: ChampCarte, valeur: string) => {
+    setCarte((c) => ({ ...c, [champ]: valeur }));
+    setSources((s) => ({ ...s, [champ]: 'SAISIE' }));
+    setDesaccords((d) => d.filter((c) => c !== champ));
+  };
 
-  const photographie = useAction(async () => {
-    let uri: string | null = null;
-    try {
-      uri = (await camera.current?.prendre(0.8)) ?? null;
-    } finally {
-      // Quoi qu'il arrive — appareil occupé, mémoire pleine, permission retirée en
-      // cours de route — on ne laisse personne coincé devant une caméra muette.
-      setAppareilOuvert(false);
-    }
-    if (!uri) return;
-    setPhoto(uri);
-    setLecture('encours');
+  const importer = useAction(async (origine: 'APPAREIL' | 'GALERIE') => {
+    const uri = origine === 'APPAREIL' ? await photographier() : await choisirDepuisGalerie();
+    if (!uri) return; // Annulé : ce n'est pas un échec.
+    const lecture = await lireImageCarte(uri);
+    integrer(lecture);
+  }, "L'image n'a pas pu être lue. Réessayez avec une photo bien à plat et bien éclairée.");
 
-    const reconnaissance = await lireTexteImage(uri);
-    if (!reconnaissance.disponible) {
-      setLecture('attente');
-      setMessageLecture(reconnaissance.raison ?? null);
-      return;
-    }
-    const bandeTrouvee = extraireBandeDepuisTexte(reconnaissance.texte);
-    if (!bandeTrouvee) {
-      setLecture('attente');
-      setMessageLecture(
-        "La bande du dos n'a pas été retrouvée sur la photo. Reprenez-la bien à plat et bien éclairée, ou recopiez-la ci-dessous.",
-      );
-      return;
-    }
-    setBande(bandeTrouvee);
-    appliquerBande(bandeTrouvee);
-  }, "La photo n'a pas pu être prise. Réessayez, ou recopiez la bande du dos de la carte.");
+  /** Voie de secours : recopier la bande du dos donne exactement le même résultat. */
+  const saisirBande = useAction(async () => {
+    const decodee = lireBandeTD1(bandeManuelle);
+    if (!decodee.ok) throw new Error(decodee.raison);
+    integrer({
+      face: 'VERSO',
+      uri: '',
+      texte: bandeManuelle,
+      bande: decodee.identite,
+      avertissements: decodee.avertissements,
+    });
+  }, "La bande n'a pas pu être décodée. Vérifiez les trois lignes de trente caractères.");
 
-  /*
-   * L'ouverture de compte est l'action la moins rattrapable de l'application : si
-   * elle échoue en silence, le bouton reste inerte et le nouveau venu abandonne
-   * avant même d'avoir vu un écran utile.
-   */
   const ouverture = useAction(async () => {
     if (!complet) return;
     creerCompte({
-      prenom: prenom.trim(),
-      nom: nom.trim().toUpperCase(),
+      prenom: carte.prenoms.trim().split(/\s+/)[0] ?? carte.prenoms.trim(),
+      nom: carte.nom.trim().toUpperCase(),
       telephone: telephone.replace(/\D/g, ''),
-      cnib: cnib.trim() || undefined,
-      dateNaissance: naissance || undefined,
-      cnibExpireLe: DATE_ISO.test(expiration) ? expiration : undefined,
-      cnibPhotoUri: photo ?? undefined,
+      cnib: carte.numeroCarte.trim() || undefined,
+      dateNaissance: carte.dateNaissance || undefined,
+      cnibExpireLe: DATE_ISO.test(carte.dateExpiration) ? carte.dateExpiration : undefined,
+      cnibPhotoUri: recto?.uri || verso?.uri || undefined,
     });
     // Le rappel d'expiration est un confort : son échec ne doit pas priver le
     // voyageur du compte qu'il vient de créer.
-    if (DATE_ISO.test(expiration)) await programmerRappelsCnib(expiration).catch(() => undefined);
+    if (DATE_ISO.test(carte.dateExpiration)) {
+      await programmerRappelsCnib(carte.dateExpiration).catch(() => undefined);
+    }
     router.replace('/');
   }, "Le compte n'a pas pu être créé. Réessayez dans un instant.");
 
-  /*
-   * Cette sortie **doit** rester après le dernier crochet.
-   *
-   * Elle était placée plus haut, avant les trois `useAction` ci-dessus, et c'était
-   * un plantage franc au pire moment qui soit : à la seconde où le compte est créé,
-   * `voyageurExistant` devient vrai, le composant se redessine, sort ici — et rend
-   * trois crochets de moins qu'au rendu précédent. React refuse (erreur #300) et
-   * fait tomber tout l'arbre. Le nouveau venu voyait un écran d'erreur en guise de
-   * bienvenue, juste après avoir saisi son identité.
-   *
-   * Trouvé par `npm run fumee`, qui joue l'inscription dans un vrai navigateur :
-   * ni les types ni les tests de règles ne peuvent voir ce défaut.
-   */
+  // Après le dernier crochet, jamais avant : une sortie placée plus haut ferait
+  // rendre moins de crochets au second rendu, et React ferait tomber tout l'arbre.
   if (voyageurExistant) return <Redirect href="/" />;
-
-  /* ── Caméra plein écran ─────────────────────────────────────────────────── */
-
-  if (appareilOuvert) {
-    return (
-      <View style={styles.fondCamera}>
-        <VueAppareil ref={camera} />
-        {/* Repère aux proportions d'une carte : c'est le dos qu'il faut cadrer. */}
-        <View style={styles.cadre} pointerEvents="none" />
-        <View style={[styles.barreCamera, { paddingBottom: insets.bottom + espace.xl }]}>
-          <Txt v="petit" couleur="#fff" style={{ textAlign: 'center' }}>
-            Photographiez le dos de votre CNIB, bien à plat et bien éclairé — c'est là que
-            se trouvent les lignes de caractères.
-          </Txt>
-          <Bouton
-            titre={photographie.enCours ? 'Capture…' : 'Prendre la photo'}
-            desactive={photographie.enCours}
-            onPress={photographie.lancer}
-          />
-          <Bouton titre="Annuler" variante="fantome" onPress={() => setAppareilOuvert(false)} />
-        </View>
-      </View>
-    );
-  }
 
   /* ── Accueil ────────────────────────────────────────────────────────────── */
 
@@ -246,7 +220,7 @@ export default function Bienvenue() {
     );
   }
 
-  /* ── Identité, à partir de la carte ─────────────────────────────────────── */
+  /* ── Identité, à partir d'une image de la carte ─────────────────────────── */
 
   return (
     <View style={[styles.fond, { paddingTop: insets.top }]}>
@@ -254,73 +228,45 @@ export default function Bienvenue() {
         <ScrollView
           contentContainerStyle={{ padding: espace.lg, paddingBottom: insets.bottom + 130, gap: espace.lg }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <EnTeteRetour onRetour={() => setEtape('ACCUEIL')} titre="Votre identité" />
 
           <Txt v="petit" couleur={couleurs.texteFaible}>
-            Photographiez votre CNIB : tout se remplit. Vous vérifiez, et c'est fait. Vos
-            informations restent sur ce téléphone.
+            Ajoutez une image de votre CNIB : tout se remplit. Le dos est le plus fiable — sa
+            bande porte des clés de contrôle. Vos informations restent sur ce téléphone.
           </Txt>
 
-          {!APPAREIL_DISPONIBLE ? (
-            /*
-              Sur le web, la caméra d'expo-camera va chercher son décodeur de QR sur un
-              CDN extérieur — dès l'import, avant même qu'on l'affiche. Puisque rien de
-              ce projet ne doit sortir sans raison, le module n'est pas embarqué du tout
-              (voir `AppareilPhoto.web.tsx`) : la version web sert à découvrir
-              l'application, et la bande se recopie tout aussi bien.
-            */
-            <Carte>
-              <Txt v="petit" couleur={couleurs.texteDoux}>
-                La photo de la carte est disponible dans l'application installée sur
-                téléphone. Ici, recopiez la bande du dos : le résultat est identique.
-              </Txt>
-            </Carte>
-          ) : photo ? (
-            <Animated.View entering={FadeIn} style={{ gap: espace.sm }}>
-              <Image source={{ uri: photo }} style={styles.photo} resizeMode="cover" />
-              <Bouton titre="Reprendre la photo" variante="fantome" onPress={() => setAppareilOuvert(true)} />
-            </Animated.View>
-          ) : (
+          <Section>Votre carte</Section>
+          <View style={{ gap: espace.md }}>
+            <View style={{ flexDirection: 'row', gap: espace.md }}>
+              <VignetteFace titre="RECTO" lecture={recto} />
+              <VignetteFace titre="DOS" lecture={verso} />
+            </View>
+
+            <MessageErreur texte={importer.erreur} />
+
             <Bouton
-              titre="Photographier ma CNIB"
-              sousTitre="Le dos de la carte — reste sur ce téléphone"
-              desactive={acces.enCours}
+              titre={importer.enCours ? 'Lecture…' : 'Photographier ma carte'}
+              sousTitre="Le dos de préférence — reste sur ce téléphone"
+              desactive={importer.enCours}
               icone={<Ionicons name="camera-outline" size={18} color={couleurs.texte} />}
-              onPress={acces.lancer}
+              onPress={() => importer.lancer('APPAREIL')}
             />
-          )}
-
-          <MessageErreur texte={acces.erreur ?? photographie.erreur} />
-
-          {lecture === 'encours' ? (
-            <Carte>
-              <Txt v="petit" couleur={couleurs.texteDoux}>
-                Lecture de la carte…
+            <Bouton
+              titre="Choisir une image existante"
+              sousTitre="Une photo de la carte déjà dans votre téléphone"
+              variante="secondaire"
+              desactive={importer.enCours}
+              icone={<Ionicons name="images-outline" size={18} color={couleurs.texteDoux} />}
+              onPress={() => importer.lancer('GALERIE')}
+            />
+            {lectures.length === 1 ? (
+              <Txt v="minuscule" couleur={couleurs.texteFaible}>
+                AJOUTEZ L'AUTRE FACE : ELLE COMPLÈTE CE QUI MANQUE ET CONFIRME LE RESTE
               </Txt>
-            </Carte>
-          ) : null}
-
-          {lecture === 'reussie' ? (
-            <Animated.View entering={FadeInDown}>
-              <Carte style={{ borderColor: 'rgba(46,204,143,0.35)', gap: espace.sm }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.sm }}>
-                  <Ionicons name="checkmark-circle" size={18} color={couleurs.succes} />
-                  <Txt v="corpsFort" couleur={couleurs.succes}>
-                    Carte lue
-                  </Txt>
-                </View>
-                <Txt v="minuscule" couleur={couleurs.attention}>
-                  VÉRIFIEZ LES CHAMPS CI-DESSOUS AVANT DE CONTINUER
-                </Txt>
-                {avertissements.map((a) => (
-                  <Txt key={a} v="minuscule" couleur={couleurs.attention}>
-                    · {a}
-                  </Txt>
-                ))}
-              </Carte>
-            </Animated.View>
-          ) : null}
+            ) : null}
+          </View>
 
           {messageLecture ? (
             <Animated.View entering={FadeIn}>
@@ -335,68 +281,147 @@ export default function Bienvenue() {
             </Animated.View>
           ) : null}
 
+          {desaccords.length > 0 ? (
+            <Animated.View entering={FadeInDown}>
+              <Carte style={{ borderColor: 'rgba(242,84,91,0.45)', gap: espace.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.sm }}>
+                  <Ionicons name="alert-circle" size={18} color={couleurs.danger} />
+                  <Txt v="corpsFort" couleur={couleurs.danger}>
+                    Les deux faces ne concordent pas
+                  </Txt>
+                </View>
+                <Txt v="petit" couleur={couleurs.texteDoux}>
+                  Le recto et le dos donnent des valeurs différentes pour{' '}
+                  {desaccords.map((c) => LIBELLES[c].toLowerCase()).join(', ')}. La valeur du dos
+                  est retenue, car elle est vérifiée — mais regardez votre carte et corrigez si
+                  besoin.
+                </Txt>
+              </Carte>
+            </Animated.View>
+          ) : null}
+
+          {avertissements.length > 0 ? (
+            <Carte style={{ borderColor: 'rgba(245,165,36,0.35)', gap: 4 }}>
+              <Txt v="minuscule" couleur={couleurs.attention}>
+                À VÉRIFIER
+              </Txt>
+              {avertissements.map((a) => (
+                <Txt key={a} v="petit" couleur={couleurs.texteDoux}>
+                  · {a}
+                </Txt>
+              ))}
+            </Carte>
+          ) : null}
+
+          <Section>Vos informations</Section>
+          <Carte style={{ gap: espace.md }}>
+            <Champ
+              libelle="NOM"
+              valeur={carte.nom}
+              source={sources.nom}
+              enDesaccord={desaccords.includes('nom')}
+              onChange={(v) => corriger('nom', v)}
+              placeholder="SAWADOGO"
+              majuscule
+            />
+            <Trait />
+            <Champ
+              libelle="PRÉNOMS"
+              valeur={carte.prenoms}
+              source={sources.prenoms}
+              enDesaccord={desaccords.includes('prenoms')}
+              onChange={(v) => corriger('prenoms', v)}
+              placeholder="ANGE STEPHANE"
+              majuscule
+            />
+            <Trait />
+            <Champ
+              libelle="TÉLÉPHONE"
+              valeur={telephone}
+              source="AUCUNE"
+              onChange={setTelephone}
+              placeholder="70 45 12 88"
+              clavier="phone-pad"
+              note="NE FIGURE PAS SUR LA CARTE"
+            />
+            <Trait />
+            <Champ
+              libelle="NUMÉRO CNIB"
+              valeur={carte.numeroCarte}
+              source={sources.numeroCarte}
+              enDesaccord={desaccords.includes('numeroCarte')}
+              onChange={(v) => corriger('numeroCarte', v)}
+              placeholder="B13654737"
+              majuscule
+            />
+            <Trait />
+            <Champ
+              libelle="EXPIRE LE (AAAA-MM-JJ)"
+              valeur={carte.dateExpiration}
+              source={sources.dateExpiration}
+              enDesaccord={desaccords.includes('dateExpiration')}
+              onChange={(v) => corriger('dateExpiration', v)}
+              placeholder="2031-08-30"
+            />
+            <Trait />
+            <Champ
+              libelle="NÉ(E) LE (AAAA-MM-JJ)"
+              valeur={carte.dateNaissance}
+              source={sources.dateNaissance}
+              enDesaccord={desaccords.includes('dateNaissance')}
+              onChange={(v) => corriger('dateNaissance', v)}
+              placeholder="2004-10-01"
+            />
+            {carte.lieuNaissance ? (
+              <>
+                <Trait />
+                <Champ
+                  libelle="LIEU DE NAISSANCE"
+                  valeur={carte.lieuNaissance}
+                  source={sources.lieuNaissance}
+                  onChange={(v) => corriger('lieuNaissance', v)}
+                  placeholder="OUAHIGOUYA"
+                  majuscule
+                />
+              </>
+            ) : null}
+          </Carte>
+
           {/*
-            Recopier la bande donne exactement le même résultat que la lecture
-            automatique : mêmes champs, même décodage, mêmes clés de contrôle. C'est
-            une voie de secours, pas une version dégradée.
+            Voie de secours, et non version dégradée : recopier la bande donne
+            exactement le même résultat que la lecture d'image — mêmes champs, même
+            décodage, mêmes clés de contrôle.
           */}
           <Section>Ou recopiez la bande du dos</Section>
           <Carte style={{ gap: espace.md }}>
             <TextInput
-              value={bande}
-              onChangeText={setBande}
-              placeholder={'I<BFAD231458907<<<<<<<<<<<<<<<\n7408122F1204159BFA<<<<<<<<<<<6\nSAWADOGO<<ANGE<<<<<<<<<<<<<<<<'}
+              value={bandeManuelle}
+              onChangeText={setBandeManuelle}
+              placeholder={'I<BFAB136547379<<<<<<<<<<<<<<<\n0410014M3108309BFA<<<<<<<<<<<0\nSAWADOGO<<ANGE<STEPHANE<<<<<<<'}
               placeholderTextColor="rgba(255,255,255,0.18)"
               multiline
               autoCapitalize="characters"
               autoCorrect={false}
               style={styles.bande}
             />
+            <MessageErreur texte={saisirBande.erreur} />
             <Bouton
               titre="Remplir depuis la bande"
               variante="secondaire"
-              desactive={bande.trim().length < 30}
-              onPress={() => appliquerBande(bande)}
-            />
-          </Carte>
-
-          <Section>Vos informations</Section>
-          <Carte style={{ gap: espace.md }}>
-            <Champ libelle="PRÉNOM" valeur={prenom} onChange={setPrenom} placeholder="Ange" />
-            <Trait />
-            <Champ libelle="NOM" valeur={nom} onChange={setNom} placeholder="SAWADOGO" majuscule />
-            <Trait />
-            <Champ
-              libelle="TÉLÉPHONE"
-              valeur={telephone}
-              onChange={setTelephone}
-              placeholder="66 79 80 31"
-              clavier="phone-pad"
-            />
-            <Trait />
-            <Champ libelle="NUMÉRO CNIB" valeur={cnib} onChange={setCnib} placeholder="B 1234567" majuscule />
-            <Trait />
-            <Champ
-              libelle="CNIB EXPIRE LE (AAAA-MM-JJ)"
-              valeur={expiration}
-              onChange={setExpiration}
-              placeholder="2030-12-31"
+              desactive={bandeManuelle.trim().length < 30 || saisirBande.enCours}
+              onPress={saisirBande.lancer}
             />
           </Carte>
 
           <View style={styles.note}>
             <Ionicons name="shield-checkmark-outline" size={18} color={couleurs.succes} />
             <Txt v="petit" couleur={couleurs.texteDoux} style={{ flex: 1 }}>
-              Rien n'est envoyé : la photo et vos informations restent sur cet appareil. Avec
+              Rien n'est envoyé : les images et vos informations restent sur cet appareil. Avec
               la date d'expiration, vous serez prévenu avant qu'une carte périmée ne pose
               problème à un contrôle.
             </Txt>
           </View>
 
-          {/*
-            Le lien est ici, au moment où l'on demande une pièce d'identité — pas
-            enterré dans un écran de réglages qu'on ouvre après coup.
-          */}
           <Bouton
             titre="Ce qui est fait de vos informations"
             variante="fantome"
@@ -408,7 +433,7 @@ export default function Bienvenue() {
           <MessageErreur texte={ouverture.erreur} />
           <Bouton
             titre={ouverture.enCours ? 'Création…' : 'Ouvrir mon compte'}
-            sousTitre={complet ? undefined : 'Prénom, nom et téléphone sont nécessaires'}
+            sousTitre={complet ? undefined : 'Nom, prénoms et téléphone sont nécessaires'}
             desactive={!complet || ouverture.enCours}
             onPress={ouverture.lancer}
           />
@@ -418,26 +443,75 @@ export default function Bienvenue() {
   );
 }
 
+const LIBELLES: Record<ChampCarte, string> = {
+  nom: 'Le nom',
+  prenoms: 'Les prénoms',
+  dateNaissance: 'La date de naissance',
+  dateExpiration: "La date d'expiration",
+  numeroCarte: 'Le numéro de carte',
+  lieuNaissance: 'Le lieu de naissance',
+  numeroIdentification: "Le numéro d'identification",
+  sexe: 'Le sexe',
+  profession: 'La profession',
+  dateDelivrance: 'La date de délivrance',
+};
+
+/** Aperçu d'une face déjà lue, ou emplacement vide qui indique ce qui manque. */
+function VignetteFace({ titre, lecture }: { titre: string; lecture?: LectureFace }) {
+  const lue = Boolean(lecture?.bande || lecture?.recto);
+  return (
+    <View style={{ flex: 1, gap: 6 }}>
+      <View style={[styles.vignette, lue && { borderColor: 'rgba(46,204,143,0.5)' }]}>
+        {lecture?.uri ? (
+          <Image source={{ uri: lecture.uri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        ) : (
+          <Ionicons name="card-outline" size={26} color={couleurs.texteFaible} />
+        )}
+        {lue ? (
+          <View style={styles.pastilleLue}>
+            <Ionicons name="checkmark" size={12} color="#fff" />
+          </View>
+        ) : null}
+      </View>
+      <Txt v="minuscule" couleur={lue ? couleurs.succes : couleurs.texteFaible}>
+        {titre} {lue ? '· LU' : '· À AJOUTER'}
+      </Txt>
+    </View>
+  );
+}
+
 function Champ({
   libelle,
   valeur,
+  source,
   onChange,
   placeholder,
   clavier = 'default',
   majuscule = false,
+  enDesaccord = false,
+  note,
 }: {
   libelle: string;
   valeur: string;
+  source: SourceChamp;
   onChange: (v: string) => void;
   placeholder?: string;
   clavier?: 'default' | 'phone-pad';
   majuscule?: boolean;
+  enDesaccord?: boolean;
+  note?: string;
 }) {
+  const origine = note ?? libelleSource(source);
   return (
     <View>
-      <Txt v="minuscule" couleur={couleurs.texteFaible}>
-        {libelle}
-      </Txt>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: espace.sm }}>
+        <Txt v="minuscule" couleur={couleurs.texteFaible}>
+          {libelle}
+        </Txt>
+        {enDesaccord ? (
+          <Ionicons name="alert-circle" size={13} color={couleurs.danger} />
+        ) : null}
+      </View>
       <TextInput
         value={valeur}
         onChangeText={onChange}
@@ -446,36 +520,45 @@ function Champ({
         keyboardType={clavier}
         autoCapitalize={majuscule ? 'characters' : 'words'}
         autoCorrect={false}
-        style={styles.saisie}
+        style={[styles.saisie, enDesaccord && { color: couleurs.danger }]}
       />
+      {origine ? (
+        <Txt
+          v="minuscule"
+          couleur={source === 'BANDE' ? couleurs.succes : couleurs.texteFaible}
+        >
+          {origine}
+        </Txt>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   fond: { flex: 1, backgroundColor: couleurs.fond },
-  fondCamera: { flex: 1, backgroundColor: '#000' },
   accueil: { flex: 1, paddingHorizontal: espace.lg },
-  cadre: {
-    position: 'absolute',
-    top: '28%',
-    left: '8%',
-    right: '8%',
-    aspectRatio: 1.58, // proportions d'une carte d'identité
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.75)',
-    borderRadius: rayon.md,
+  vignette: {
+    height: 96,
+    borderRadius: rayon.lg,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: couleurs.bordureForte,
+    backgroundColor: couleurs.surfaceBasse,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  barreCamera: {
+  pastilleLue: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: espace.lg,
-    gap: espace.sm,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: couleurs.succes,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  photo: { width: '100%', height: 190, borderRadius: rayon.lg, backgroundColor: couleurs.surface },
   bande: {
     color: couleurs.texte,
     fontSize: 13,

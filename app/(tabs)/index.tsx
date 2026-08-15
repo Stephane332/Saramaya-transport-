@@ -22,7 +22,7 @@ import {
 import { LIGNES, ligneParId } from '../../src/data/reseau';
 import { MODE_AGENT } from '../../src/lib/modeAgent';
 import { dateHeureConvocation, dateHeureDepart, evaluerReservation } from '../../src/lib/confirmation';
-import { compteARebours, jourCourt, montant } from '../../src/lib/format';
+import { compteARebours, jourCourt, montant, prenomAffiche } from '../../src/lib/format';
 import { prochainVoyage, useApp, voyagesEffectues } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
@@ -61,7 +61,8 @@ export default function Accueil() {
           <Txt v="petit" couleur={couleurs.texteFaible}>
             {format(new Date(), 'EEEE d MMMM', { locale: fr })}
           </Txt>
-          <Txt v="titre">Bonjour {voyageur?.prenom ?? ''}</Txt>
+          {/* La carte dit « ANGE » ; on n'accueille pas quelqu'un en majuscules. */}
+          <Txt v="titre">Bonjour {voyageur ? prenomAffiche(voyageur.prenom) : ''}</Txt>
         </View>
         {/*
           Le manifeste des départs est un outil de gare, pas un écran de voyageur.

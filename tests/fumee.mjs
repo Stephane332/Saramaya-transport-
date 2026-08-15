@@ -178,11 +178,19 @@ async function jouerLeParcours() {
     }
   };
 
-  // 1. Ouverture de compte, sans photo : la saisie manuelle doit suffire.
+  /*
+   * 1. Ouverture de compte.
+   *
+   * Le chemin normal est l'image de la CNIB, que ce test ne peut pas emprunter :
+   * il n'a ni appareil photo ni galerie. On vérifie donc la voie de secours, qui
+   * doit rester praticable de bout en bout — c'est elle qui garantit que personne
+   * ne reste bloqué faute de pouvoir photographier sa carte.
+   */
   await cliquer('Créer mon compte');
-  await remplir('Ange', 'Ange');
+  await page.screenshot({ path: join(RACINE, 'fumee-identite.png') });
   await remplir('SAWADOGO', 'SAWADOGO');
-  await remplir('66 79 80 31', '70451288');
+  await remplir('ANGE STEPHANE', 'ANGE STEPHANE');
+  await remplir('70 45 12 88', '70451288');
   await cliquer('Ouvrir mon compte');
   await page.waitForTimeout(1500);
 

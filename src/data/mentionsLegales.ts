@@ -46,8 +46,8 @@ export const CONFIDENTIALITE: SectionLegale[] = [
       "Tout ce que vous saisissez ou scannez est conservé dans l'espace privé de l'application, sur cet appareil :",
     ],
     points: [
-      'Votre identité : nom, prénom, numéro de téléphone.',
-      "Votre pièce d'identité, si vous la renseignez : numéro de CNIB, date de naissance, date d'expiration, et la photo de la carte si vous en prenez une.",
+      'Votre identité : nom, prénoms, numéro de téléphone.',
+      "Votre pièce d'identité, si vous la renseignez : numéro de CNIB, date de naissance, lieu de naissance, date d'expiration, et l'image de la carte si vous en fournissez une.",
       'Vos réservations et vos billets : ligne, date, heure, classe, siège, montant, état du paiement.',
       "Vos colis : nom et téléphone du destinataire, gares, description, valeur déclarée, code de retrait.",
       'Les rappels déjà programmés, pour ne pas vous prévenir deux fois.',
@@ -65,11 +65,12 @@ export const CONFIDENTIALITE: SectionLegale[] = [
     ],
   },
   {
-    titre: "La photo de votre CNIB",
+    titre: "L'image de votre CNIB",
     paragraphes: [
-      "Elle sert à remplir votre profil sans le saisir à la main : l'application lit les lignes de caractères au dos de la carte et en tire le nom, le numéro et les dates. La lecture se fait sur l'appareil.",
-      "La photo est enregistrée dans l'espace privé de l'application, sur votre téléphone. Elle n'est envoyée nulle part, et elle disparaît avec l'application si vous la désinstallez. Vous pouvez la remplacer ou supprimer l'ensemble de vos données à tout moment depuis votre profil.",
-      "Photographier sa carte est facultatif : la saisie à la main donne exactement le même résultat.",
+      "Elle sert à remplir votre profil sans rien saisir : l'application lit les lignes de caractères au dos de la carte, et les champs imprimés au recto, pour en tirer le nom, les prénoms, le numéro et les dates. **Toute la lecture se fait sur l'appareil**, sans connexion.",
+      "Vous pouvez prendre la photo ou choisir une image déjà présente dans votre téléphone. Dans ce second cas, l'application demande l'accès à vos photos : elle n'y lit que l'image que vous désignez, et rien d'autre.",
+      "L'image retenue est enregistrée dans l'espace privé de l'application, sur votre téléphone. Elle n'est envoyée nulle part, et elle disparaît avec l'application si vous la désinstallez. Vous pouvez la remplacer ou supprimer l'ensemble de vos données à tout moment depuis votre profil.",
+      "Donner une image de sa carte est facultatif : recopier la bande du dos, ou saisir les champs à la main, donne exactement le même résultat.",
     ],
   },
   {

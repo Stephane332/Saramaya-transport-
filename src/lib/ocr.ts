@@ -1,29 +1,40 @@
 /**
- * Reconnaissance de caractères sur une photo — branchée, mais pas encore livrable.
+ * Reconnaissance de caractères sur une image — la pièce qui transforme une photo
+ * de CNIB en texte.
  *
- * L'inscription se fait à partir d'une photo de la CNIB : c'est le geste attendu, et
- * tout l'écran est construit autour. Reste l'étape qui transforme les pixels en
- * texte, et elle demande un module natif — Vision côté Apple, ML Kit côté Google —
- * qui n'existe pas dans Expo Go.
+ * L'inscription se fait à partir d'une image de la carte : c'est le geste attendu,
+ * et tout l'écran est construit autour.
  *
- * Plutôt que d'attendre ce module pour écrire le reste, tout est fait autour :
+ *   image → **reconnaissance** → bande ou champs du recto → décodage → formulaire
+ *           ^^^^^^^^^^^^^^^^^^
+ *                  ici
  *
- *   photo → **reconnaissance** → extraction de la bande → décodage → formulaire
- *            ^^^^^^^^^^^^^^^^
- *            la seule pièce manquante
+ * ## Ce qui fait la lecture, et où
  *
- * Ce fichier est cette pièce. Il tente de charger le module au moment où on en a
- * besoin ; s'il est absent, il le dit au lieu d'échouer, et l'écran propose la
- * saisie de la bande — qui remplit exactement les mêmes champs par le même chemin.
+ * Le travail est fait par le **système du téléphone** : Vision chez Apple, ML Kit
+ * chez Google. Rien n'est envoyé nulle part — la reconnaissance a lieu sur
+ * l'appareil, hors ligne, et c'est aussi pour cela qu'elle est instantanée.
  *
- * Pour l'allumer, une fois en build de développement ou de production :
+ * Deux modules sont essayés, dans cet ordre :
  *
- *     npx expo install @react-native-ml-kit/text-recognition
+ * 1. `expo-text-extractor`, module Expo qui expose Vision et ML Kit ;
+ * 2. `@react-native-ml-kit/text-recognition`, s'il est présent dans un projet qui
+ *    l'utilisait déjà.
  *
- * Rien d'autre à changer : la fonction ci-dessous le détecte et s'en sert. C'est
- * pourquoi le chargement est dynamique et non un import en tête de fichier — un
- * import classique ferait échouer le paquet entier dans Expo Go.
+ * ## Là où ça ne marche pas, et ce qu'on en dit
+ *
+ * Ces modules sont **natifs** : ils doivent être compilés dans l'application. Ils
+ * n'existent donc ni dans Expo Go, ni dans la version web. L'application ne fait
+ * pas semblant et ne renvoie pas un message vague : elle dit **précisément** ce qui
+ * manque et par quoi le remplacer, car la réponse n'est pas la même sur le web et
+ * dans Expo Go.
+ *
+ * Le chargement est dynamique, par un nom que le compilateur ne résout pas. C'est
+ * volontaire : le projet doit continuer à se construire — et la version web à se
+ * produire — même quand ces modules sont absents.
  */
+
+import { Platform } from 'react-native';
 
 export interface Reconnaissance {
   disponible: boolean;
@@ -33,36 +44,78 @@ export interface Reconnaissance {
   raison?: string;
 }
 
-const INDISPONIBLE =
-  "La lecture automatique d'image n'est pas disponible dans Expo Go. Recopiez la bande du dos : elle contient les mêmes informations.";
+/**
+ * Pourquoi la lecture n'a pas lieu, et quoi faire — formulé pour l'endroit exact
+ * où se trouve la personne. « Pas disponible » sans plus serait une impasse.
+ */
+export function raisonIndisponibilite(): string {
+  if (Platform.OS === 'web') {
+    return (
+      "La lecture automatique d'image demande le moteur de reconnaissance du téléphone, " +
+      "qui n'existe pas dans un navigateur. Recopiez la bande du dos ci-dessous — elle " +
+      'contient les mêmes informations, décodées et vérifiées de la même façon — ou ' +
+      "saisissez les champs à la main. Dans l'application installée, la lecture est automatique."
+    );
+  }
+  return (
+    "La lecture automatique d'image n'est pas incluse dans Expo Go : elle demande un " +
+    "module compilé dans l'application. Recopiez la bande du dos ci-dessous — même " +
+    'décodage, mêmes clés de contrôle — ou saisissez les champs à la main.'
+  );
+}
+
+/*
+ * Les deux noms de modules, en constantes.
+ *
+ * Ils ne peuvent être ni des littéraux dans l'`import()` — le bundler tenterait de
+ * les résoudre à la construction et échouerait s'ils sont absents — ni des
+ * paramètres de fonction, que Metro refuse tout net. Une constante locale est la
+ * seule forme qui passe, et c'est pour cela que les deux chargements sont écrits à
+ * la main plutôt que factorisés.
+ */
+const MODULE_EXPO = 'expo-text-extractor';
+const MODULE_MLKIT = '@react-native-ml-kit/text-recognition';
 
 /**
  * Lit le texte d'une image. Ne lève jamais : renvoie toujours un résultat
  * exploitable, disponible ou non.
  */
 export async function lireTexteImage(uri: string): Promise<Reconnaissance> {
+  if (Platform.OS === 'web') {
+    return { disponible: false, texte: '', raison: raisonIndisponibilite() };
+  }
+
   try {
-    /*
-     * Chargement à l'exécution, par un nom que le compilateur ne peut pas résoudre.
-     * C'est volontaire : le module est facultatif, et un import littéral ferait
-     * échouer la compilation tant qu'il n'est pas installé — or tout le reste du
-     * projet doit continuer à se construire sans lui.
-     */
-    const nomModule = '@react-native-ml-kit/text-recognition';
-    const module: unknown = await import(nomModule).catch(() => null);
+    // 1. Le module Expo, qui expose Vision (iOS) et ML Kit (Android).
+    const extracteur = (await import(MODULE_EXPO).catch(() => null)) as {
+      isSupported?: boolean;
+      extractTextFromImage?: (u: string) => Promise<string[]>;
+    } | null;
 
-    const reconnaitre = (
-      module as { default?: { recognize?: (u: string) => Promise<{ text: string }> } } | null
-    )?.default?.recognize;
-    if (!reconnaitre) return { disponible: false, texte: '', raison: INDISPONIBLE };
+    if (extracteur?.extractTextFromImage && extracteur.isSupported !== false) {
+      const morceaux = await extracteur.extractTextFromImage(uri);
+      // Le module rend des fragments : une ligne par bloc reconnu. La bande du dos
+      // a besoin de ses retours à la ligne pour être découpée en trois.
+      return { disponible: true, texte: morceaux.join('\n') };
+    }
 
-    const resultat = await reconnaitre(uri);
-    return { disponible: true, texte: resultat.text ?? '' };
+    // 2. Repli sur ML Kit en module autonome, si le projet l'a déjà.
+    const mlkit = (await import(MODULE_MLKIT).catch(() => null)) as {
+      default?: { recognize?: (u: string) => Promise<{ text: string }> };
+    } | null;
+
+    const reconnaitre = mlkit?.default?.recognize;
+    if (reconnaitre) {
+      const resultat = await reconnaitre(uri);
+      return { disponible: true, texte: resultat.text ?? '' };
+    }
+
+    return { disponible: false, texte: '', raison: raisonIndisponibilite() };
   } catch (erreur) {
     return {
       disponible: false,
       texte: '',
-      raison: erreur instanceof Error ? erreur.message : INDISPONIBLE,
+      raison: erreur instanceof Error && erreur.message ? erreur.message : raisonIndisponibilite(),
     };
   }
 }

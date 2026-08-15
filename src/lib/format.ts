@@ -28,6 +28,25 @@ export function initiales(prenom: string, nom: string): string {
   return `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase();
 }
 
+/**
+ * Un prénom tel qu'on l'adresse à quelqu'un.
+ *
+ * Les prénoms viennent de la CNIB, où tout est en capitales — et c'est ainsi
+ * qu'ils doivent rester dans le profil, puisque c'est cette forme que l'agent
+ * compare à la carte. Mais « Bonjour ANGE » sur l'écran d'accueil crie ; on
+ * n'accueille pas quelqu'un en majuscules. La donnée reste fidèle à la carte, seul
+ * l'affichage s'adoucit.
+ *
+ * Les prénoms composés gardent leur capitale : « JEAN-PAUL » devient « Jean-Paul ».
+ */
+export function prenomAffiche(prenom: string): string {
+  return prenom
+    .toLocaleLowerCase('fr')
+    .replace(/(^|[\s'\-])([\p{L}])/gu, (_, avant: string, lettre: string) =>
+      `${avant}${lettre.toLocaleUpperCase('fr')}`,
+    );
+}
+
 /** « dans 2 h 15 », « dans 34 min », « départ passé ». */
 export function compteARebours(cible: Date, maintenant: Date = new Date()): string {
   const minutes = differenceInMinutes(cible, maintenant);

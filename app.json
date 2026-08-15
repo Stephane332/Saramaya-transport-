@@ -55,6 +55,13 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Vos photos servent uniquement à choisir l'image de votre CNIB, dont l'application lit les informations sur cet appareil. Aucune image n'est envoyée.",
+          "cameraPermission": "La caméra sert à photographier votre CNIB pour remplir votre profil. La photo reste sur cet appareil."
+        }
+      ],
+      [
         "expo-notifications",
         {
           "color": "#D81F26"

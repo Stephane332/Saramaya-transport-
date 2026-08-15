@@ -10,7 +10,13 @@
  *   npm test
  */
 
-import { decalerHeure, departsAVenir, estAujourdhui, joursAvantExpiration } from '../src/lib/format';
+import {
+  decalerHeure,
+  departsAVenir,
+  estAujourdhui,
+  joursAvantExpiration,
+  prenomAffiche,
+} from '../src/lib/format';
 import { departsDuJour } from '../src/lib/departs';
 import {
   estReferenceApplication,
@@ -33,6 +39,8 @@ import {
 } from '../src/lib/colis';
 import { migrerEtat } from '../src/store/migration';
 import { creerVerrou } from '../src/lib/verrou';
+import { dateFrancaiseVersIso, lireRectoCnib, rectoExploitable } from '../src/lib/cnibRecto';
+import { carteSuffisante, fusionnerCarte } from '../src/lib/carteIdentite';
 import { calculerFidelite, phraseHabitue } from '../src/lib/fidelite';
 import {
   depuisBase64Url,
@@ -667,6 +675,119 @@ await (async () => {
   });
   verifier('un nouvel essai est possible après un échec', reprise, true);
 })();
+
+/* ── Affichage du prénom ─────────────────────────────────────────────────── */
+
+groupe('prenomAffiche — la carte crie, l’accueil non');
+verifier('capitales de la carte adoucies', prenomAffiche('ANGE'), 'Ange');
+verifier('prénom composé', prenomAffiche('JEAN-PAUL'), 'Jean-Paul');
+verifier('apostrophe', prenomAffiche("N'GOLO"), "N'Golo");
+verifier('accents conservés', prenomAffiche('AÏSSATA'), 'Aïssata');
+verifier('déjà en minuscules', prenomAffiche('ange'), 'Ange');
+
+/* ── Le recto de la carte, lu par étiquettes ─────────────────────────────── */
+
+groupe('CNIB — lire le recto d’une carte photographiée');
+
+/*
+ * Texte tel qu'un moteur de reconnaissance le rend sur une CNIB burkinabè : lignes
+ * dans le désordre du cadrage, accents perdus, espaces irréguliers dans les
+ * numéros. La carte est **fictive** — on ne met la pièce d'identité de personne
+ * dans un dépôt de code — mais sa mise en page est celle du document réel.
+ */
+const RECTO_BRUT = `CARTE NATIONALE D'IDENTITE BURKINABE
+BURKINA FASO
+Unite - Progres - Justice
+2 0 0 4 1 2 0 0 2 0 8 0 0 8 0 2 7
+Nom:  OUEDRAOGO
+Prénoms:  FATIMATA ADIZA
+Né(e) le:  14/05/1990  A KOUDOUGOU
+Sexe: F          Taille: 165 cm
+Profession:  COMMERCANTE
+Délivrée le:  12/03/2022
+Expire le:  11/03/2032        B 9 8 7 6 5 4 3 2
+Signature du titulaire`;
+
+const recto = lireRectoCnib(RECTO_BRUT);
+verifier('nom lu au recto', recto.nom, 'OUEDRAOGO');
+verifier('prénoms lus au recto', recto.prenoms, 'FATIMATA ADIZA');
+verifier('date de naissance convertie', recto.dateNaissance, '1990-05-14');
+// Le lieu se lit sur la même ligne que la date, après un « A » isolé.
+verifier('lieu de naissance', recto.lieuNaissance, 'KOUDOUGOU');
+verifier('sexe', recto.sexe, 'F');
+verifier('taille', recto.tailleCm, 165);
+verifier('profession', recto.profession, 'COMMERCANTE');
+verifier('date de délivrance', recto.dateDelivrance, '2022-03-12');
+verifier("date d'expiration", recto.dateExpiration, '2032-03-11');
+// Les numéros sont imprimés espacés : on les recolle.
+verifier('numéro de carte recollé', recto.numeroCarte, 'B98765432');
+verifier("numéro d'identification à 17 chiffres", recto.numeroIdentification, '20041200208008027');
+
+// Rien n'est deviné : un texte quelconque ne doit rien produire.
+const rectoVide = lireRectoCnib('Reçu de caisse\nMerci de votre visite\n15/08/2026');
+verifier('aucun champ inventé sur un texte étranger', rectoExploitable(rectoVide), false);
+
+// Une date impossible est rejetée plutôt que rangée dans le formulaire.
+verifier('date impossible rejetée', dateFrancaiseVersIso('32/13/2020'), undefined);
+verifier('date valide convertie', dateFrancaiseVersIso('01/10/2004'), '2004-10-01');
+
+/* ── Fusion des deux faces ───────────────────────────────────────────────── */
+
+groupe('CNIB — fusionner le recto et le dos');
+
+const BANDE_SYNTHETIQUE = [
+  'I<BFAB987654323<<<<<<<<<<<<<<<',
+  '9005145F3203112BFA<<<<<<<<<<<2',
+  'OUEDRAOGO<<FATIMATA<ADIZA<<<<<',
+].join('\n');
+
+const lueDos = lireBandeTD1(BANDE_SYNTHETIQUE);
+verifier('la bande synthétique est valide', lueDos.ok, true);
+
+const fusionCarte = fusionnerCarte(lueDos.ok ? lueDos.identite : null, recto);
+
+// Les champs communs viennent de la bande : elle seule porte des clés de contrôle.
+verifier('le nom vient de la bande', fusionCarte.sources.nom, 'BANDE');
+verifier("l'expiration vient de la bande", fusionCarte.sources.dateExpiration, 'BANDE');
+verifier('le numéro vient de la bande', fusionCarte.carte.numeroCarte, 'B98765432');
+// Et le recto comble ce que la bande ne contient pas.
+verifier('le lieu de naissance vient du recto', fusionCarte.sources.lieuNaissance, 'RECTO');
+verifier('la profession vient du recto', fusionCarte.carte.profession, 'COMMERCANTE');
+verifier("le numéro d'identification vient du recto", fusionCarte.sources.numeroIdentification, 'RECTO');
+// Les deux faces concordent : aucun désaccord ne doit être signalé.
+verifier('aucun désaccord sur une carte cohérente', fusionCarte.desaccords, []);
+
+// Le recto seul suffit à remplir un formulaire, en le signalant comme à vérifier.
+const sansBande = fusionnerCarte(null, recto);
+verifier('le recto seul remplit le nom', sansBande.carte.nom, 'OUEDRAOGO');
+verifier('et il est marqué comme lu au recto', sansBande.sources.nom, 'RECTO');
+verifier('la carte est exploitable', carteSuffisante(sansBande.carte), true);
+
+/*
+ * Le cas qui justifie toute la fusionCarte : les deux faces se contredisent. Aucun
+ * système ne peut deviner laquelle a raison — mais il doit le dire, et pointer le
+ * champ. Ici, un « 8 » lu à la place d'un « 3 » sur l'année d'expiration du recto.
+ */
+const rectoFautif = lireRectoCnib(RECTO_BRUT.replace('11/03/2032', '11/03/2082'));
+const contradiction = fusionnerCarte(lueDos.ok ? lueDos.identite : null, rectoFautif);
+verifier(
+  "le désaccord sur l'expiration est signalé",
+  contradiction.desaccords,
+  ['dateExpiration'],
+);
+verifier(
+  'et la valeur retenue reste celle de la bande',
+  contradiction.carte.dateExpiration,
+  '2032-03-11',
+);
+// Une différence de casse ou d'accent n'est pas un désaccord : le signaler ferait
+// perdre confiance dans les vrais.
+const rectoCasse = lireRectoCnib(RECTO_BRUT.replace('OUEDRAOGO', 'Ouedraogo'));
+verifier(
+  'une différence de casse n’est pas un désaccord',
+  fusionnerCarte(lueDos.ok ? lueDos.identite : null, rectoCasse).desaccords,
+  [],
+);
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
 process.exit(echoues > 0 ? 1 : 0);
