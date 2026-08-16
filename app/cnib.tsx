@@ -57,7 +57,7 @@ import {
 import { joursAvantExpirationCnib, lireBandeTD1 } from '../src/lib/cnib';
 import {
   choisirDepuisGalerie,
-  lireImageCarte,
+  lireImagesCarte,
   photographier,
   placerLecture,
   type LectureFace,
@@ -122,10 +122,16 @@ export default function EcranCnib() {
   const recto = useMemo(() => lectures.find((l) => l.face === 'RECTO'), [lectures]);
   const verso = useMemo(() => lectures.find((l) => l.face === 'VERSO'), [lectures]);
 
-  const integrer = (lecture: LectureFace) => {
-    const suivantes = placerLecture(lectures, lecture);
+  /*
+   * Les deux faces arrivent ensemble quand elles sont choisies ensemble, et sont
+   * donc rangées en une seule fois : deux appels successifs liraient `lectures`
+   * dans son état d'avant, et la seconde face effacerait la première.
+   */
+  const integrer = (nouvelles: LectureFace[]) => {
+    const suivantes = nouvelles.reduce(placerLecture, lectures);
     setLectures(suivantes);
-    if (lecture.uri) setPhoto((p) => p ?? lecture.uri);
+    const premiereImage = nouvelles.find((l) => l.uri)?.uri;
+    if (premiereImage) setPhoto((p) => p ?? premiereImage);
 
     const fusion = fusionnerCarte(
       suivantes.find((l) => l.bande)?.bande ?? null,
@@ -138,7 +144,7 @@ export default function EcranCnib() {
     setSources(applique.sources);
     setDesaccords(fusion.desaccords);
     setAvertissements(fusion.avertissements);
-    setMessageLecture(lecture.raisonIndisponible ?? null);
+    setMessageLecture(nouvelles.find((l) => l.raisonIndisponible)?.raisonIndisponible ?? null);
   };
 
   const corriger = (champ: ChampCarte, valeur: string) => {
@@ -148,24 +154,30 @@ export default function EcranCnib() {
   };
 
   const importer = useAction(async (origine: 'APPAREIL' | 'GALERIE') => {
-    const uri = origine === 'APPAREIL' ? await photographier() : await choisirDepuisGalerie();
-    if (!uri) return;
-    integrer(await lireImageCarte(uri));
+    // L'appareil photo rend une image à la fois ; la galerie en rend jusqu'à deux.
+    const uris =
+      origine === 'APPAREIL'
+        ? [await photographier()].filter((u): u is string => Boolean(u))
+        : await choisirDepuisGalerie();
+    if (uris.length === 0) return;
+    integrer(await lireImagesCarte(uris));
   }, "L'image n'a pas pu être lue. Réessayez avec une photo bien à plat et bien éclairée.");
 
   const saisirBande = useAction(async () => {
     const decodee = lireBandeTD1(bandeManuelle);
     if (!decodee.ok) throw new Error(decodee.raison);
-    integrer({
-      face: 'VERSO',
-      // Recopiée à la main depuis le dos : la face ne fait aucun doute.
-      faceDeduite: true,
-      uri: '',
-      texte: bandeManuelle,
-      bande: decodee.identite,
-      bandeBrute: bandeManuelle,
-      avertissements: decodee.avertissements,
-    });
+    integrer([
+      {
+        face: 'VERSO',
+        // Recopiée à la main depuis le dos : la face ne fait aucun doute.
+        faceDeduite: true,
+        uri: '',
+        texte: bandeManuelle,
+        bande: decodee.identite,
+        bandeBrute: bandeManuelle,
+        avertissements: decodee.avertissements,
+      },
+    ]);
     setBandeManuelle('');
   }, "La bande n'a pas pu être décodée. Vérifiez les trois lignes de trente caractères.");
 
@@ -255,7 +267,8 @@ export default function EcranCnib() {
               onPress={() => importer.lancer('APPAREIL')}
             />
             <Bouton
-              titre="Choisir une image existante"
+              titre="Choisir mes images"
+              sousTitre="Les deux faces d’un coup, si elles sont déjà dans votre téléphone"
               variante="secondaire"
               desactive={importer.enCours}
               icone={<Ionicons name="images-outline" size={18} color={couleurs.texteDoux} />}

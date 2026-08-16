@@ -71,7 +71,7 @@ import {
 import { lireBandeTD1 } from '../src/lib/cnib';
 import {
   choisirDepuisGalerie,
-  lireImageCarte,
+  lireImagesCarte,
   photographier,
   placerLecture,
   type LectureFace,
@@ -135,14 +135,19 @@ export default function Bienvenue() {
   const faceManquante = !recto ? 'RECTO' : !verso ? 'DOS' : null;
 
   /**
-   * Range une lecture et reporte le résultat sur le formulaire.
+   * Range une ou plusieurs lectures et reporte le résultat sur le formulaire.
    *
    * La fusion est **recalculée depuis toutes les faces**, et non appliquée par
    * incréments : c'est ce qui permet de détecter qu'un recto et un dos se
    * contredisent, ce qu'un remplissage au fil de l'eau ne verrait jamais.
+   *
+   * Les deux faces arrivent ensemble quand elles sont choisies ensemble. Elles sont
+   * donc rangées **en une seule fois** : appeler cette fonction deux fois de suite
+   * lirait `lectures` dans son état d'avant, et la seconde effacerait la première —
+   * exactement le défaut qu'on vient de corriger, réintroduit par la porte d'à côté.
    */
-  const integrer = (lecture: LectureFace) => {
-    const suivantes = placerLecture(lectures, lecture);
+  const integrer = (nouvelles: LectureFace[]) => {
+    const suivantes = nouvelles.reduce(placerLecture, lectures);
     setLectures(suivantes);
 
     const bande = suivantes.find((l) => l.bande)?.bande ?? null;
@@ -158,7 +163,7 @@ export default function Bienvenue() {
     setSources(applique.sources);
     setDesaccords(fusion.desaccords);
     setAvertissements(fusion.avertissements);
-    setMessageLecture(lecture.raisonIndisponible ?? null);
+    setMessageLecture(nouvelles.find((l) => l.raisonIndisponible)?.raisonIndisponible ?? null);
   };
 
   /** Corriger un champ à la main : la correction ne sera plus jamais écrasée. */
@@ -185,26 +190,31 @@ export default function Bienvenue() {
   );
 
   const importer = useAction(async (origine: 'APPAREIL' | 'GALERIE') => {
-    const uri = origine === 'APPAREIL' ? await photographier() : await choisirDepuisGalerie();
-    if (!uri) return; // Annulé : ce n'est pas un échec.
-    const lecture = await lireImageCarte(uri);
-    integrer(lecture);
+    // L'appareil photo rend une image à la fois ; la galerie en rend jusqu'à deux.
+    const uris =
+      origine === 'APPAREIL'
+        ? [await photographier()].filter((u): u is string => Boolean(u))
+        : await choisirDepuisGalerie();
+    if (uris.length === 0) return; // Annulé : ce n'est pas un échec.
+    integrer(await lireImagesCarte(uris));
   }, "L'image n'a pas pu être lue. Réessayez avec une photo bien à plat et bien éclairée.");
 
   /** Voie de secours : recopier la bande du dos donne exactement le même résultat. */
   const saisirBande = useAction(async () => {
     const decodee = lireBandeTD1(bandeManuelle);
     if (!decodee.ok) throw new Error(decodee.raison);
-    integrer({
-      face: 'VERSO',
-      // Recopiée à la main depuis le dos : la face ne fait aucun doute.
-      faceDeduite: true,
-      uri: '',
-      texte: bandeManuelle,
-      bande: decodee.identite,
-      bandeBrute: bandeManuelle,
-      avertissements: decodee.avertissements,
-    });
+    integrer([
+      {
+        face: 'VERSO',
+        // Recopiée à la main depuis le dos : la face ne fait aucun doute.
+        faceDeduite: true,
+        uri: '',
+        texte: bandeManuelle,
+        bande: decodee.identite,
+        bandeBrute: bandeManuelle,
+        avertissements: decodee.avertissements,
+      },
+    ]);
     setBandeManuelle('');
   }, "La bande n'a pas pu être décodée. Vérifiez les trois lignes de trente caractères.");
 
@@ -340,8 +350,12 @@ export default function Bienvenue() {
               onPress={() => importer.lancer('APPAREIL')}
             />
             <Bouton
-              titre="Choisir une image existante"
-              sousTitre={carteLue ? undefined : 'Une photo de la carte déjà dans votre téléphone'}
+              titre="Choisir mes images"
+              sousTitre={
+                carteLue
+                  ? undefined
+                  : 'Les deux faces d’un coup, si elles sont déjà dans votre téléphone'
+              }
               variante="secondaire"
               desactive={importer.enCours}
               icone={<Ionicons name="images-outline" size={18} color={couleurs.texteDoux} />}

@@ -40,11 +40,24 @@ export type { FaceCarte, LectureFace } from './facesCarte';
 
 import type { LectureFace } from './facesCarte';
 
+/** Une carte a deux faces : jamais plus de deux images à la fois. */
+export const IMAGES_MAX = 2;
+
 /**
- * Ouvre la galerie du téléphone. Les images ne sont jamais copiées ailleurs : on
- * reçoit un chemin local, et c'est tout ce dont on a besoin.
+ * Ouvre la galerie du téléphone, et laisse choisir **les deux faces d'un coup**.
+ *
+ * Une carte se photographie des deux côtés ; les deux images sont donc côte à côte
+ * dans la pellicule. Les faire choisir une par une, en rouvrant la galerie entre
+ * les deux, ajoutait un aller-retour à un geste qui n'en demande pas.
+ *
+ * `orderedSelection` fait revenir les images dans l'ordre où elles ont été
+ * touchées : quand la reconnaissance de caractères n'est pas disponible et que le
+ * contenu ne dit rien, c'est cet ordre qui décide laquelle est le recto.
+ *
+ * Les images ne sont jamais copiées ailleurs : on reçoit des chemins locaux, et
+ * c'est tout ce dont on a besoin.
  */
-export async function choisirDepuisGalerie(): Promise<string | null> {
+export async function choisirDepuisGalerie(): Promise<string[]> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
     throw new Error(
@@ -55,14 +68,18 @@ export async function choisirDepuisGalerie(): Promise<string | null> {
   const resultat = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     // Pas de recadrage imposé : une carte mal recadrée perd sa bande, et c'est
-    // précisément la partie qui porte les clés de contrôle.
+    // précisément la partie qui porte les clés de contrôle. L'option est de toute
+    // façon incompatible avec la sélection multiple.
     allowsEditing: false,
+    allowsMultipleSelection: true,
+    selectionLimit: IMAGES_MAX,
+    orderedSelection: true,
     quality: 1,
     exif: false,
   });
 
-  if (resultat.canceled) return null;
-  return resultat.assets[0]?.uri ?? null;
+  if (resultat.canceled) return [];
+  return resultat.assets.slice(0, IMAGES_MAX).map((a) => a.uri);
 }
 
 /** Ouvre l'appareil photo du système, avec le même contrat. */
@@ -155,4 +172,20 @@ export async function lireImageCarte(uri: string): Promise<LectureFace> {
       "Aucune information de carte d'identité n'a été reconnue sur cette image. Reprenez-la bien à plat, bien éclairée, et cadrée sur la carte entière.",
     ],
   };
+}
+
+/**
+ * Lit plusieurs images, dans l'ordre où elles ont été choisies.
+ *
+ * L'ordre compte : quand la reconnaissance de caractères n'est pas disponible, il
+ * est le seul indice dont on dispose pour savoir quelle image est le recto. Les
+ * lectures sont donc faites **en série** et non en parallèle, pour que la liste
+ * rendue suive exactement la sélection.
+ */
+export async function lireImagesCarte(uris: string[]): Promise<LectureFace[]> {
+  const lectures: LectureFace[] = [];
+  for (const uri of uris.slice(0, IMAGES_MAX)) {
+    lectures.push(await lireImageCarte(uri));
+  }
+  return lectures;
 }

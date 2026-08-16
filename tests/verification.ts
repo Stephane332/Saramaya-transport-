@@ -991,5 +991,41 @@ verifier(
   'dos-lu',
 );
 
+/*
+ * Les deux faces choisies **en un seul geste**.
+ *
+ * C'est ainsi que les écrans les rangent désormais : `nouvelles.reduce(placerLecture,
+ * lectures)`, en une fois. Deux appels successifs liraient l'état d'avant et la
+ * seconde face effacerait la première — le défaut corrigé, réintroduit par la porte
+ * d'à côté. Ce contrôle fige le pliage.
+ */
+const dUnCoupIllisibles = [face('RECTO', false, 'img-1'), face('RECTO', false, 'img-2')].reduce(
+  placerLecture,
+  [] as LectureFace[],
+);
+verifier(
+  'deux images illisibles choisies ensemble occupent les deux places',
+  dUnCoupIllisibles.map((l) => [l.face, l.uri]),
+  [
+    ['RECTO', 'img-1'],
+    ['VERSO', 'img-2'],
+  ],
+);
+
+// Et quand la lecture fonctionne, l'ordre de sélection n'a aucune importance : le
+// contenu décide. Choisir le dos en premier ne doit pas inverser la carte.
+const dUnCoupLues = [face('VERSO', true, 'le-dos'), face('RECTO', true, 'le-recto')].reduce(
+  placerLecture,
+  [] as LectureFace[],
+);
+verifier(
+  'deux faces déduites vont à leur place quel que soit l’ordre de sélection',
+  [
+    dUnCoupLues.find((l) => l.face === 'RECTO')?.uri,
+    dUnCoupLues.find((l) => l.face === 'VERSO')?.uri,
+  ],
+  ['le-recto', 'le-dos'],
+);
+
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
 process.exit(echoues > 0 ? 1 : 0);
