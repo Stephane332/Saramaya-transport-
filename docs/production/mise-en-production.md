@@ -196,7 +196,18 @@ vente et la note sur les failles de la compagnie. L'adresse
 Le workflow est donc passé en déclenchement manuel — il coûtait une croix rouge à
 chaque envoi et laissait croire à une publication qui n'existait pas.
 
-**La voie qui marche :**
+**La voie qui marche**, en un double-clic sous Windows : `publier.bat`.
+
+Il enchaîne tout — récupération du code, dépendances, connexion au compte Expo si
+elle manque, `eas init` à la première fois, vérification complète, construction,
+publication — et s'arrête net avec un message clair si un contrôle échoue. La
+vérification passe **avant** la publication, exprès : une adresse publique qui sert
+une version cassée est pire que pas d'adresse.
+
+Il ne demande jamais d'identifiants : la connexion est réclamée par l'outil d'Expo,
+dans sa propre invite.
+
+À la main, l'équivalent :
 
 ```bash
 npm run web:publier      # vérification complète, export, puis eas deploy --prod

@@ -127,28 +127,46 @@ vrai. **Les deux avant tout partage ou toute mise en production.**
 
 ## Tester sur un téléphone
 
-**Avec un ordinateur** — `npx expo start` affiche un QR code à scanner avec Expo Go
-(gratuit sur l'App Store et le Play Store). L'application s'ouvre sur le téléphone, en
-natif, avec les animations et la 3D.
+**Deux fichiers à double-cliquer, sous Windows :**
 
-**Sans ordinateur, et pour faire tester à des amis** — publier la version web :
+| Fichier | Ce qu'il fait |
+|---|---|
+| `lancer.bat` | Récupère le code, vérifie tout, affiche le QR code à scanner avec Expo Go |
+| `publier.bat` | Récupère le code, vérifie tout, publie la version web et rend **une adresse** |
+
+`lancer.bat` demande que le PC reste allumé et que le téléphone soit sur le même
+réseau — le partage de connexion du téléphone convient. `publier.bat` rend une
+adresse qui vit sans le PC.
+
+Ni l'un ni l'autre ne demande d'identifiants : quand une connexion Expo est
+nécessaire, c'est l'outil officiel qui la réclame, dans sa propre invite.
+
+**À la main**, si l'on préfère :
 
 ```bash
+npx expo start           # QR code, Expo Go
 npm run web:publier      # verifier + export + eas deploy --prod
 ```
 
-Cela demande un compte Expo (gratuit) et un `eas init` fait une fois. La commande
-renvoie une adresse publique. Ouverte dans Safari puis ajoutée à l'écran d'accueil
-(Partager → *Sur l'écran d'accueil*), la page s'ouvre en plein écran, avec son icône
-et sans barre de navigateur — et c'est aussi l'adresse à déclarer aux boutiques pour
-la politique de confidentialité (`…/confidentialite`).
+La publication demande un compte Expo (gratuit) et un `eas init` fait une fois —
+`publier.bat` enchaîne les deux tout seul. L'adresse rendue, ouverte dans Safari puis
+ajoutée à l'écran d'accueil (Partager → *Sur l'écran d'accueil*), s'ouvre en plein
+écran avec son icône et sans barre de navigateur. C'est aussi l'adresse à déclarer
+aux boutiques pour la politique de confidentialité (`…/confidentialite`).
+
+> **Deux limites de la version web**, pour ne pas être surpris : la lecture
+> automatique de la CNIB et les rappels de départ n'y fonctionnent pas — ils
+> demandent des modules natifs. Recopier la bande du dos donne exactement le même
+> résultat ; pour le reste, il faut un build (`eas build -p android --profile
+> preview`, gratuit).
 
 > **Pourquoi pas GitHub Pages ?** Le workflow existe (`.github/workflows/pages.yml`)
-> et fonctionne, mais **ce dépôt est privé**, et GitHub Pages sur dépôt privé exige un
-> plan payant. Le rendre public n'est pas une solution : l'historique contient
+> mais **n'a jamais publié** : il a tourné 51 fois et échoué 51 fois sur un 404. Ce
+> dépôt est privé, et Pages sur dépôt privé exige un plan payant. Le rendre public
+> n'est pas une solution : l'historique contient
 > `docs/presentation/securite-et-ethique.md` et `argumentaire.md`, qu'il vaut mieux ne
-> pas exposer avant d'avoir parlé à la compagnie. `eas deploy` est gratuit et ne pose
-> aucun de ces deux problèmes.
+> pas exposer avant d'avoir parlé à la compagnie. Le workflow est donc en
+> déclenchement manuel, et `eas deploy` est la voie qui marche.
 
 Pour reproduire le build Pages en local, si le dépôt devient public un jour :
 
