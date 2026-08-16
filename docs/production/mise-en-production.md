@@ -31,7 +31,7 @@ claire de ce qui dépend de la compagnie.
 | Compte **Apple Developer** (99 $/an) | developer.apple.com | Publier sur iOS |
 | **Autorisation écrite** de Saramaya | la compagnie | Publier sous leur nom et leur marque |
 
-### La politique de confidentialité : déjà écrite, et déjà en ligne
+### La politique de confidentialité : écrite, mais pas encore en ligne
 
 Les deux boutiques refusent une application sans **adresse publique** menant à une
 politique de confidentialité — a fortiori une application qui touche à une pièce
@@ -39,8 +39,11 @@ d'identité.
 
 Elle est dans le dépôt, et elle n'est pas un document à part : c'est l'écran
 `app/confidentialite.tsx`, alimenté par `src/data/mentionsLegales.ts`. Le voyageur la
-lit depuis son profil, **hors ligne**, et la version web la publie à la même adresse
-que le reste. Le lien à déclarer aux stores est donc :
+lit depuis son profil, **hors ligne**.
+
+Ce qui manque est l'**adresse publique** : aucun déploiement n'a encore eu lieu, donc
+ce lien n'existe pas encore. Il naîtra du premier `eas deploy --prod`, et prendra la
+forme :
 
 ```
 https://<le-domaine-du-déploiement>/confidentialite
