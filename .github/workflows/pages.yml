@@ -1,29 +1,40 @@
-# Publie la version web sur GitHub Pages — **hors service, et volontairement**.
+# Publie la version web de l'application sur GitHub Pages.
 #
-# Ce workflow ne se déclenche plus tout seul. Il a tourné 51 fois, il a échoué 51
-# fois, toujours au même endroit : `deploy-pages` répond 404 parce que GitHub Pages
-# n'est pas activé sur ce dépôt — et il ne peut pas l'être. Pages sur dépôt privé
-# exige un abonnement payant, et **rendre le dépôt public n'est pas une option** :
-# l'historique contient l'argumentaire de vente et la note sur les failles de la
-# compagnie, qui deviendraient lisibles par elle avant le premier rendez-vous.
+#     https://stephane332.github.io/Saramaya-transport-/
 #
-# Le coût de le laisser se déclencher n'était pas nul : une croix rouge à chaque
-# envoi, et surtout l'illusion qu'une version web était publiée quelque part. Elle
-# ne l'était pas — l'adresse ci-dessous n'a jamais rien servi.
+# Le résultat est une adresse ouvrable depuis n'importe quel téléphone, sans
+# ordinateur allumé et sans passer par les stores.
 #
-#     https://stephane332.github.io/Saramaya-transport-/   (404)
+# ## Historique, pour qui reprendrait ce fichier
 #
-# **La voie qui marche est `eas deploy --prod`** (`npm run web:publier`) : elle
-# publie chez Expo depuis un code qui reste privé. Voir `docs/feuille-de-route.md`.
+# Ce workflow a longtemps tourné dans le vide : 51 exécutions, 51 échecs, toujours
+# le même 404 sur `deploy-pages`. La cause n'était pas dans le fichier — Pages
+# n'était pas activé sur le dépôt, et ne pouvait pas l'être, un dépôt privé exigeant
+# un abonnement payant. Il a donc été mis en déclenchement manuel : une croix rouge à
+# chaque envoi, et l'illusion qu'une version web existait quelque part, coûtaient plus
+# que le service rendu.
 #
-# Ce fichier est conservé, prêt à servir, pour le jour où le dépôt deviendra public
-# ou le compte passera à une formule payante. Pour l'essayer : onglet Actions →
-# « Publier la version web » → Run workflow, après avoir fait
-# Settings → Pages → Source : « GitHub Actions ».
+# **Le dépôt est désormais public**, et la voie est ouverte. Le déclenchement
+# automatique revient.
+#
+# ## Une condition qui ne dépend pas de ce fichier
+#
+# `Settings → Pages → Source : « GitHub Actions »`, à faire **une fois**. Sans ce
+# réglage, la construction réussit et la publication échoue avec un 404 — c'est
+# exactement ce qui s'est passé 51 fois.
+#
+# ## Ce que la publicité du dépôt implique
+#
+# Tout ce qui est ici se lit désormais sans compte, `docs/presentation/` compris.
+# Ces notes sont écrites pour préparer un rendez-vous, pas pour être lues par la
+# compagnie. Ce qui ne doit pas être public doit être **retiré du dépôt et de son
+# historique**, pas seulement de la dernière version.
 
 name: Publier la version web
 
 on:
+  push:
+    branches: [claude/salut-t175hl, main]
   workflow_dispatch:
 
 permissions:

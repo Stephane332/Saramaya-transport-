@@ -160,13 +160,30 @@ aux boutiques pour la politique de confidentialité (`…/confidentialite`).
 > résultat ; pour le reste, il faut un build (`eas build -p android --profile
 > preview`, gratuit).
 
-> **Pourquoi pas GitHub Pages ?** Le workflow existe (`.github/workflows/pages.yml`)
-> mais **n'a jamais publié** : il a tourné 51 fois et échoué 51 fois sur un 404. Ce
-> dépôt est privé, et Pages sur dépôt privé exige un plan payant. Le rendre public
-> n'est pas une solution : l'historique contient
-> `docs/presentation/securite-et-ethique.md` et `argumentaire.md`, qu'il vaut mieux ne
-> pas exposer avant d'avoir parlé à la compagnie. Le workflow est donc en
-> déclenchement manuel, et `eas deploy` est la voie qui marche.
+### GitHub Pages
+
+Le dépôt étant public, Pages est redevenu possible et le workflow
+(`.github/workflows/pages.yml`) publie à chaque envoi :
+
+```
+https://stephane332.github.io/Saramaya-transport-/
+```
+
+Un réglage, à faire **une fois** : `Settings → Pages → Source : « GitHub Actions »`.
+Sans lui la construction réussit et la publication échoue sur un 404 — c'est ce qui
+s'est produit 51 fois avant que le dépôt ne devienne public.
+
+> **Ce que la publicité du dépôt expose.** Tout se lit désormais sans compte,
+> `docs/presentation/` compris : l'argumentaire de vente, l'analyse de la
+> concurrence, les chiffres à collecter au guichet, et la note sur la sécurité. Ces
+> notes ont été écrites pour préparer un rendez-vous, pas pour être lues par la
+> compagnie. Ce qui ne doit pas rester visible se retire **du dépôt et de son
+> historique** — supprimer le fichier ne suffit pas, l'ancienne version reste
+> accessible dans les commits.
+
+Les deux voies coexistent : Pages ne coûte rien et suit la branche, `eas deploy`
+donne une adresse indépendante de GitHub. La politique de confidentialité se déclare
+aux boutiques depuis l'une ou l'autre, suivie de `/confidentialite`.
 
 Pour reproduire le build Pages en local, si le dépôt devient public un jour :
 

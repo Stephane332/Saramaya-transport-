@@ -135,13 +135,28 @@ puis scanner le QR code avec Expo Go. C'est tout.
 | APK Android installable | `eas build -p android --profile preview` | Compte Expo (gratuit) |
 | App iPhone hors Expo Go | `eas build -p ios --profile preview` | Compte Apple Developer (99 $/an) |
 
-### Pourquoi pas GitHub Pages
+### GitHub Pages, et ce qu'il a fallu accepter pour l'avoir
 
-Le dépôt est privé (`"private": true`, vérifié par l'API), et Pages sur dépôt privé
-exige un abonnement payant. **Le rendre public n'est pas une option** : il contient
-l'argumentaire de vente, l'analyse de la concurrence et la note sur leurs failles.
-Tout deviendrait lisible par Saramaya avant le premier rendez-vous. `eas deploy`
-publie depuis un code qui reste privé — c'est la voie propre.
+Pages sur dépôt privé exige un abonnement payant. Le dépôt a donc été **rendu
+public**, et Pages fonctionne : `https://stephane332.github.io/Saramaya-transport-/`,
+publié à chaque envoi, gratuitement.
+
+Le prix est réel et il faut le connaître : `docs/presentation/` est lisible par tout
+le monde, Saramaya comprise. L'argumentaire de vente, l'analyse de la concurrence,
+les chiffres à collecter au guichet et la note sur la sécurité ont été écrits pour
+préparer un rendez-vous, pas pour être lus par la partie d'en face.
+
+**Deux façons de revenir en arrière**, si l'exposition n'est pas voulue :
+
+1. **Repasser le dépôt en privé** (`Settings → General → Change visibility`) et
+   publier avec `eas deploy --prod`, qui ne demande pas un dépôt public. C'est le
+   plus simple, et rien n'est perdu.
+2. **Retirer les documents** — en les effaçant du dépôt **et de son historique**.
+   Supprimer le fichier ne suffit pas : l'ancienne version reste lisible dans les
+   commits, et une réécriture d'historique est nécessaire.
+
+`eas deploy` reste disponible dans les deux cas, et donne une adresse indépendante
+de GitHub.
 
 ---
 

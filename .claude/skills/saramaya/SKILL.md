@@ -234,6 +234,17 @@ docs/production/etat-de-preparation.md   où en est le projet
 Publier l'application sous le nom et le logo Saramaya. Les builds internes et la
 démonstration ne l'exigent pas — c'est par là qu'on commence.
 
-Ne pas rendre le dépôt public : l'historique contient
-`docs/presentation/securite-et-ethique.md` et `argumentaire.md`, destinés à la
-présentation et non au public.
+**Le dépôt est public** depuis l'activation de GitHub Pages — Pages sur dépôt privé
+exigeait un abonnement payant. Il faut en tenir compte à chaque ajout :
+
+- `docs/presentation/` est lisible par tout le monde, Saramaya comprise :
+  argumentaire de vente, analyse de la concurrence, chiffres à collecter au guichet,
+  note sur la sécurité. Écrire désormais en le sachant.
+- **Rien de sensible ne s'ajoute au dépôt sans se demander qui le lira.** Ni clé, ni
+  identifiant, ni donnée personnelle réelle — la règle existait déjà, elle ne
+  pardonne plus.
+- Retirer un document publié suppose de l'effacer **du dépôt et de son historique** ;
+  supprimer le fichier laisse l'ancienne version lisible dans les commits.
+
+Repasser en privé reste possible à tout moment : `eas deploy --prod` publie sans
+exiger un dépôt public.

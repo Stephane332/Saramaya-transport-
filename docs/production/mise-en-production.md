@@ -177,24 +177,33 @@ Les canaux (`channel`) sont déjà nommés dans `eas.json` (`production`,
 builds de production dès que `expo-updates` sera installé. On l'ajoute après le
 premier build, pour ne pas mélanger les étapes.
 
-## Web — et pourquoi ce n'est pas GitHub Pages
+## Web — deux voies, toutes deux ouvertes
 
-Ce document a longtemps affirmé que la version web « se publie sur GitHub Pages via
-le workflow existant ». **C'était faux.** Le workflow a tourné 51 fois et échoué 51
-fois, toujours sur la même erreur :
+### GitHub Pages
+
+Longtemps impossible : le workflow a tourné 51 fois et échoué 51 fois sur
 
 ```
 Failed to create deployment (status: 404)
 Ensure GitHub Pages has been enabled
 ```
 
-Pages n'est pas activé sur le dépôt, et ne peut pas l'être : Pages sur dépôt privé
-exige un abonnement payant, et rendre le dépôt public exposerait l'argumentaire de
-vente et la note sur les failles de la compagnie. L'adresse
-`stephane332.github.io/Saramaya-transport-/` a toujours répondu « Site not found ».
+parce que Pages sur dépôt privé exige un abonnement payant. **Le dépôt est désormais
+public**, et le déclenchement automatique est revenu. Adresse :
 
-Le workflow est donc passé en déclenchement manuel — il coûtait une croix rouge à
-chaque envoi et laissait croire à une publication qui n'existait pas.
+```
+https://stephane332.github.io/Saramaya-transport-/
+```
+
+Un réglage à faire une fois : `Settings → Pages → Source : « GitHub Actions »`. Sans
+lui, la construction réussit et la publication échoue — exactement le 404 ci-dessus.
+
+> **Ce que la publicité du dépôt expose.** `docs/presentation/` se lit désormais sans
+> compte : argumentaire de vente, analyse de la concurrence, chiffres à collecter au
+> guichet, note sur la sécurité. Écrits pour préparer un rendez-vous, pas pour être
+> lus par la compagnie. Les retirer suppose de les effacer **du dépôt et de son
+> historique** : supprimer le fichier laisse l'ancienne version lisible dans les
+> commits.
 
 **La voie qui marche**, en un double-clic sous Windows : `publier.bat`.
 
