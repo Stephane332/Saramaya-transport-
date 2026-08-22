@@ -1,0 +1,83 @@
+{
+  "expo": {
+    "name": "Saramaya Transport",
+    "slug": "saramaya-transport",
+    "version": "1.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "saramaya",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A070E"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.saramaya.transport",
+      "infoPlist": {
+        "NSCameraUsageDescription": "La caméra sert à scanner le code-barres de vos tickets papier et, si vous le souhaitez, à photographier votre CNIB pour remplir votre profil. Les photos restent sur cet appareil et ne sont jamais envoyées.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon-sombre.png"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "package": "com.saramaya.transport",
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "CAMERA",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "La caméra sert à scanner le code-barres de vos tickets papier et à photographier votre CNIB. Les photos restent sur cet appareil."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Vos photos servent uniquement à choisir l'image de votre CNIB, dont l'application lit les informations sur cet appareil. Aucune image n'est envoyée.",
+          "cameraPermission": "La caméra sert à photographier votre CNIB pour remplir votre profil. La photo reste sur cet appareil."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#D81F26"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    }
+  }
+}

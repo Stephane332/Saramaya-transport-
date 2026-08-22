@@ -1,0 +1,71 @@
+# Publie une mise à jour à toutes les applications déjà installées.
+#
+# À chaque envoi sur la branche, ce workflow vérifie le projet puis publie le
+# nouveau code : les téléphones qui ont l'application l'appliquent au lancement
+# suivant, sans réinstallation et sans passer par un store.
+#
+# Ce qui est diffusé ainsi : tout le code de l'interface et de la logique, soit la
+# quasi-totalité du projet. Ce qui exige une nouvelle installation : l'ajout d'un
+# module natif, un changement d'icône ou de permissions. L'empreinte déclarée dans
+# app.json (`runtimeVersion: fingerprint`) veille à ce qu'une mise à jour ne soit
+# jamais servie à une application dont le socle natif ne la supporterait pas.
+#
+# À faire une seule fois pour l'activer :
+#   1. npx eas-cli@latest login    puis    npx eas-cli@latest init
+#   2. Créer un jeton sur https://expo.dev/settings/access-tokens
+#   3. L'ajouter au dépôt : Settings → Secrets and variables → Actions
+#      → New repository secret → nom : EXPO_TOKEN
+#
+# Tant que le secret n'existe pas, le workflow s'arrête proprement en l'expliquant,
+# sans jamais faire échouer la branche.
+
+name: Publier la mise à jour
+
+on:
+  push:
+    branches: [claude/salut-t175hl, main]
+  workflow_dispatch:
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `eas update --auto` reprend le message du dernier commit : il lui faut
+          # l'historique, pas seulement l'instantané.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Vérifier que le jeton Expo est configuré
+        id: jeton
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Aucun secret EXPO_TOKEN : publication ignorée."
+            echo "::notice::Pour l'activer, voir l'en-tête de .github/workflows/mise-a-jour.yml"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Installer les dépendances
+        if: steps.jeton.outputs.present == 'true'
+        run: npm ci
+
+      - name: Contrôles avant publication
+        # Versions, types et règles de calcul. Une mise à jour part vers de vrais
+        # téléphones : elle ne doit jamais être publiée sans être vérifiée.
+        if: steps.jeton.outputs.present == 'true'
+        run: npm run verifier
+
+      - name: Publier la mise à jour
+        if: steps.jeton.outputs.present == 'true'
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx eas-cli@latest update --auto --non-interactive
