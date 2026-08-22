@@ -209,7 +209,7 @@ export function messagePourLaGare(r: Reservation, voyageur: Voyageur): string {
     `Date : ${format(parseISO(r.date), 'dd/MM/yyyy')}`,
     `Départ : ${r.heure} (convocation ${r.convocation})`,
     `Classe : ${LIBELLES_CLASSE[r.classe]}`,
-    r.siege ? `Siège souhaité : ${r.siege}` : null,
+    r.siege ? `Place souhaitée : ${r.siege} (si elle est libre)` : null,
     `Tarif : ${r.montant} F`,
     `Nom : ${voyageur.nom} ${voyageur.prenom}`,
     `Contact : ${voyageur.telephone}`,

@@ -111,7 +111,7 @@ Dessinez-le sur une feuille devant eux, ou imprimez-le.
 | **Paiement vérifié automatiquement** | **✗ (déclaratif)** | ✓ | **✓** |
 | Billet électronique | ✗ | ✓ (e-mail/PDF) | ✓ (QR + code-barres) |
 | Compte client, historique | ✗ | ✓ | ✓ |
-| Choix du siège | ✗ (à la main) | ✓ | ✓ |
+| Choix du siège | ✗ (attribué au guichet) | ✓ | ~ (souhait transmis) |
 | **Billet hors ligne** | — | ✗ | **✓** |
 | **Import du ticket papier** | — | ✗ | **✓** |
 | **Alarme de confirmation** | ✗ (appels manuels) | ✗ | **✓** |

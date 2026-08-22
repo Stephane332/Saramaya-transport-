@@ -183,7 +183,24 @@ export default function Billet() {
             <Case titre="CONVOCATION" valeur={r.convocation} accent />
           </View>
           <View style={styles.grille}>
-            <Case titre="SIÈGE" valeur={r.siege ? String(r.siege) : '—'} />
+            {/*
+              La place vient de la gare, jamais de l'application.
+
+              Tant qu'elle n'est pas attribuée, un tiret laisserait croire à une
+              donnée manquante ou à un bogue. C'est au contraire l'état normal : chez
+              Saramaya, l'agent choisit une place libre en encaissant et l'inscrit sur
+              le billet. On le dit, plutôt que de faire un trou.
+            */}
+            <Case
+              titre="PLACE"
+              valeur={
+                r.siege
+                  ? String(r.siege)
+                  : actions.afficherBillet
+                    ? 'Voir le ticket'
+                    : 'Au guichet'
+              }
+            />
             <Case titre="TARIF" valeur={montant(r.montant)} />
             <View style={{ flex: 1 }}>
               <Txt v="minuscule" couleur={couleurs.texteFaible}>
