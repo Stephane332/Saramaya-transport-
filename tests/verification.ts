@@ -532,6 +532,53 @@ verifier(
   null,
 );
 
+/*
+ * Les dégradations réelles d'une reconnaissance de caractères.
+ *
+ * Le premier essai sur une vraie photo a échoué, et pas pour une raison exotique :
+ * les chevrons ne survivent pas à la lecture optique. Rendus « « », « ‹ », ou
+ * purement avalés, ils raccourcissent la ligne au point qu'un filtre de longueur la
+ * rejetait. Ces contrôles rejouent chaque dégradation observée, sur une carte
+ * fictive dont on connaît la réponse exacte : la bande retrouvée doit être
+ * **identique à l'originale**, pas seulement décodable.
+ */
+const BANDE_FICTIVE = [
+  'I<BFAB987654323<<<<<<<<<<<<<<<',
+  '9005145F3203112BFA<<<<<<<<<<<2',
+  'OUEDRAOGO<<FATIMATA<ADIZA<<<<<',
+];
+const ATTENDUE = BANDE_FICTIVE.join('\n');
+
+const degradations: [string, string][] = [
+  ['bande propre', ATTENDUE],
+  [
+    'noyée dans les mentions de la carte',
+    ['BURKINA FASO', "CARTE NATIONALE D'IDENTITE", ...BANDE_FICTIVE, 'Signature'].join('\n'),
+  ],
+  ['chevrons doubles rendus « »', ATTENDUE.replace(/<</g, '«')],
+  ['chevrons simples rendus ‹', ATTENDUE.replace(/</g, '‹')],
+  ['espaces insérés tous les cinq caractères', BANDE_FICTIVE.map((l) => l.replace(/(.{5})/g, '$1 ')).join('\n')],
+  ['les trois lignes recollées en une', BANDE_FICTIVE.join('')],
+  ['O lu partout à la place de 0', ATTENDUE.replace(/0/g, 'O')],
+  [
+    'I pour 1 et S pour 5 dans les dates',
+    [BANDE_FICTIVE[0], BANDE_FICTIVE[1]!.replace(/1/g, 'I').replace(/5/g, 'S'), BANDE_FICTIVE[2]].join('\n'),
+  ],
+  [
+    'B pour 8 et G pour 6 dans le numéro',
+    [BANDE_FICTIVE[0]!.replace(/8/g, 'B').replace(/6/g, 'G'), BANDE_FICTIVE[1], BANDE_FICTIVE[2]].join('\n'),
+  ],
+  ['chevrons de remplissage avalés en fin de ligne', BANDE_FICTIVE.map((l) => l.replace(/<+$/, '')).join('\n')],
+  [
+    'tout à la fois : mentions, « », espaces, O pour 0',
+    ['REPUBLIQUE', ...BANDE_FICTIVE.map((l) => l.replace(/<</g, '«'))].join('\n').replace(/0/g, 'O'),
+  ],
+];
+
+for (const [nom, texte] of degradations) {
+  verifier(`bande retrouvée intacte — ${nom}`, extraireBandeDepuisTexte(texte), ATTENDUE);
+}
+
 
 /* ── Fidélité ────────────────────────────────────────────────────────────── */
 

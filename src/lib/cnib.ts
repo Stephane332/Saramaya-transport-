@@ -185,41 +185,166 @@ export function joursAvantExpirationCnib(dateIso: string, maintenant = new Date(
 /**
  * Retrouve la bande à lecture machine dans un texte quelconque.
  *
- * C'est le chaînon entre une photo et le décodage. Une reconnaissance de caractères
- * ne rend pas trois lignes propres : elle rend tout ce qu'elle a vu sur la carte —
- * en-têtes, mentions, nom en gros, et quelque part au milieu la bande. Cette
- * fonction va la chercher.
+ * C'est le chaînon entre une photo et le décodage — et le maillon faible de toute
+ * la chaîne. Une reconnaissance de caractères ne rend pas trois lignes propres :
+ * elle rend tout ce qu'elle a vu sur la carte, en-têtes et mentions comprises, et
+ * quelque part au milieu la bande, abîmée de trois façons connues.
  *
- * Deux tolérances, parce qu'une lecture optique se trompe toujours un peu :
+ * ## Les trois abîmes, et comment on les franchit
  *
- *   - les espaces parasites sont retirés (l'œil de la machine coupe volontiers les
- *     suites de chevrons) ;
- *   - le chiffre 0 et la lettre O sont confondus par toutes les reconnaissances du
- *     monde ; la bande n'utilisant que des majuscules, des chiffres et « < », on
- *     tente les deux lectures et on garde celle dont les clés de contrôle tombent
- *     juste. C'est exactement à cela que servent ces clés.
+ * **1. Les chevrons ne survivent pas.** `<` est le caractère le plus maltraité de la
+ * bande : rendu « « », « ‹ », « K », ou purement et simplement avalé. Une ligne dont
+ * les chevrons ont disparu est plus courte que trente caractères et ne ressemble plus
+ * à rien. On rétablit d'abord les sosies typographiques, puis on complète à trente.
+ *
+ * **2. Le découpage en lignes est arbitraire.** Selon le moteur et le cadrage, la
+ * bande arrive en trois lignes, en une seule de quatre-vingt-dix caractères, ou
+ * noyée entre des lignes parasites. Les trois formes sont donc essayées.
+ *
+ * **3. Chiffres et lettres se confondent.** `0/O`, `1/I`, `5/S`, `8/B`, `6/G`, `2/Z`.
+ * La correction naïve — remplacer tous les O par des 0 sur la deuxième ligne — ne
+ * suffisait pas : elle abîmait la nationalité « BFA » au passage.
+ *
+ * La parade tient au format lui-même : **on sait, position par position, ce qui doit
+ * être un chiffre et ce qui doit être une lettre.** Une date de naissance n'a que des
+ * chiffres, une nationalité que des lettres. On corrige donc chaque caractère selon
+ * ce que sa place exige, et les clés de contrôle tranchent : si elles tombent juste,
+ * la lecture est bonne. C'est exactement à cela qu'elles servent.
  */
-export function extraireBandeDepuisTexte(texte: string): string | null {
-  const candidates = texte
-    .toUpperCase()
+
+/** Sosies typographiques du chevron, rendus par les moteurs de reconnaissance. */
+const SOSIES_CHEVRON: [RegExp, string][] = [
+  [/[«»]/g, '<<'],
+  [/[‹›〈〉＜⟨⟩]/g, '<'],
+  [/[\u2039\u203A]/g, '<'],
+];
+
+const VERS_CHIFFRE: Record<string, string> = {
+  O: '0', Q: '0', D: '0',
+  I: '1', L: '1',
+  Z: '2', A: '4', S: '5', G: '6', T: '7', B: '8',
+};
+
+const VERS_LETTRE: Record<string, string> = {
+  '0': 'O', '1': 'I', '2': 'Z', '4': 'A', '5': 'S', '6': 'G', '8': 'B',
+};
+
+/** Ce que chaque position d'une ligne TD1 doit contenir. */
+type Exigence = 'CHIFFRE' | 'LETTRE' | 'LIBRE';
+
+function exigence(rang: number, position: number): Exigence {
+  if (rang === 0) {
+    // I<BFA + numéro + clé. Le numéro burkinabè s'écrit une lettre puis des
+    // chiffres — « B 1237763 » sur la carte, « B98765432 » sur l'exemple — et
+    // c'est ce qui permet de rattraper le B lu pour un 8 ou le G lu pour un 6.
+    if (position >= 2 && position <= 4) return 'LETTRE';
+    if (position === 5) return 'LETTRE';
+    if (position >= 6 && position <= 13) return 'CHIFFRE';
+    if (position === 14) return 'CHIFFRE';
+    return 'LIBRE';
+  }
+  if (rang === 1) {
+    // AAMMJJ clé sexe AAMMJJ clé NATIONALITÉ … clé composite.
+    if (position <= 6) return 'CHIFFRE';
+    if (position === 7) return 'LIBRE'; // M, F ou <
+    if (position >= 8 && position <= 14) return 'CHIFFRE';
+    if (position >= 15 && position <= 17) return 'LETTRE';
+    if (position === 29) return 'CHIFFRE';
+    return 'LIBRE';
+  }
+  // Ligne 3 : nom et prénoms, uniquement des lettres et des chevrons.
+  return 'LETTRE';
+}
+
+/** Corrige une ligne caractère par caractère, selon ce que sa position exige. */
+function coercerParPosition(ligne: string, rang: number): string {
+  return ligne
+    .split('')
+    .map((c, i) => {
+      if (c === '<') return c;
+      const attendu = exigence(rang, i);
+      if (attendu === 'CHIFFRE') return VERS_CHIFFRE[c] ?? c;
+      if (attendu === 'LETTRE') return VERS_LETTRE[c] ?? c;
+      return c;
+    })
+    .join('');
+}
+
+/** Ramène une ligne à exactement trente caractères, sans jamais rogner du contenu. */
+function trenteCaracteres(ligne: string): string | null {
+  if (ligne.length === 30) return ligne;
+  if (ligne.length < 30) return ligne.padEnd(30, '<');
+  // Trop longue : les chevrons de remplissage en trop sont à la fin, on les retire.
+  const rognee = ligne.replace(/<+$/, '');
+  if (rognee.length <= 30) return rognee.padEnd(30, '<');
+  return null;
+}
+
+/** Toutes les découpes plausibles du texte en trois lignes candidates. */
+function triplesCandidats(texte: string): string[][] {
+  let normalise = texte.toUpperCase();
+  for (const [motif, remplacement] of SOSIES_CHEVRON) {
+    normalise = normalise.replace(motif, remplacement);
+  }
+
+  const lignes = normalise
     .split(/\r?\n/)
     .map((l) => l.replace(/[^A-Z0-9<]/g, ''))
-    .filter((l) => l.length >= 28 && l.length <= 32 && l.includes('<'));
+    .filter(Boolean);
 
-  // On cherche trois lignes consécutives qui forment une bande valide.
-  for (let i = 0; i + 2 < candidates.length + 1 && i + 2 < candidates.length + 1; i += 1) {
-    const trois = candidates.slice(i, i + 3);
-    if (trois.length < 3) break;
-    const bande = trois.map((l) => l.slice(0, 30).padEnd(30, '<')).join('\n');
-    if (lireBandeTD1(bande).ok) return bande;
+  const triples: string[][] = [];
 
-    // Deuxième chance : la confusion classique entre O et 0 dans les zones de chiffres.
-    const corrigee = trois
-      .map((l, rang) => (rang === 1 ? l.replace(/O/g, '0') : l))
-      .map((l) => l.slice(0, 30).padEnd(30, '<'))
-      .join('\n');
-    const essai = lireBandeTD1(corrigee);
-    if (essai.ok && essai.avertissements.length === 0) return corrigee;
+  /*
+   * a) Trois lignes consécutives de forme plausible.
+   *
+   * Le seuil est bas exprès : quand la reconnaissance avale les chevrons de
+   * remplissage, « I<BFAB987654323<<<<<<<<<<<<<<< » n'arrive plus que sur quinze
+   * caractères. Un filtre à vingt-quatre les rejetait, et la bande entière était
+   * perdue pour une raison purement cosmétique. Les fausses pistes que ce seuil
+   * laisse entrer ne coûtent rien : les clés de contrôle les écartent ensuite.
+   */
+  const plausibles = lignes.filter(
+    (l) => l.length >= 14 && l.length <= 34 && (l.includes('<') || /^\d{6}/.test(l)),
+  );
+  for (let i = 0; i + 2 < plausibles.length; i += 1) {
+    triples.push(plausibles.slice(i, i + 3));
   }
-  return null;
+
+  // b) La bande rendue d'un bloc : une ligne d'au moins quatre-vingt-dix caractères.
+  //    Certains moteurs recollent tout ; d'autres joignent deux lignes sur trois.
+  const colle = lignes.filter((l) => l.length >= 88).concat([lignes.join('')]);
+  for (const bloc of colle) {
+    const i = bloc.indexOf('I<');
+    const depart = i >= 0 ? i : 0;
+    const utile = bloc.slice(depart);
+    if (utile.length >= 88) {
+      triples.push([utile.slice(0, 30), utile.slice(30, 60), utile.slice(60, 90)]);
+    }
+  }
+
+  return triples;
+}
+
+export function extraireBandeDepuisTexte(texte: string): string | null {
+  let repli: string | null = null;
+
+  for (const triple of triplesCandidats(texte)) {
+    for (const corriger of [false, true]) {
+      const lignes = triple
+        .map((l, rang) => (corriger ? coercerParPosition(l, rang) : l))
+        .map(trenteCaracteres);
+      if (lignes.some((l) => l === null)) continue;
+
+      const bande = (lignes as string[]).join('\n');
+      const lecture = lireBandeTD1(bande);
+      if (!lecture.ok) continue;
+      // Sans avertissement, les clés de contrôle concordent : c'est la bonne lecture.
+      if (lecture.avertissements.length === 0) return bande;
+      // Sinon on la garde sous le coude — mieux vaut une bande douteuse, soumise à
+      // confirmation, que pas de bande du tout et une saisie entière à la main.
+      repli = repli ?? bande;
+    }
+  }
+
+  return repli;
 }

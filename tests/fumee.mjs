@@ -342,7 +342,12 @@ async function jouerLeParcours() {
     'le premier départ de la liste',
   );
   await page.waitForTimeout(900);
-  await cliquer('Sans préférence de place');
+  /*
+   * On ne choisit pas sa place chez Saramaya : l'agent l'attribue en encaissant.
+   * L'écran ne propose donc plus un plan de cabine mais un numéro souhaité, qu'on
+   * laisse vide ici — c'est le cas le plus courant.
+   */
+  await cliquer('Continuer sans préférence');
   await cliquer('Créer ma réservation');
   await page.waitForTimeout(2000);
 

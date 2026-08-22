@@ -17,7 +17,7 @@ import {
   Trait,
   Txt,
 } from '../../src/components/base';
-import { PlanSieges } from '../../src/components/PlanSieges';
+import { DemandeDePlace } from '../../src/components/DemandeDePlace';
 import { ScannerCamera } from '../../src/components/ScannerCamera';
 import {
   GARES,
@@ -336,24 +336,10 @@ export default function Reserver() {
         <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
           <Section>Place souhaitée</Section>
           <EnAttenteDeLaCompagnie {...etatFonction('PLACES_OCCUPEES')} />
-          <Txt v="petit" couleur={couleurs.texteFaible}>
-            Indiquez la place que vous préférez : elle part avec votre demande à la gare, qui
-            l'attribue au moment de l'émission du billet. Les places déjà prises s'afficheront
-            une fois l'application connectée au système de la compagnie.
-          </Txt>
-          <PlanSieges classe={classe} occupes={[]} choisi={siege} onChoisir={setSiege} />
+          <DemandeDePlace classe={classe} valeur={siege} onChange={setSiege} />
           <Bouton
-            titre={siege ? `Continuer avec le siège ${siege}` : 'Choisissez une place'}
-            desactive={!siege}
+            titre={siege ? `Continuer en demandant la place ${siege}` : 'Continuer sans préférence'}
             onPress={() => setEtape('RECAP')}
-          />
-          <Bouton
-            titre="Sans préférence de place"
-            variante="fantome"
-            onPress={() => {
-              setSiege(null);
-              setEtape('RECAP');
-            }}
           />
         </Animated.View>
       ) : null}
@@ -379,7 +365,7 @@ export default function Reserver() {
             <Ligne gauche="Date" droite={format(parseISO(date), 'EEEE d MMMM', { locale: fr })} />
             <Ligne gauche="Départ" droite={heure} />
             <Ligne gauche="Convocation" droite={decalerHeure(heure, -30)} />
-            <Ligne gauche="Siège" droite={siege ? String(siege) : 'Sans préférence'} />
+            <Ligne gauche="Place" droite={siege ? `${siege} — demandée` : 'Attribuée par la gare'} />
             <Ligne gauche="Gare" droite={GARES.find((g) => g.id === gareId)?.nom ?? '—'} />
             <Trait />
             <View style={styles.entre}>

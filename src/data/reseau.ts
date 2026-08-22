@@ -227,35 +227,53 @@ export function lignesDepuis(ville: Ville): Ligne[] {
 }
 
 /**
- * Plans de bus. Le VIP est en 2+1 (sièges extra-larges, écran individuel,
- * chargeur USB, boisson offerte) ; le classique en 2+2 climatisé.
+ * Ce qu'on sait des voitures — et ce qu'on n'en sait pas.
+ *
+ * La compagnie publie une seule chose sur l'aménagement : le **VIP est en 2+1**,
+ * « trois sièges par rangée au lieu de quatre », contre 2+2 pour l'ordinaire. C'est
+ * vérifiable, c'est ici.
+ *
+ * ## Ce qui a été retiré, et pourquoi
+ *
+ * Il y avait ici un plan complet : seize rangées, une banquette de cinq au fond,
+ * soixante-neuf places pour l'ordinaire. **Rien de tout cela n'était vérifié.** Ces
+ * nombres avaient été inventés pour pouvoir dessiner une cabine à l'écran, et
+ * l'écran laissait ensuite le voyageur y choisir sa place — deux fautes qui se
+ * tenaient l'une l'autre.
+ *
+ * La première contredit la règle du projet : on n'affiche pas ce qu'on ne sait pas.
+ * Un voyageur pouvait demander le siège 69 d'un car qui n'en compte peut-être que
+ * cinquante.
+ *
+ * La seconde contredit la procédure de la compagnie. Chez Saramaya, la place est
+ * **attribuée par l'agent** au moment de l'encaissement : leur billetterie affiche
+ * les places libres du départ, l'agent en clique une, et le billet s'imprime. Le
+ * voyageur ne choisit pas — il peut demander, et l'agent honore la demande si la
+ * place est libre. L'application dit donc exactement cela : un souhait transmis à la
+ * gare, jamais une réservation de place.
+ *
+ * Le nombre de places par voiture viendra du système de la compagnie, comme les
+ * places déjà vendues. D'ici là, il n'est écrit nulle part.
  */
 export interface PlanBus {
   classe: Classe;
-  rangees: number;
-  /** Sièges à gauche du couloir, puis à droite. */
+  /** Sièges de chaque côté du couloir. La seule donnée d'aménagement publiée. */
   gauche: number;
   droite: number;
-  /** Banquette du fond, sur toute la largeur. */
-  fond: number;
   equipements: string[];
 }
 
 export const PLANS_BUS: Record<Classe, PlanBus> = {
   ORDINAIRE: {
     classe: 'ORDINAIRE',
-    rangees: 16,
     gauche: 2,
     droite: 2,
-    fond: 5,
     equipements: ['Climatisation', 'Sièges inclinables'],
   },
   VIP_1RE: {
     classe: 'VIP_1RE',
-    rangees: 13,
     gauche: 2,
     droite: 1,
-    fond: 4,
     equipements: [
       'Sièges extra-larges',
       'Écran TV individuel',
@@ -267,10 +285,8 @@ export const PLANS_BUS: Record<Classe, PlanBus> = {
   },
   VIP_DIRECTE: {
     classe: 'VIP_DIRECTE',
-    rangees: 13,
     gauche: 2,
     droite: 1,
-    fond: 4,
     equipements: [
       'Sans arrêt intermédiaire',
       'Sièges extra-larges',
@@ -281,6 +297,12 @@ export const PLANS_BUS: Record<Classe, PlanBus> = {
     ],
   },
 };
+
+/** « 2+2 », « 2+1 » — la disposition d'une rangée, telle que la compagnie l'annonce. */
+export function dispositionRangee(classe: Classe): string {
+  const p = PLANS_BUS[classe];
+  return `${p.gauche}+${p.droite}`;
+}
 
 /** Libellés courts, tels que la compagnie les emploie. */
 export const LIBELLES_CLASSE: Record<Classe, string> = {
@@ -294,11 +316,6 @@ export const LIBELLES_CLASSE_COURT: Record<Classe, string> = {
   VIP_1RE: 'VIP 1RE',
   VIP_DIRECTE: 'VIP DIRECTE',
 };
-
-export function nombreDeSieges(classe: Classe): number {
-  const p = PLANS_BUS[classe];
-  return p.rangees * (p.gauche + p.droite) + p.fond;
-}
 
 /** Règles de transport imprimées au dos du ticket papier. */
 export const CONDITIONS_TRANSPORT = [

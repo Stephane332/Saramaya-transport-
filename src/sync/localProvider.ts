@@ -13,7 +13,6 @@ import {
   MINUTES_CONVOCATION,
   identifiantDepart,
   ligneParId,
-  nombreDeSieges,
 } from '../data/reseau';
 import { decalerHeure } from '../lib/format';
 import { identifiant, referenceBillet } from '../lib/identifiants';
@@ -86,7 +85,8 @@ export class LocalProvider implements SyncProvider {
           convocation: decalerHeure(d.heure, -MINUTES_CONVOCATION),
           classe: d.classe,
           tarif: ligne.tarifs[d.classe],
-          placesTotal: nombreDeSieges(d.classe),
+          // Capacité inconnue tant que la compagnie n'a pas ouvert son système.
+          placesTotal: null,
           // Horizon 1 : l'application ne connaît pas la disponibilité réelle.
           placesLibres: null,
           siegesOccupes: null,

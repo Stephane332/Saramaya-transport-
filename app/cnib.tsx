@@ -144,7 +144,10 @@ export default function EcranCnib() {
     setSources(applique.sources);
     setDesaccords(fusion.desaccords);
     setAvertissements(fusion.avertissements);
-    setMessageLecture(nouvelles.find((l) => l.raisonIndisponible)?.raisonIndisponible ?? null);
+    const indisponible = nouvelles.find((l) => l.raisonIndisponible)?.raisonIndisponible ?? null;
+    setMessageLecture(indisponible);
+    // Sur cet écran la saisie de la bande est déjà visible en permanence : il n'y a
+    // pas de voie de secours à ouvrir, seulement le message qui explique pourquoi.
   };
 
   const corriger = (champ: ChampCarte, valeur: string) => {

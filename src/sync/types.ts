@@ -21,7 +21,12 @@ export interface DepartDisponible {
   convocation: string;
   classe: Classe;
   tarif: number;
-  placesTotal: number;
+  /**
+   * Nombre de places de la voiture. **Nul tant que la compagnie ne l'a pas dit** :
+   * il figurait ici une valeur calculée à partir d'un plan de bus inventé, et une
+   * capacité inventée est aussi trompeuse qu'une disponibilité inventée.
+   */
+  placesTotal: number | null;
   /**
    * Disponibilité réelle — connue seulement quand l'application est branchée sur
    * le système de la compagnie. En Horizon 1 (téléphone seul), elle vaut null :

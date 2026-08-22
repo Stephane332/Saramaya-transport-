@@ -49,9 +49,9 @@ const ATTENTE: Record<Fonction, Omit<Etat, 'disponible'>> = {
       "Votre historique existe dans le système de la compagnie, pas ici. En attendant, scannez vos anciens tickets : chacun rejoint votre historique.",
   },
   PLACES_OCCUPEES: {
-    promesse: 'Les places déjà prises affichées en direct sur le plan du bus.',
+    promesse: 'Le plan de la voiture, avec les places déjà vendues et celles qui restent.',
     raison:
-      "Seule la billetterie de la compagnie sait quelles places sont vendues. En attendant, indiquez la place que vous préférez : elle part avec votre demande.",
+      "Seule la billetterie de la compagnie connaît l'aménagement de la voiture et les places vendues. En attendant, l'application ne dessine aucun plan : elle transmet le numéro que vous souhaitez, et c'est l'agent qui attribue la place en encaissant.",
   },
   MANIFESTE_COMPLET: {
     promesse: 'La liste de tous les voyageurs d\'un départ, avec leur paiement en direct.',

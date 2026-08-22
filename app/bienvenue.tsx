@@ -163,7 +163,16 @@ export default function Bienvenue() {
     setSources(applique.sources);
     setDesaccords(fusion.desaccords);
     setAvertissements(fusion.avertissements);
-    setMessageLecture(nouvelles.find((l) => l.raisonIndisponible)?.raisonIndisponible ?? null);
+    const indisponible = nouvelles.find((l) => l.raisonIndisponible)?.raisonIndisponible ?? null;
+    setMessageLecture(indisponible);
+    /*
+     * La lecture n'a pas pu avoir lieu — dans Expo Go, sur le web, ou sur une photo
+     * illisible. Laisser l'utilisateur devant un formulaire vide et une explication
+     * serait le laisser dans une impasse : on ouvre la voie de secours pour lui.
+     * Recopier la bande du dos donne exactement le même résultat, par le même
+     * décodage et les mêmes clés de contrôle.
+     */
+    if (indisponible) setBandeOuverte(true);
   };
 
   /** Corriger un champ à la main : la correction ne sera plus jamais écrasée. */
