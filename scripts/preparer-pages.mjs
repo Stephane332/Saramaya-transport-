@@ -15,7 +15,7 @@
  * Usage :  node scripts/preparer-pages.mjs <dossier> [prefixe-url]
  */
 
-import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const dossier = process.argv[2] ?? 'dist';
@@ -78,5 +78,26 @@ writeFileSync(chemin, html);
 copyFileSync(chemin, join(dossier, '404.html'));
 writeFileSync(join(dossier, '.nojekyll'), '');
 
+/*
+ * Les adresses qui doivent répondre **200**, et pas seulement s'afficher.
+ *
+ * Le repli en 404.html suffit à un humain : la page s'ouvre, l'application démarre
+ * et affiche la bonne route. Mais le serveur a répondu « 404 », et ce détail
+ * invisible compte pour les robots — ceux d'Apple et de Google vont chercher
+ * l'adresse de la politique de confidentialité au moment de la revue, et une
+ * réponse 404 est un motif de refus. GitHub Pages ne sait pas réécrire les
+ * adresses ; on écrit donc un vrai fichier là où il en faut un.
+ *
+ * On ne le fait que pour les routes publiques qui ont besoin d'une adresse propre.
+ * Surtout pas pour les écrans du personnel : leur donner un fichier reviendrait à
+ * les annoncer, alors qu'ils doivent rester introuvables.
+ */
+const ROUTES_PUBLIQUES = ['confidentialite'];
+for (const route of ROUTES_PUBLIQUES) {
+  mkdirSync(join(dossier, route), { recursive: true });
+  writeFileSync(join(dossier, route, 'index.html'), html);
+}
+
 console.log(`Préparé : ${dossier} (préfixe « ${base || '/'} »)`);
 console.log('  index.html enrichi, 404.html créé, .nojekyll ajouté.');
+console.log(`  adresses servies en 200 : ${ROUTES_PUBLIQUES.map((r) => `/${r}`).join(', ')}`);
