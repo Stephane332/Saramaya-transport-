@@ -62,12 +62,32 @@ même approximatives — « à peu près une heure par départ » vaut mieux qu'
 
 ## Digiparc
 
+> **Trois de ces questions ont déjà leur réponse**, trouvée dans la documentation
+> publique de Digiparc. Les poser quand même ferait perdre du temps et donnerait
+> l'impression de ne pas s'être renseigné. Elles sont conservées ici avec leur
+> réponse, pour savoir ce qu'il reste vraiment à demander.
+
 17. **Depuis quand utilisez-vous Digiparc ?** En êtes-vous satisfaits ?
-18. **Digiparc gère-t-il le plan des sièges ?** Si oui, pourquoi le numéro est-il écrit à la
-    main sur le ticket ?
-19. **Existe-t-il déjà un espace client ?** (une page « Mon compte » figure sur leur instance)
-20. **Digiparc propose-t-il une connexion pour des applications extérieures ?** — question à
-    poser à la direction, pas au guichet.
+
+18. ~~Digiparc gère-t-il le plan des sièges ?~~ — **Oui.** Leur documentation dit que
+    « les feuilles de route affichent les places disponibles et **leurs numéros** pour
+    chaque voyage », et que l'agent réserve « **en cliquant sur une place libre** dans
+    l'interface Réservations ». La vraie question devient donc : *pourquoi le numéro
+    est-il alors recopié à la main sur le ticket ?* Écran non branché sur
+    l'imprimante, habitude du guichet, ou billets pré-imprimés ?
+
+19. ~~Existe-t-il déjà un espace client ?~~ — **Oui**, sur leur instance. La question
+    utile est plutôt : *combien de voyageurs s'en servent réellement ?*
+
+20. ~~Digiparc propose-t-il une connexion pour des applications extérieures ?~~ —
+    **Oui.** Digiparc annonce une « API ouverte », « API REST documentée et webhooks
+    temps réel ». Elle n'a donc rien à développer : la question à poser à la direction
+    est **« nous ouvrez-vous un accès en lecture sur votre compte ? »**, ce qui est une
+    demande administrative, pas un projet informatique. Voir
+    `../integration/digiparc.md`.
+
+21. **Combien d'agences votre instance couvre-t-elle ?** Digiparc est multi-agences, et
+    un de leurs clients transport en pilote vingt-quatre depuis une seule base.
 
 ---
 

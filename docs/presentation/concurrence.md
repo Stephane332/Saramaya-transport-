@@ -54,6 +54,37 @@ Avoir sa propre application, c'est garder cette relation.
 
 ---
 
+## Qui est Digiparc, et qui d'autre s'en sert
+
+Éditeur marocain basé à Rabat, fondé en 2007, dirigé par Hicham El Habti. Il annonce
+**19 ans d'expérience et 350 clients** en Afrique, Europe et Moyen-Orient, et déclare
+servir le Maroc, la France, l'Espagne, l'Allemagne, l'Algérie, la Tunisie, le Sénégal,
+la Côte d'Ivoire, l'Arabie saoudite, les Émirats et le Qatar.
+
+Deux clients transport sont nommés publiquement dans ses témoignages :
+
+| Client | Ce qu'ils en font |
+|---|---|
+| **Marsys** (transport international) | Billetterie automatique complète, **24 agences** sur une base unique : billets voyage et bagage, feuilles de route, caisse en temps réel |
+| **STAREO** (autobus) | Sinistres, accidents, suivi des bus non assurés, statistiques de flotte |
+
+Les autres témoignages sont anonymisés — on n'y lit que des prénoms et des fonctions,
+plusieurs ouest-africains. **Saramaya n'est donc pas un cas isolé** : c'est une
+plateforme éprouvée sur des réseaux plus gros que le sien, et un argument à retourner
+en leur faveur — nous ne proposons pas de remplacer un outil qui marche.
+
+Ce qu'il faut en retenir pour la présentation :
+
+- **La billetterie et la caisse sont déjà liées.** Un témoignage le dit : « chaque
+  billet est enregistré automatiquement depuis les agences, et selon le type de client,
+  le montant est directement affecté à la caisse comme encaissement ».
+- **Les places sont numérotées et attribuées par l'agent**, en cliquant une place libre
+  sur la feuille de route. Ce n'est pas un tirage automatique.
+- **Le prix est calculé par la plateforme** selon la ligne, la période, le type de
+  client et le poids du bagage.
+
+---
+
 ## Ce que Saramaya a déjà — et pourquoi ça ne marche pas
 
 **C'est le point le plus important du dossier, et il faut le manier avec tact.**

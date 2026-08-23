@@ -378,7 +378,12 @@ function FormulaireEnvoi({ onFermer }: { onFermer: () => void }) {
         titre={preparation.enCours ? 'Préparation…' : "Préparer l'envoi"}
         sousTitre={
           complet
-            ? `${montant(prix)} à régler au guichet de ${gareParId(gareDepartId)?.ville}`
+            ? // « Environ », parce que c'en est une : nos tarifs de colis sont estimés,
+              // la compagnie ne les publie pas, et leur billetterie calcule le prix
+              // réel au pesage. Annoncer une somme au franc près juste au-dessus d'un
+              // encadré qui dit « le tarif exact est confirmé au guichet » est une
+              // contradiction que le voyageur voit d'un coup d'œil.
+              `Environ ${montant(prix)} — à régler et à confirmer au guichet de ${gareParId(gareDepartId)?.ville}`
             : 'Complétez les informations du destinataire'
         }
         desactive={!complet || preparation.enCours}
