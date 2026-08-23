@@ -33,6 +33,10 @@
       },
       "package": "com.saramaya.transport",
       "edgeToEdgeEnabled": true,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "permissions": [
         "CAMERA",
         "VIBRATE",

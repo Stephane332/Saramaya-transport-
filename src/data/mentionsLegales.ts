@@ -21,7 +21,7 @@
 import { CONCEPTEUR, NOM_COMPAGNIE } from './application';
 
 /** Dernière révision du texte, à mettre à jour à chaque modification de fond. */
-export const REVISION_MENTIONS = '2026-08-15';
+export const REVISION_MENTIONS = '2026-08-23';
 
 export interface SectionLegale {
   titre: string;
@@ -99,6 +99,15 @@ export const CONFIDENTIALITE: SectionLegale[] = [
       "Aucune revente ni partage de vos données : nous ne les détenons pas.",
       "Aucune collecte cachée. Ce document décrit l'intégralité de ce qui sort de l'appareil.",
       "Aucune reconnaissance faciale, aucune donnée biométrique.",
+      /*
+       * Cette ligne n'est pas une déclaration d'intention : elle est tenue par la
+       * configuration du build. `blockedPermissions` retire le micro du manifeste
+       * Android, où la bibliothèque de la caméra l'ajoutait toute seule — pour la
+       * vidéo, que l'application ne filme jamais. Sans ce blocage, le téléphone
+       * aurait affiché « Micro » dans la liste des autorisations, et cette page
+       * aurait menti.
+       */
+      "Aucun accès au microphone ni à votre position : l'application ne les demande pas, et le système ne les lui accorderait pas.",
     ],
   },
   {
