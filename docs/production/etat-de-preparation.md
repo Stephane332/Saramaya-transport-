@@ -18,11 +18,11 @@ Ce qui relève de Saramaya est branché et attend leur feu vert.
 
 ## 1. Ce qui est fini et vérifié
 
-**14 écrans, 23 modules de règles, 11 900 lignes, 202 contrôles automatiques**, plus
+**14 écrans, 23 modules de règles, 11 900 lignes, 222 contrôles automatiques**, plus
 les parcours joués de bout en bout dans un vrai navigateur — voyageur et agent.
 
 ```bash
-npm run verifier    # paquets, types, 180 exemples, 22 invariants
+npm run verifier    # paquets, types, 200 exemples, 22 invariants
 npm run fumee       # les deux paquets s'ouvrent dans Chromium : 33 contrôles
 ```
 
@@ -117,9 +117,9 @@ Chaque champ indique d'où il vient, et **une correction manuelle n'est jamais
 > **Où la lecture automatique fonctionne.** Elle utilise le moteur du système —
 > Vision chez Apple, ML Kit chez Google — via `expo-text-extractor`. Ce module est
 > **natif** : il est compilé dans l'application, et n'existe donc ni dans Expo Go ni
-> dans un navigateur. Pour la voir à l'œuvre, il faut une application construite :
-> `npm run apk` (Android, gratuit) est le chemin le plus court. Partout ailleurs,
-> l'écran le dit clairement et propose de recopier la bande — mêmes champs, même
+> dans un navigateur. Pour la voir à l'œuvre, il faut une application construite —
+> `construire.bat` (ou `npm run apk`), Android, gratuit. Partout ailleurs, l'écran le
+> dit clairement et **ouvre de lui-même** la saisie de la bande — mêmes champs, même
 > décodage, mêmes clés de contrôle.
 
 ### Rien ne se perd
@@ -221,7 +221,7 @@ Pour que ce ne soit pas un oubli :
 Le détail est dans `mise-en-production.md`. En deux lignes :
 
 ```bash
-npm run verifier      # versions, types, 180 exemples, 22 invariants
+npm run verifier      # versions, types, 200 exemples, 22 invariants
 npm run fumee         # l'application s'ouvre et se laisse utiliser pour de vrai
 ```
 

@@ -111,7 +111,7 @@ npm run web             # ou dans le navigateur
 Vérifications :
 
 ```bash
-npm run verifier                        # paquets, types, 180 exemples, 22 invariants
+npm run verifier                        # paquets, types, 200 exemples, 22 invariants
 npm run fumee                           # les deux paquets, dans un vrai navigateur
 ```
 
@@ -127,19 +127,24 @@ vrai. **Les deux avant tout partage ou toute mise en production.**
 
 ## Tester sur un téléphone
 
-**Deux fichiers à double-cliquer, sous Windows :**
+**Trois fichiers à double-cliquer, sous Windows :**
 
 | Fichier | Ce qu'il fait |
 |---|---|
 | `lancer.bat` | Récupère le code, vérifie tout, affiche le QR code à scanner avec Expo Go |
 | `publier.bat` | Récupère le code, vérifie tout, publie la version web et rend **une adresse** |
+| `construire.bat` | Récupère le code, vérifie tout, construit l'**APK Android** installable |
 
 `lancer.bat` demande que le PC reste allumé et que le téléphone soit sur le même
 réseau — le partage de connexion du téléphone convient. `publier.bat` rend une
-adresse qui vit sans le PC.
+adresse qui vit sans le PC. `construire.bat` produit un APK qui s'installe et
+fonctionne ensuite tout seul, **avec la lecture de la CNIB par photo et les
+rappels** — les deux choses qu'Expo Go ne peut pas fournir.
 
-Ni l'un ni l'autre ne demande d'identifiants : quand une connexion Expo est
-nécessaire, c'est l'outil officiel qui la réclame, dans sa propre invite.
+Aucun des trois ne demande d'identifiants : quand une connexion Expo est
+nécessaire, c'est l'outil officiel qui la réclame, dans sa propre invite. Et tous
+les trois passent `npm run verifier` **avant** d'agir : un APK installé chez
+quelqu'un ne se corrige plus d'un clic.
 
 **À la main**, si l'on préfère :
 
@@ -154,11 +159,10 @@ ajoutée à l'écran d'accueil (Partager → *Sur l'écran d'accueil*), s'ouvre 
 écran avec son icône et sans barre de navigateur. C'est aussi l'adresse à déclarer
 aux boutiques pour la politique de confidentialité (`…/confidentialite`).
 
-> **Deux limites de la version web**, pour ne pas être surpris : la lecture
-> automatique de la CNIB et les rappels de départ n'y fonctionnent pas — ils
-> demandent des modules natifs. Recopier la bande du dos donne exactement le même
-> résultat ; pour le reste, il faut un build (`eas build -p android --profile
-> preview`, gratuit).
+> **Deux limites communes à Expo Go et à la version web** : la lecture automatique
+> de la CNIB et les rappels de départ n'y fonctionnent pas — ils demandent des
+> modules natifs. Recopier la bande du dos donne exactement le même résultat pour
+> l'identité ; pour le reste, il faut l'APK (`construire.bat`, gratuit).
 
 ### GitHub Pages
 
@@ -257,7 +261,7 @@ src/
   store/                useApp.ts (zustand + AsyncStorage), migration.ts
   sync/                 types.ts (SyncProvider), localProvider.ts
   theme/                couleurs, typographie, espacements
-tests/                  verification.ts (180 exemples), invariants.ts (22 propriétés), fumee.mjs (navigateur)
+tests/                  verification.ts (200 exemples), invariants.ts (22 propriétés), fumee.mjs (navigateur)
 docs/presentation/      argumentaire, chiffres à collecter, déroulé de démonstration
 docs/production/        état de préparation, mise en production, partage et mises à jour
 docs/integration/       comment se brancher sur la billetterie Digiparc de la compagnie

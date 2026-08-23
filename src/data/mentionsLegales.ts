@@ -108,6 +108,15 @@ export const CONFIDENTIALITE: SectionLegale[] = [
        * aurait menti.
        */
       "Aucun accès au microphone ni à votre position : l'application ne les demande pas, et le système ne les lui accorderait pas.",
+      /*
+       * Le capteur de mouvement, lui, est réellement utilisé — l'inclinaison qui fait
+       * bouger le billet et les cartes. iOS demande une autorisation pour cela, et le
+       * texte affiché était celui d'Expo, en anglais. Une page qui promet d'énumérer
+       * tout ce que l'application touche ne peut pas passer un capteur sous silence,
+       * fût-il inoffensif : c'est précisément le genre d'omission qui décrédibilise
+       * le reste.
+       */
+      "Les capteurs de mouvement servent seulement à incliner le billet et les cartes à l'écran. Rien n'en est enregistré ni envoyé.",
     ],
   },
   {
