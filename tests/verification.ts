@@ -52,6 +52,7 @@ import { paiementPourVille } from '../src/data/reseau';
 import { dateFrancaiseVersIso, lireRectoCnib, rectoExploitable } from '../src/lib/cnibRecto';
 import { carteSuffisante, fusionnerCarte } from '../src/lib/carteIdentite';
 import { placerLecture, type FaceCarte, type LectureFace } from '../src/lib/facesCarte';
+import { lireTicketPapier, ticketExploitable } from '../src/lib/ticketPapier';
 import { calculerFidelite, phraseHabitue } from '../src/lib/fidelite';
 import {
   depuisBase64Url,
@@ -1179,6 +1180,78 @@ verifier(
   `aucun sous-titre au-dessus de ${LIMITE_SOUS_TITRE} caractères`,
   sousTitresTropLongs,
   [],
+);
+
+/* ── Lecture d'un ticket papier en photo ─────────────────────────────────── */
+
+/*
+ * Le code-barres ne donne que le numéro. Tout le reste — date, heure, convocation,
+ * tarif, trajet, classe — se recopiait à la main : six champs, sur un téléphone, à la
+ * gare. Autant dire que personne ne le faisait, et que l'import de ticket papier,
+ * qui est pourtant le cœur de l'horizon 1, restait théorique.
+ *
+ * Un ticket n'a ni positions fixes ni clés de contrôle, contrairement à la bande
+ * d'une carte d'identité : on ne peut rien vérifier, seulement reconnaître des
+ * formes. D'où la règle — rien n'est affirmé, tout est proposé, et un champ non
+ * reconnu reste vide plutôt que deviné.
+ */
+groupe('Ticket papier — lu en photo, jamais deviné');
+
+const TICKET_PROPRE = [
+  'SARAMAYA TRANSPORT',
+  'Un service des hommes integres',
+  'TICKET DE VOYAGE   N° 66456',
+  'OUAHIGOUYA - OUAGADOUGOU',
+  'DATE : 06/08/2026',
+  'DEPART 16:00   CONVOCATION 15:30',
+  'TRANSPORT ORDINAIRE CLIMATISE',
+  'PRIX : 3 500 F CFA',
+  'ALLER SIMPLE',
+].join('\n');
+
+const ticketPropre = lireTicketPapier(TICKET_PROPRE);
+verifier('numéro du ticket', ticketPropre.numero, '66456');
+verifier('date convertie en ISO', ticketPropre.date, '2026-08-06');
+verifier('heure de départ', ticketPropre.heure, '16:00');
+verifier('convocation', ticketPropre.convocation, '15:30');
+verifier('tarif, espace insécable compris', ticketPropre.montant, 3500);
+verifier('trajet dans le bon sens', [ticketPropre.origine, ticketPropre.destination], [
+  'Ouahigouya',
+  'Ouagadougou',
+]);
+verifier('classe', ticketPropre.classe, 'ORDINAIRE');
+verifier('les huit champs sont annoncés', ticketPropre.champsLus.length, 8);
+
+// Sans libellés, ni « DEPART » ni « N° » : seule la forme reste.
+const ticketSale = lireTicketPapier(
+  ['SARAMAVA TRANSPORT', '66456', 'OUAHIGOUYA OUAGADOUGOU', '06-08-2026', '15h30   16h00', 'VIP', '8 000 FCFA'].join('\n'),
+);
+verifier('sans libellé, la plus tardive est le départ', ticketSale.heure, '16:00');
+verifier('et la précédente, la convocation', ticketSale.convocation, '15:30');
+verifier('heures écrites avec un h', [ticketSale.heure, ticketSale.convocation], ['16:00', '15:30']);
+verifier('VIP reconnu', ticketSale.classe, 'VIP_1RE');
+verifier('le numéro ne se confond pas avec le tarif', ticketSale.numero, '66456');
+
+// Ce qui compte le plus : ne rien inventer.
+verifier(
+  'un texte quelconque ne produit aucun champ',
+  lireTicketPapier('Bonjour, ceci est une facture de telephone.').champsLus,
+  [],
+);
+verifier(
+  'et il n’est pas exploitable',
+  ticketExploitable(lireTicketPapier('Bonjour, ceci est une facture.')),
+  false,
+);
+verifier(
+  'un nombre sans marque de monnaie n’est pas un tarif',
+  lireTicketPapier('Reference 4520 du 06/08/2026').montant,
+  undefined,
+);
+verifier(
+  'une année ne passe pas pour un numéro de ticket',
+  lireTicketPapier('Edite en 2026 a Ouagadougou').numero,
+  undefined,
 );
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);

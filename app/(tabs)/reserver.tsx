@@ -30,6 +30,9 @@ import {
   ligneParId,
 } from '../../src/data/reseau';
 import { useAction } from '../../src/lib/action';
+import { choisirDepuisGalerie, photographier } from '../../src/lib/imageCarte';
+import { lireTexteImage } from '../../src/lib/ocr';
+import { lireTicketPapier, ticketExploitable } from '../../src/lib/ticketPapier';
 import { decalerHeure, montant } from '../../src/lib/format';
 import { departsDuJour } from '../../src/lib/departs';
 import { etatFonction } from '../../src/lib/disponibilite';
@@ -493,8 +496,63 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
   const [classeTicket, setClasseTicket] = useState<Classe>('ORDINAIRE');
   const [siegeTicket, setSiegeTicket] = useState('');
   const [montantTicket, setMontantTicket] = useState('');
+  const [messageTicket, setMessageTicket] = useState<string | null>(null);
 
   const ligne = ligneParId(ligneId);
+
+  /**
+   * Lit le ticket en photo et pré-remplit le formulaire.
+   *
+   * **Rien n'est affirmé, tout est proposé.** Un ticket n'a ni positions fixes ni
+   * clés de contrôle — contrairement à la bande d'une carte d'identité, on ne peut
+   * rien vérifier, seulement reconnaître des formes. Chaque champ trouvé remplit une
+   * case que le voyageur relit ensuite, et un champ non reconnu **reste vide**
+   * plutôt que d'être deviné.
+   *
+   * C'est d'ailleurs ce que la compagnie écrit au dos de son propre ticket :
+   * « vérifiez l'heure et la date dès réception, car nos agents peuvent se
+   * tromper ». Une machine aussi.
+   */
+  const photoTicket = useAction(async (origine: 'APPAREIL' | 'GALERIE') => {
+    const uris =
+      origine === 'APPAREIL'
+        ? [await photographier()].filter((u): u is string => Boolean(u))
+        : await choisirDepuisGalerie();
+    if (uris.length === 0) return; // Annulé : ce n'est pas un échec.
+
+    const reconnaissance = await lireTexteImage(uris[0]!);
+    if (!reconnaissance.disponible) {
+      setMessageTicket(reconnaissance.raison ?? null);
+      return;
+    }
+
+    const lu = lireTicketPapier(reconnaissance.texte);
+    if (!ticketExploitable(lu)) {
+      setMessageTicket(
+        "Rien de reconnaissable sur cette photo. Reprenez-la bien à plat et bien éclairée, ou saisissez les champs à la main.",
+      );
+      return;
+    }
+
+    if (lu.numero) setReference(lu.numero);
+    if (lu.date) setDateTicket(lu.date);
+    if (lu.heure) setHeureTicket(lu.heure);
+    if (lu.classe) setClasseTicket(lu.classe);
+    if (lu.montant !== undefined) setMontantTicket(String(lu.montant));
+    if (lu.origine && lu.destination) {
+      const trouvee = LIGNES.find(
+        (l) =>
+          (l.origine === lu.origine && l.destination === lu.destination) ||
+          (l.origine === lu.destination && l.destination === lu.origine),
+      );
+      if (trouvee) setLigneId(trouvee.id);
+    }
+
+    setMessageTicket(
+      `${lu.champsLus.length} champ${lu.champsLus.length > 1 ? 's' : ''} lu${lu.champsLus.length > 1 ? 's' : ''} : ${lu.champsLus.join(', ')}. Vérifiez-les avant d'ajouter.`,
+    );
+    setPhase('SAISIE');
+  }, "La photo n'a pas pu être lue. Réessayez, ou saisissez les champs à la main.");
 
   /*
    * Sans verrou, deux appuis sur « Ajouter à mes voyages » importeraient deux fois
@@ -531,7 +589,7 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
     <Ecran>
       <EnTeteRetour
         onRetour={retour}
-        titre="Ajouter un ticket"
+        titre="Ajouter un ticket papier"
         icone={phase === 'SAISIE' ? 'chevron-back' : 'close'}
       />
 
@@ -551,10 +609,41 @@ function PanneauScan({ onFermer }: { onFermer: () => void }) {
             }}
             onSaisieManuelle={() => setPhase('SAISIE')}
           />
+
+          {/*
+            Le code-barres ne donne que le numéro.
+            Date, heure, convocation, tarif, trajet, classe : six champs restaient à
+            recopier à la main, sur un téléphone, à la gare. Autant dire que personne
+            ne le faisait — et l'import du ticket papier, qui est pourtant tout
+            l'intérêt de l'horizon 1, restait théorique.
+            Le moteur de reconnaissance sert déjà à lire la CNIB ; il lit le ticket.
+          */}
+          <MessageErreur texte={photoTicket.erreur} />
+          <Bouton
+            titre={photoTicket.enCours ? 'Lecture…' : 'Photographier le ticket'}
+            sousTitre="Tout se remplit : date, heure, tarif"
+            icone={<Ionicons name="camera-outline" size={18} color={couleurs.texte} />}
+            desactive={photoTicket.enCours}
+            onPress={() => photoTicket.lancer('APPAREIL')}
+          />
+          <Bouton
+            titre="Choisir une photo du ticket"
+            variante="secondaire"
+            icone={<Ionicons name="images-outline" size={18} color={couleurs.texteDoux} />}
+            desactive={photoTicket.enCours}
+            onPress={() => photoTicket.lancer('GALERIE')}
+          />
+          {messageTicket ? (
+            <Carte style={{ borderColor: 'rgba(245,165,36,0.35)' }}>
+              <Txt v="petit" couleur={couleurs.texteDoux}>
+                {messageTicket}
+              </Txt>
+            </Carte>
+          ) : null}
         </>
       ) : (
         <Animated.View entering={FadeInDown} style={{ gap: espace.md }}>
-          <Section>Les informations de votre ticket</Section>
+          <Section>Les informations de votre ticket papier</Section>
           <Carte style={{ gap: espace.md }}>
             <SaisieTicket libelle="N° DU TICKET" valeur={reference} onChange={setReference} placeholder="66456" clavier="number-pad" />
           </Carte>

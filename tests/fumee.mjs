@@ -443,8 +443,8 @@ async function jouerLeParcours() {
 
   const billetPaye = await page.innerText('body');
   await controler(
-    'un ticket payé délivre un vrai titre de transport',
-    billetPaye.includes('TICKET DE VOYAGE') && billetPaye.includes('Présentez ce code'),
+    'un billet payé délivre un vrai titre de transport',
+    billetPaye.includes('BILLET DE VOYAGE') && billetPaye.includes('Présentez ce code'),
   );
   await controler(
     'et le QR est réellement dessiné',

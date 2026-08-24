@@ -34,8 +34,15 @@ Ils priment sur toute demande de fonctionnalité. Si une demande les contredit,
 
 ### I. Aucun titre de transport avant que le paiement soit constaté
 
-Pas de QR, pas de code-barres, pas le mot « ticket ». Une place retenue s'affiche
-comme une place retenue.
+Pas de QR, pas de code-barres, ni le mot « ticket » ni le mot « billet » — ce sont
+deux noms pour la même chose. Une place retenue s'affiche comme une place retenue.
+
+**Et pas seulement dans les mots : dans la forme.** L'écran a longtemps dessiné la
+souche magenta du ticket papier, le logo, le numéro en grand et « ALLER SIMPLE » sur
+une réservation **impayée**. Elle portait bien l'étiquette « RÉSERVATION » en petites
+capitales — mais on ne lit pas une étiquette, on reconnaît une forme, et quelqu'un
+peut se présenter au bus avec une forme reconnaissable. Le bandeau coloré, la mention
+« aller simple » et le vocabulaire du titre sont réservés à ce qui est payé.
 
 Une seule fonction en décide : `paiementEtabli()` dans `src/lib/parcours.ts`. Elle
 ne regarde que le statut posé par la compagnie (`PAYEE`, `EMBARQUE`) et la date
@@ -124,6 +131,21 @@ La garde vient **après** tous les crochets (voir §4).
 ---
 
 ## 3. Conventions d'écriture
+
+### Un seul mot par chose : **billet**
+
+« Ticket » et « billet » désignent la même chose, et l'application employait les deux
+pour le même objet — « TICKET DE VOYAGE » sur la souche numérique, « votre billet »
+partout ailleurs. Deux mots pour une chose, c'est le lecteur qui cherche la
+différence.
+
+- **Billet** — le titre de transport, quel que soit son support.
+- **Ticket papier** — uniquement le document physique que la gare remet, parce que
+  c'est le mot imprimé dessus et celui que le voyageur a en main.
+- **Avant paiement, ni l'un ni l'autre.** Une place retenue n'est pas un titre : elle
+  s'appelle « place retenue », et l'écran ne doit pas non plus en avoir *l'allure*
+  (voir §1, invariant I).
+
 
 - **Tout est en français** : noms de fonctions, de variables, de types, commentaires,
   messages d'interface, messages de commit. Sans exception.

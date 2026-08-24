@@ -59,8 +59,17 @@ export const couleurs = {
 export const degrades = {
   marque: ['#F0362F', '#8E1017'] as const,
   marqueDouce: ['rgba(240,54,47,0.22)', 'rgba(170,20,24,0.06)', 'rgba(10,7,14,0)'] as const,
-  /** Le bandeau du ticket papier, et lui seul. */
+  /**
+   * Le bandeau du ticket papier, et lui seul.
+   *
+   * « Et lui seul » n'était pas respecté : une réservation **impayée** portait le
+   * même bandeau magenta, le même logo et la même mention « aller simple » qu'un
+   * vrai titre de transport. Elle disait bien « RÉSERVATION » en petit, mais d'un
+   * coup d'œil c'était un billet — et un voyageur peut se présenter au bus avec.
+   */
   ticket: ['#F0357F', '#8E1149'] as const,
+  /** Une place retenue, pas encore payée : sobre, sans la couleur du titre. */
+  attente: ['#3B2C33', '#1A1216'] as const,
   vip: ['#F0CE7A', '#B98A1E'] as const,
   vipDirecte: ['#FFB35C', '#C7690D'] as const,
   classique: ['#7BA5F5', '#3A63BC'] as const,

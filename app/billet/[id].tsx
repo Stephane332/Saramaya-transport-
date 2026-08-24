@@ -15,6 +15,7 @@ import {
   Bouton,
   Carte,
   Ecran,
+  EnAttenteDeLaCompagnie,
   MessageErreur,
   Section,
   Trait,
@@ -22,6 +23,7 @@ import {
 } from '../../src/components/base';
 import { CONDITIONS_TRANSPORT, gareParId, ligneParId, paiementPourVille } from '../../src/data/reseau';
 import { useAction } from '../../src/lib/action';
+import { etatFonction } from '../../src/lib/disponibilite';
 import { politiqueAnnulation } from '../../src/lib/annulation';
 import { dateHeureDepart, retractationPossible } from '../../src/lib/confirmation';
 import { compteARebours, joursAvantExpiration, montant, telephone } from '../../src/lib/format';
@@ -124,13 +126,31 @@ export default function Billet() {
         </View>
       </View>
 
-      {/* Le billet, dessiné comme le ticket papier. Il prend du relief à l'inclinaison. */}
+      {/*
+        Le titre de transport se dessine comme le ticket papier — mais **seulement
+        quand c'en est un**.
+
+        Tant que le paiement n'est pas constaté, la souche magenta, la mention
+        « aller simple » et le numéro en grand faisaient de cette page un billet
+        au premier coup d'œil. Le mot « RÉSERVATION » en petites capitales ne
+        suffisait pas : on ne lit pas une étiquette, on reconnaît une forme. Et
+        quelqu'un peut se présenter au bus avec une forme reconnaissable.
+
+        Une place retenue porte donc un bandeau sobre, sans la couleur du titre,
+        sans « aller simple », et son numéro est annoncé pour ce qu'il est : une
+        référence à donner au guichet, pas un numéro de billet.
+      */}
       <Animated.View entering={FadeInDown.springify().damping(18)}>
        <CarteSpatiale intensite={8} style={styles.billet}>
-        <LinearGradient colors={degrades.ticket} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.souche}>
+        <LinearGradient
+          colors={actions.afficherBillet ? degrades.ticket : degrades.attente}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.souche}
+        >
           <View style={{ gap: 8, flex: 1 }}>
             <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
-              {actions.afficherBillet ? 'TICKET DE VOYAGE' : 'RÉSERVATION'}
+              {actions.afficherBillet ? 'BILLET DE VOYAGE' : 'PLACE RETENUE — PAS ENCORE UN TITRE'}
             </Txt>
             {/* Sur leurs supports, l'emblème est toujours posé sur du blanc. */}
             <View style={styles.plaqueLogo}>
@@ -142,16 +162,18 @@ export default function Billet() {
           </View>
           <View style={styles.numero}>
             <Txt v="minuscule" couleur="rgba(255,255,255,0.75)">
-              N°
+              {actions.afficherBillet ? 'N°' : 'RÉFÉRENCE'}
             </Txt>
             <Txt v="sousTitre" couleur="#fff">
               {r.reference}
             </Txt>
-            <View style={styles.sens}>
-              <Txt v="minuscule" couleur="#fff" style={{ fontSize: 9 }}>
-                ALLER SIMPLE
-              </Txt>
-            </View>
+            {actions.afficherBillet ? (
+              <View style={styles.sens}>
+                <Txt v="minuscule" couleur="#fff" style={{ fontSize: 9 }}>
+                  ALLER SIMPLE
+                </Txt>
+              </View>
+            ) : null}
           </View>
         </LinearGradient>
 
@@ -197,7 +219,7 @@ export default function Billet() {
                 r.siege
                   ? String(r.siege)
                   : actions.afficherBillet
-                    ? 'Voir le ticket'
+                    ? 'Voir le billet'
                     : 'Au guichet'
               }
             />
@@ -308,8 +330,16 @@ export default function Billet() {
           )}
 
           <View style={{ gap: 2 }}>
+            {/*
+              Le mot « ticket » ne s'écrit pas sur ce qui n'en est pas un. Cette
+              ligne annonçait « TICKET NON REMBOURSABLE » sur une réservation
+              impayée : elle nommait un titre inexistant et lui prêtait des
+              conditions qui ne s'appliquent qu'une fois le paiement encaissé.
+            */}
             <Txt v="minuscule" couleur={couleurs.texteFaible}>
-              TICKET NON REMBOURSABLE · VALIDE UNIQUEMENT POUR CE TRAJET · 30 JOURS
+              {actions.afficherBillet
+                ? 'BILLET NON REMBOURSABLE · VALIDE UNIQUEMENT POUR CE TRAJET · 30 JOURS'
+                : 'AUCUN TITRE DE TRANSPORT N’EST ENCORE ÉMIS · PLACE RETENUE SEULEMENT'}
             </Txt>
             {gare ? (
               <Txt v="minuscule" couleur={couleurs.texteFaible}>
@@ -453,6 +483,36 @@ export default function Billet() {
                   />
                 </>
               ) : null}
+
+              {/*
+                Ce que l'application ne peut pas faire, dit à l'endroit où on l'attend.
+
+                Il y avait ici « Comment votre billet apparaîtra : scannez votre
+                ticket papier ». C'était du travail inutile : quelqu'un qui est allé
+                au guichet **a déjà son ticket en main** — lui demander de le
+                rephotographier n'ajoute rien à son voyage.
+
+                La vérité est plus simple, et il faut la dire : tant que la compagnie
+                n'a pas ouvert son système, l'application ne peut pas savoir que vous
+                avez payé, donc pas émettre de titre. Le billet vient de la gare.
+                C'est exactement ce que `PAIEMENT_VERIFIE` annonce.
+              */}
+              <EnAttenteDeLaCompagnie {...etatFonction('PAIEMENT_VERIFIE')} />
+
+              {/*
+                Le scan du ticket papier garde une vraie utilité — mais pas celle-là.
+                Il sert à qui achète au guichet **sans passer par l'application** :
+                le voyage rejoint l'historique, le billet devient consultable hors
+                réseau, et l'expiration à trente jours est rappelée. Proposé donc
+                comme un service rendu, pas comme une étape à franchir.
+              */}
+              <Bouton
+                titre="J'ai déjà mon ticket papier"
+                sousTitre="L'ajouter : historique, hors ligne, rappels"
+                variante="secondaire"
+                icone={<Ionicons name="scan-outline" size={18} color={couleurs.texteDoux} />}
+                onPress={() => router.push('/reserver?scan=1')}
+              />
             </>
           ) : null}
 
@@ -533,7 +593,13 @@ function Rangee({ gauche, droite }: { gauche: string; droite: string }) {
       <Txt v="petit" couleur={couleurs.texteFaible}>
         {gauche}
       </Txt>
-      <Txt v="corpsFort" numberOfLines={1} style={{ maxWidth: '62%', textAlign: 'right' }}>
+      {/*
+        Deux lignes, pas une. Cette rangée sert entre autres à donner les numéros
+        Orange Money de la gare : ils étaient trois, et le troisième se faisait
+        couper — « 05 48 40 02 · 05 48 40 03 · … ». C'est précisément le numéro qu'il
+        faut composer pour payer, et le voyageur ne pouvait pas le lire.
+      */}
+      <Txt v="corpsFort" numberOfLines={2} style={{ maxWidth: '62%', textAlign: 'right' }}>
         {droite}
       </Txt>
     </View>
