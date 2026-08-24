@@ -176,7 +176,7 @@ export default function EcranGare() {
       <Section>Embarquement</Section>
       <Bouton
         titre="Contrôler les billets"
-        sousTitre="Scanner le QR à la porte du bus — fonctionne sans réseau"
+        sousTitre="À la porte du bus — fonctionne sans réseau"
         icone={<Ionicons name="scan-outline" size={18} color={couleurs.texte} />}
         onPress={() => router.push('/controle')}
       />

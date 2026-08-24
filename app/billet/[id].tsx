@@ -222,7 +222,7 @@ export default function Billet() {
           </View>
 
           <View style={styles.grille}>
-            <Case titre="NOM" valeur={`${voyageur.nom} ${voyageur.prenom}`} />
+            <Case titre="NOM" valeur={`${voyageur.nom} ${voyageur.prenom}`} lignes={2} />
             <Case titre="CONTACT" valeur={telephone(voyageur.telephone)} />
           </View>
 
@@ -540,13 +540,32 @@ function Rangee({ gauche, droite }: { gauche: string; droite: string }) {
   );
 }
 
-function Case({ titre, valeur, accent = false }: { titre: string; valeur: string; accent?: boolean }) {
+function Case({
+  titre,
+  valeur,
+  accent = false,
+  lignes = 1,
+}: {
+  titre: string;
+  valeur: string;
+  accent?: boolean;
+  /*
+   * Le nom du voyageur est ce que l'agent compare à la CNIB au moment du contrôle.
+   * « OUEDRAOGO FATI… » ne se compare à rien : un nom composé, courant ici, se
+   * faisait couper. Il prend deux lignes quand il en a besoin.
+   */
+  lignes?: number;
+}) {
   return (
     <View style={{ flex: 1 }}>
       <Txt v="minuscule" couleur={couleurs.texteFaible}>
         {titre}
       </Txt>
-      <Txt v="corpsFort" couleur={accent ? couleurs.marqueVif : couleurs.texte} numberOfLines={1}>
+      <Txt
+        v="corpsFort"
+        couleur={accent ? couleurs.marqueVif : couleurs.texte}
+        numberOfLines={lignes}
+      >
         {valeur}
       </Txt>
     </View>

@@ -271,7 +271,7 @@ export default function EcranCnib() {
             />
             <Bouton
               titre="Choisir mes images"
-              sousTitre="Les deux faces d’un coup, si elles sont déjà dans votre téléphone"
+              sousTitre="Les deux faces d’un coup"
               variante="secondaire"
               desactive={importer.enCours}
               icone={<Ionicons name="images-outline" size={18} color={couleurs.texteDoux} />}

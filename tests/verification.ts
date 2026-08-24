@@ -38,6 +38,7 @@ import {
   paiementEtabli,
 } from '../src/lib/parcours';
 import { politiqueAnnulation } from '../src/lib/annulation';
+import { confirmationTardiveRecevable } from '../src/lib/confirmation';
 import {
   etapeCourante,
   messageDestinataire,
@@ -63,8 +64,24 @@ import {
 } from '../src/lib/sha256';
 import type { Colis, Reservation, Voyageur } from '../src/types';
 
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
 let reussis = 0;
 let echoues = 0;
+
+/** Tous les écrans de l'application, pour les contrôles qui relisent l'interface. */
+function fichiersEcrans(dossier = 'app'): string[] {
+  return readdirSync(dossier, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory()
+      ? fichiersEcrans(join(dossier, e.name))
+      : e.name.endsWith('.tsx')
+        ? [join(dossier, e.name)]
+        : [],
+  );
+}
+
+const lireFichier = (chemin: string) => readFileSync(chemin, 'utf8');
 
 function verifier(nom: string, obtenu: unknown, attendu: unknown) {
   const a = JSON.stringify(obtenu);
@@ -1072,6 +1089,96 @@ verifier(
     dUnCoupLues.find((l) => l.face === 'VERSO')?.uri,
   ],
   ['le-recto', 'le-dos'],
+);
+
+/* ── Confirmation tardive ────────────────────────────────────────────────── */
+
+/*
+ * « Oui, je viens » promettait « Votre place est gardée » à toute heure, y compris
+ * après le départ. À cinq minutes du départ, la place part à la liste d'attente et
+ * l'application n'a aucun moyen de la retenir : l'assurance était fausse, et c'est
+ * le genre d'assurance qui fait rater un bus. La règle existait dans le code sans
+ * être branchée — elle l'est, et ces contrôles la tiennent.
+ */
+groupe('Confirmation tardive — jusqu’où « je viens » veut encore dire quelque chose');
+
+const resaConf: Reservation = {
+  ...billetDeBase,
+  date: '2026-09-10',
+  heure: '16:00',
+  statut: 'OPTION',
+};
+
+verifier(
+  'la veille, la confirmation est recevable',
+  confirmationTardiveRecevable(resaConf, new Date('2026-09-09T16:00:00')),
+  true,
+);
+verifier(
+  'une heure avant, encore recevable',
+  confirmationTardiveRecevable(resaConf, new Date('2026-09-10T15:00:00')),
+  true,
+);
+verifier(
+  'à six minutes du départ, encore recevable',
+  confirmationTardiveRecevable(resaConf, new Date('2026-09-10T15:54:00')),
+  true,
+);
+verifier(
+  'à quatre minutes, la place est déjà à la liste d’attente',
+  confirmationTardiveRecevable(resaConf, new Date('2026-09-10T15:56:00')),
+  false,
+);
+verifier(
+  'après le départ, plus rien à confirmer',
+  confirmationTardiveRecevable(resaConf, new Date('2026-09-10T16:30:00')),
+  false,
+);
+verifier(
+  'une réservation annulée ne se confirme pas',
+  confirmationTardiveRecevable(
+    { ...resaConf, statut: 'ANNULEE' },
+    new Date('2026-09-09T16:00:00'),
+  ),
+  false,
+);
+verifier(
+  'si la place a été réattribuée, c’est non quoi qu’il arrive',
+  confirmationTardiveRecevable(resaConf, new Date('2026-09-09T16:00:00'), true),
+  false,
+);
+
+/* ── Longueur des sous-titres de boutons ─────────────────────────────────── */
+
+/*
+ * Un défaut qu'aucun test de logique ne pouvait voir — il ne se découvre qu'en
+ * REGARDANT l'écran. Sur un téléphone de 390 points de large, le sous-titre d'un
+ * bouton tient sur une ligne et se fait couper au-delà : « fonctionne sans résea… ».
+ * Trois l'étaient, dont un sur l'écran des agents.
+ *
+ * Le seuil est empirique, mesuré sur les captures : au-delà, ça déborde. Ce contrôle
+ * lit les écrans eux-mêmes, comme une relecture automatique, et échoue avant qu'une
+ * phrase trop longue n'atteigne un téléphone.
+ */
+groupe('Écrans — un sous-titre de bouton ne doit pas déborder');
+
+const LIMITE_SOUS_TITRE = 52;
+const sousTitresTropLongs: string[] = [];
+for (const fichier of fichiersEcrans()) {
+  const source = lireFichier(fichier);
+  for (const [, guillemets, apostrophes] of source.matchAll(
+    /sousTitre=(?:"([^"]{10,})"|\{?\s*['"]([^'"]{10,})['"])/g,
+  )) {
+    const texte = guillemets ?? apostrophes ?? '';
+    if (texte.length > LIMITE_SOUS_TITRE) {
+      sousTitresTropLongs.push(`${fichier} — « ${texte} » (${texte.length})`);
+    }
+  }
+}
+verifier(
+  `aucun sous-titre au-dessus de ${LIMITE_SOUS_TITRE} caractères`,
+  sousTitresTropLongs,
+  [],
 );
 
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);

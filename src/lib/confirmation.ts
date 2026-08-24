@@ -65,7 +65,7 @@ export const ECHELLE_RAPPELS: EtapeRappel[] = [
     id: 'quatre-vingt-dix',
     libelle: 'Rappel insistant',
     minutesAvant: 90,
-    canal: 'PUSH_ET_SMS',
+    canal: 'PUSH_INSISTANT',
     intensite: 'INSISTANTE',
     message: ({ heure }) =>
       `Départ à ${heure}. Merci de confirmer votre présence pour garder votre place.`,
@@ -83,7 +83,7 @@ export const ECHELLE_RAPPELS: EtapeRappel[] = [
     id: 'dernier-appel',
     libelle: 'Dernier appel',
     minutesAvant: 45,
-    canal: 'PUSH_ET_SMS',
+    canal: 'PUSH_INSISTANT',
     intensite: 'MAXIMALE',
     message: ({ convocation }) =>
       `Dernier appel. Sans réponse à ${convocation}, votre place sera proposée à la liste d'attente.`,
@@ -175,14 +175,6 @@ export function evaluerReservation(
     : { type: 'RAPPEL', etape };
 }
 
-/** Horaires absolus de chaque rappel, pour programmer les notifications locales. */
-export function planifierRappels(r: Reservation): Array<{ etape: EtapeRappel; quand: Date }> {
-  const depart = dateHeureDepart(r);
-  return ECHELLE_RAPPELS.map((etape) => ({
-    etape,
-    quand: addMinutes(depart, -etape.minutesAvant),
-  })).filter(({ quand }) => quand.getTime() > Date.now());
-}
 
 /**
  * Une annulation reste rattrapable tant que la place n'a pas été réattribuée.
@@ -213,17 +205,3 @@ export function confirmationTardiveRecevable(
   return minutesRestantes >= MINUTES_LIBERATION_PLACE;
 }
 
-/**
- * Un push non délivré ne doit jamais être confondu avec un refus. Dans ce cas
- * seulement, l'agent décroche son téléphone — pour deux ou trois personnes, plus
- * pour tout le bus.
- */
-export function appelAgentNecessaire(
-  r: Reservation,
-  notificationDelivree: boolean,
-  maintenant: Date = new Date(),
-): boolean {
-  if (aRepondu(r) || estProtegee(r)) return false;
-  const minutesRestantes = differenceInMinutes(dateHeureDepart(r), maintenant);
-  return !notificationDelivree && minutesRestantes <= 90;
-}

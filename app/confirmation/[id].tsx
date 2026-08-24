@@ -16,7 +16,7 @@ import { fr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -37,11 +37,15 @@ import {
   Trait,
   Txt,
 } from '../../src/components/base';
-import { ligneParId } from '../../src/data/reseau';
+import { MINUTES_LIBERATION_PLACE, gareParId, ligneParId } from '../../src/data/reseau';
 import { useAction } from '../../src/lib/action';
 import { politiqueAnnulation } from '../../src/lib/annulation';
-import { dateHeureConvocation, estProtegee } from '../../src/lib/confirmation';
-import { compteARebours, montant } from '../../src/lib/format';
+import {
+  confirmationTardiveRecevable,
+  dateHeureConvocation,
+  estProtegee,
+} from '../../src/lib/confirmation';
+import { compteARebours, montant, telephone } from '../../src/lib/format';
 import { useApp } from '../../src/store/useApp';
 import { couleurs, degrades, espace, rayon } from '../../src/theme';
 
@@ -90,6 +94,7 @@ function Alarme({ reservationId }: { reservationId: string }) {
    */
   const r = reservations.find((x) => x.id === reservationId);
   const ligne = r ? ligneParId(r.ligneId) : null;
+  const gareDepart = r ? gareParId(r.gareDepartId) : null;
 
   const pulsation = useSharedValue(1);
   const lueur = useSharedValue(0.4);
@@ -118,6 +123,15 @@ function Alarme({ reservationId }: { reservationId: string }) {
   }, "Votre réponse n'a pas pu être enregistrée. Réessayez, ou appelez la gare.");
 
   if (!r) return <Introuvable />;
+
+  /*
+   * Passé le seuil de libération des places, « Oui, je viens » ne peut plus rien
+   * garder : à cinq minutes du départ, la place part à la liste d'attente, et
+   * l'application n'a aucun moyen de la retenir. Laisser le bouton actif avec
+   * « Votre place est gardée » serait une promesse que personne ne tient — c'est
+   * exactement le genre d'assurance qui fait rater un bus.
+   */
+  const recevable = confirmationTardiveRecevable(r);
 
   return (
     <Ecran defilant={false}>
@@ -155,11 +169,28 @@ function Alarme({ reservationId }: { reservationId: string }) {
           <MessageErreur texte={reponse.erreur} />
           <Bouton
             titre={reponse.enCours ? 'Enregistrement…' : 'Oui, je viens'}
-            sousTitre="Votre place est gardée"
+            sousTitre={
+              recevable
+                ? 'Votre place est gardée'
+                : `À moins de ${MINUTES_LIBERATION_PLACE} minutes du départ, seule la gare peut encore agir`
+            }
             variante="succes"
-            desactive={reponse.enCours}
+            desactive={reponse.enCours || !recevable}
             onPress={reponse.lancer}
           />
+          {!recevable && gareDepart?.telephones[0] ? (
+            <Bouton
+              titre="Appeler la gare"
+              sousTitre={telephone(gareDepart.telephones[0])}
+              variante="principal"
+              icone={<Ionicons name="call" size={18} color={couleurs.texte} />}
+              onPress={() =>
+                Linking.openURL(`tel:${gareDepart.telephones[0]?.replace(/\s/g, '')}`).catch(
+                  () => undefined,
+                )
+              }
+            />
+          ) : null}
           <Bouton
             titre="Je ne peux pas venir"
             variante="secondaire"

@@ -363,7 +363,7 @@ export default function Bienvenue() {
               sousTitre={
                 carteLue
                   ? undefined
-                  : 'Les deux faces d’un coup, si elles sont déjà dans votre téléphone'
+                  : 'Les deux faces d’un coup'
               }
               variante="secondaire"
               desactive={importer.enCours}
@@ -533,9 +533,18 @@ export default function Bienvenue() {
             </Txt>
           </View>
 
+          {/*
+            Ce lien n'avait ni icône ni chevron : à l'écran, il ressemblait à une
+            phrase centrée sous un grand vide, et rien ne disait qu'on pouvait le
+            toucher. Un bouton qu'on ne reconnaît pas comme tel est un bouton que
+            personne n'appuie — et c'est la politique de confidentialité qu'on
+            cachait ainsi, au moment précis où l'on demande une pièce d'identité.
+          */}
           <Bouton
             titre="Ce qui est fait de vos informations"
-            variante="fantome"
+            sousTitre="Lire la politique de confidentialité"
+            variante="secondaire"
+            icone={<Ionicons name="shield-checkmark-outline" size={18} color={couleurs.texteDoux} />}
             onPress={() => router.push('/confidentialite')}
           />
         </ScrollView>

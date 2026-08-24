@@ -50,8 +50,11 @@ const ATTENTE: Record<Fonction, Omit<Etat, 'disponible'>> = {
   },
   PLACES_OCCUPEES: {
     promesse: 'Le plan de la voiture, avec les places déjà vendues et celles qui restent.',
+    // Court, exprès : l'écran explique juste en dessous comment la place est
+    // attribuée. Deux paragraphes qui disent la même chose à la suite, et le
+    // voyageur ne lit ni l'un ni l'autre.
     raison:
-      "Seule la billetterie de la compagnie connaît l'aménagement de la voiture et les places vendues. En attendant, l'application ne dessine aucun plan : elle transmet le numéro que vous souhaitez, et c'est l'agent qui attribue la place en encaissant.",
+      "Seule la billetterie de la compagnie connaît l'aménagement de la voiture et les places déjà vendues.",
   },
   MANIFESTE_COMPLET: {
     promesse: 'La liste de tous les voyageurs d\'un départ, avec leur paiement en direct.',

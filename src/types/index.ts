@@ -153,7 +153,13 @@ export interface EtapeRappel {
   libelle: string;
   /** Minutes avant l'heure de départ. */
   minutesAvant: number;
-  canal: 'PUSH' | 'PUSH_ET_SMS' | 'ALARME';
+  /*
+   * Le canal s'appelait « PUSH_ET_SMS », et aucun SMS n'a jamais été envoyé : ce nom
+   * décrivait une intention, pas le code. L'application n'envoie jamais de message
+   * toute seule — sa politique de confidentialité l'affirme, et seuls partent les
+   * messages que l'utilisateur envoie lui-même. Trois canaux, donc, tous locaux.
+   */
+  canal: 'PUSH' | 'PUSH_INSISTANT' | 'ALARME';
   intensite: 'DOUCE' | 'NORMALE' | 'INSISTANTE' | 'MAXIMALE';
   message: (ctx: { ligne: string; heure: string; convocation: string }) => string;
 }

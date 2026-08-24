@@ -59,14 +59,25 @@ aucun écran n'est réécrit.
 L'application remplace l'appel de la gare par une escalade de rappels, qui va du plus doux au
 plus insistant :
 
-| Quand | Canal | Message |
+| Quand | Ce qui part réellement | Message |
 |---|---|---|
 | J-1 | Notification | « Votre voyage part demain à 16:00. Confirmez-vous ? » |
 | T-3 h | Notification | Rappel de l'heure de convocation |
-| T-90 min | Notification + SMS | Insistant |
-| **T-60 min** | **Alarme plein écran** | Sonne comme un réveil jusqu'à ce qu'on réponde |
-| T-45 min | Notification + SMS | Dernier appel, avec l'heure limite affichée |
+| T-90 min | Notification insistante | « Confirmez, sinon votre place sera proposée » |
+| **T-60 min** | **Notification sur un canal d'alarme dédié** | Son et priorité maximale, en tête de la pile |
+| T-45 min | Notification, priorité maximale | Dernier appel, avec l'heure limite affichée |
 | T-30 min (convocation) | — | **Signalement à la gare, jamais annulation automatique** |
+
+> **Ce tableau a été corrigé après vérification du code.** Il annonçait un SMS aux
+> deux avant-derniers échelons et une « alarme plein écran qui sonne comme un réveil
+> jusqu'à ce qu'on réponde ». Ni l'un ni l'autre n'existe, et l'un des deux ne peut
+> pas exister : **l'application n'envoie jamais de SMS toute seule** — c'est la règle
+> qu'elle publie dans sa politique de confidentialité, où seuls partent les messages
+> que l'utilisateur envoie lui-même. Ce qui est programmé, ce sont cinq notifications
+> locales d'intensité croissante, dont une sur un canal Android dédié qui sonne et
+> passe devant les autres. C'est réel, c'est utile, et c'est moins que ce qui était
+> écrit. Le montrer à la compagnie en promettant un réveil qui ne sonne pas serait la
+> pire façon d'ouvrir la discussion.
 
 À l'échéance, une réservation **non payée** sans réponse bascule en « sans réponse » sur
 l'écran de la gare : c'est un agent qui décide, pas un minuteur. Un billet **payé** n'est
@@ -79,8 +90,16 @@ Cinq garde-fous protègent la place du voyageur :
 2. **Rétractation** possible pendant 15 minutes, tant que la place n'a pas été réattribuée.
 3. Le silence n'annule **jamais** un billet payé.
 4. Une **confirmation tardive** reste recevable jusqu'à 5 minutes du départ.
-5. Si la notification n'est pas délivrée, la gare le voit et **appelle cette personne-là** —
-   deux ou trois par bus, au lieu de quarante.
+5. À l'échéance, une réservation restée sans réponse apparaît **« sans réponse »** sur
+   l'écran de la gare, qui appelle alors ces personnes-là — deux ou trois par bus, au
+   lieu de quarante.
+
+> **Ce point disait autre chose** : « si la notification n'est pas délivrée, la gare
+> le voit ». Elle ne peut pas. Une notification **locale** n'a pas d'accusé de
+> réception : le téléphone la programme lui-même, et rien ne remonte. Le code
+> contenait une fonction bâtie sur cette information inexistante — elle a été
+> supprimée. Ce que la gare voit réellement, c'est l'absence de réponse, ce qui
+> suffit largement à savoir qui appeler.
 
 ## Reporter plutôt qu'annuler
 
