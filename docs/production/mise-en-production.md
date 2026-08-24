@@ -16,8 +16,10 @@ claire de ce qui dépend de la compagnie.
 - **`app.json`** — identité de l'app : nom, `bundleIdentifier` iOS
   (`com.saramaya.transport`), `package` Android, icône (le kangourou et son petit sur
   fond rouge), écran de démarrage, permissions Android (caméra, vibration,
-  notifications, alarme exacte, démarrage), et les plugins natifs
-  (`expo-router`, `expo-camera`, `expo-notifications`).
+  notifications, alarme exacte, démarrage), les permissions **bloquées** (micro et
+  superposition d'écran, que les bibliothèques ajoutent d'elles-mêmes alors que
+  l'application ne s'en sert pas), et les plugins natifs (`expo-router`,
+  `expo-camera`, `expo-notifications`, `expo-image-picker`).
 - **`app.config.js`** — ajoute le sous-chemin GitHub Pages au build web sans
   gêner les builds natifs.
 
@@ -31,7 +33,7 @@ claire de ce qui dépend de la compagnie.
 | Compte **Apple Developer** (99 $/an) | developer.apple.com | Publier sur iOS |
 | **Autorisation écrite** de Saramaya | la compagnie | Publier sous leur nom et leur marque |
 
-### La politique de confidentialité : écrite, mais pas encore en ligne
+### La politique de confidentialité : écrite, et en ligne
 
 Les deux boutiques refusent une application sans **adresse publique** menant à une
 politique de confidentialité — a fortiori une application qui touche à une pièce
@@ -41,15 +43,25 @@ Elle est dans le dépôt, et elle n'est pas un document à part : c'est l'écran
 `app/confidentialite.tsx`, alimenté par `src/data/mentionsLegales.ts`. Le voyageur la
 lit depuis son profil, **hors ligne**.
 
-Ce qui manque est l'**adresse publique** : aucun déploiement n'a encore eu lieu, donc
-ce lien n'existe pas encore. Il naîtra du premier `eas deploy --prod`, et prendra la
-forme :
+**L'adresse publique existe.** Le site est en ligne sur GitHub Pages, et voici
+l'adresse exacte à déclarer aux deux boutiques :
 
 ```
-https://<le-domaine-du-déploiement>/confidentialite
+https://stephane332.github.io/Saramaya-transport-/confidentialite/
 ```
 
-où `<le-domaine-du-déploiement>` est l'adresse renvoyée par `eas deploy --prod`.
+> **La barre finale n'est pas décorative.** Sans elle, GitHub Pages répond 301 vers
+> la version avec barre. Les robots suivent la redirection, donc les deux marchent —
+> mais on déclare l'adresse qui répond **200 directement**, sans intermédiaire.
+>
+> Elle a d'abord répondu **404**. La page s'affichait pourtant : Pages ne connaît
+> qu'`index.html`, le repli en `404.html` fait démarrer l'application, qui route
+> ensuite côté client. Invisible pour un humain, rédhibitoire pour le robot d'Apple
+> ou de Google qui vient lire l'adresse pendant la revue. `preparer-pages.mjs` écrit
+> désormais un vrai fichier à cet endroit.
+
+Si vous publiez plutôt chez Expo (`eas deploy --prod`), l'adresse devient
+`https://<le-domaine-renvoyé>/confidentialite` — les deux voies restent valables.
 
 > **Règle à tenir.** Ce texte décrit ce que le logiciel fait *aujourd'hui*. Toute
 > modification qui change ce qui sort du téléphone — un serveur, une mesure d'audience,
