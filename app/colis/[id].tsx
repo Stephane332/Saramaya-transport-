@@ -121,21 +121,41 @@ export default function DetailColis() {
           </LinearGradient>
         </Animated.View>
       ) : (
-        /* Le code de retrait, en très grand : c'est l'information centrale. */
+        /*
+          Le code de retrait — **celui du guichet, ou rien qui y ressemble.**
+
+          Cet encadré affichait le code que l'application se fabrique à la
+          préparation, en très grand, avec un QR, sous le titre « CODE DE RETRAIT — à
+          présenter au guichet ». Quand le guichet n'en avait pas remis, c'était une
+          promesse intenable : le destinataire se déplaçait, présentait un code que
+          personne n'a jamais émis, et repartait sans le colis. Pire que du travail
+          inutile — un colis perdu.
+
+          Le code de la compagnie fait foi. Le nôtre n'est qu'une référence interne
+          entre l'expéditeur et le destinataire : il est montré comme telle, sans QR,
+          sans « à présenter », et l'écran dit ce qui fera réellement foi au retrait.
+        */
         <Animated.View entering={FadeInDown.springify().damping(18)}>
-          <LinearGradient colors={degrades.marque} style={styles.carteCode}>
+          <LinearGradient
+            colors={c.codeDuGuichet ? degrades.marque : degrades.nuit}
+            style={styles.carteCode}
+          >
             <Txt v="minuscule" couleur="rgba(255,255,255,0.85)">
-              CODE DE RETRAIT
+              {c.codeDuGuichet ? 'CODE DE RETRAIT' : 'RÉFÉRENCE DE VOTRE ENVOI'}
             </Txt>
             <Txt v="geant" couleur="#fff" style={{ letterSpacing: 4, fontSize: 44 }}>
               {c.codeRetrait}
             </Txt>
             <Txt v="petit" couleur="rgba(255,255,255,0.85)" style={{ textAlign: 'center' }}>
-              À présenter au guichet de {arrivee?.nom}, avec une pièce d'identité
+              {c.codeDuGuichet
+                ? `À présenter au guichet de ${arrivee?.nom ?? 'destination'}, avec une pièce d'identité`
+                : `Le guichet ne vous a pas remis de code. Au retrait, ce sont le nom du destinataire et sa pièce d'identité qui font foi à ${arrivee?.nom ?? 'destination'} — cette référence sert seulement à vous retrouver entre vous.`}
             </Txt>
-            <View style={styles.cadreQr}>
-              <QRCode value={c.codeRetrait} size={92} backgroundColor="#FFFFFF" color="#0A070E" />
-            </View>
+            {c.codeDuGuichet ? (
+              <View style={styles.cadreQr}>
+                <QRCode value={c.codeRetrait} size={92} backgroundColor="#FFFFFF" color="#0A070E" />
+              </View>
+            ) : null}
           </LinearGradient>
         </Animated.View>
       )}

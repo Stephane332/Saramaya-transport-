@@ -39,14 +39,26 @@ export function messageDestinataire(colis: Colis, nomExpediteur: string): string
     ``,
     `${nomExpediteur} vous envoie un colis par Saramaya Transport.`,
     ``,
-    `Code de retrait : ${colis.codeRetrait}`,
+    /*
+     * Le code du guichet fait foi ; le nôtre n'est qu'une référence.
+     *
+     * Ce message annonçait « Code de retrait » et « Présentez ce code au guichet »
+     * quel que soit son origine. Quand le guichet n'en avait pas remis, le
+     * destinataire se déplaçait avec un code que personne n'a jamais émis. Un colis
+     * perdu vaut mieux d'être annoncé pour ce qu'il est.
+     */
+    colis.codeDuGuichet
+      ? `Code de retrait : ${colis.codeRetrait}`
+      : `Référence de l'envoi : ${colis.codeRetrait}`,
     `Référence : ${colis.reference}`,
     ``,
     `Départ : ${depart?.nom ?? '—'}`,
     `À retirer : ${arrivee?.nom ?? '—'}`,
     arrivee?.telephones[0] ? `Téléphone de la gare : ${arrivee.telephones[0]}` : null,
     ``,
-    `Présentez ce code et une pièce d'identité au guichet.`,
+    colis.codeDuGuichet
+      ? `Présentez ce code et une pièce d'identité au guichet.`
+      : `Au guichet, présentez votre pièce d'identité : c'est votre nom qui fait foi. Donnez la référence ci-dessus si on vous la demande.`,
     /*
      * Aucune promesse d'alerte automatique : le destinataire n'a pas cette
      * application, et la compagnie seule peut le prévenir. On donne donc ce qui

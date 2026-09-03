@@ -1254,5 +1254,108 @@ verifier(
   undefined,
 );
 
+/* ── Le code de retrait d'un colis ───────────────────────────────────────── */
+
+/*
+ * Le défaut le plus coûteux trouvé dans cet audit — il ne faisait pas perdre du
+ * temps, il faisait perdre un colis.
+ *
+ * L'application se fabrique un code à la préparation, en attendant celui du
+ * guichet. Elle l'affichait en très grand, avec un QR, sous le titre « CODE DE
+ * RETRAIT — à présenter au guichet », et l'envoyait tel quel au destinataire. Quand
+ * le guichet n'en avait remis aucun, le destinataire se déplaçait et présentait un
+ * code que personne n'avait jamais émis.
+ *
+ * Le code de la compagnie fait foi. Le nôtre est une référence entre expéditeur et
+ * destinataire, et le message doit le dire.
+ */
+groupe('Colis — un code inventé ne se présente pas comme celui du guichet');
+
+const colisSansCode: Colis = { ...colisPrepare, codeRetrait: 'K7X2M9' };
+const colisAvecCode: Colis = { ...colisPrepare, codeRetrait: '884120', codeDuGuichet: true };
+
+const messageSansCode = messageDestinataire(colisSansCode, 'OUEDRAOGO Fatimata');
+const messageAvecCode = messageDestinataire(colisAvecCode, 'OUEDRAOGO Fatimata');
+
+verifier(
+  'sans code du guichet, on n’annonce pas un « code de retrait »',
+  messageSansCode.includes('Code de retrait :'),
+  false,
+);
+verifier(
+  'on annonce une référence',
+  messageSansCode.includes("Référence de l'envoi : K7X2M9"),
+  true,
+);
+verifier(
+  'et on ne demande pas de présenter ce code au guichet',
+  messageSansCode.includes('Présentez ce code'),
+  false,
+);
+verifier(
+  'ce qui fait foi est dit : la pièce d’identité',
+  messageSansCode.includes("pièce d'identité"),
+  true,
+);
+verifier(
+  'avec le code du guichet, il est annoncé comme tel',
+  messageAvecCode.includes('Code de retrait : 884120'),
+  true,
+);
+verifier(
+  'et là, on demande bien de le présenter',
+  messageAvecCode.includes('Présentez ce code'),
+  true,
+);
+
+/* ── Migration vers la version 4 ─────────────────────────────────────────── */
+
+/*
+ * `demandeEnvoyeeLe` est purement additif : une réservation d'avant ne le porte
+ * pas, et son absence dit exactement la vérité — la demande n'est pas partie depuis
+ * l'application. Ces contrôles vérifient qu'aucune réservation n'est perdue au
+ * passage et que rejouer la migration ne change rien.
+ */
+groupe('Migration v3 → v4 — un champ ajouté ne coûte aucune donnée');
+
+const avantV4 = {
+  voyageur: { id: 'v1', nom: 'OUEDRAOGO', prenom: 'Fatimata' },
+  reservations: [
+    { ...billetDeBase, id: 'r1' },
+    { ...billetDeBase, id: 'r2', statut: 'PAYEE' as const },
+  ],
+  colis: [],
+  caisse: null,
+};
+
+const apresV4 = migrerEtat(avantV4, 3);
+verifier('les deux réservations survivent', apresV4.reservations?.length, 2);
+verifier(
+  'leurs identifiants sont intacts',
+  apresV4.reservations?.map((r) => r.id),
+  ['r1', 'r2'],
+);
+verifier(
+  "l'absence du champ signifie « demande non envoyée »",
+  apresV4.reservations?.every((r) => r.demandeEnvoyeeLe === undefined),
+  true,
+);
+verifier('le voyageur est intact', apresV4.voyageur?.nom, 'OUEDRAOGO');
+verifier(
+  'rejouer la migration ne change rien',
+  JSON.stringify(migrerEtat(apresV4, 3)),
+  JSON.stringify(apresV4),
+);
+// Une réservation qui porte déjà la date n'est pas réinitialisée.
+const dejaEnvoyee = migrerEtat(
+  { ...avantV4, reservations: [{ ...billetDeBase, demandeEnvoyeeLe: '2026-08-01T10:00:00.000Z' }] },
+  3,
+);
+verifier(
+  'une demande déjà envoyée le reste',
+  dejaEnvoyee.reservations?.[0]?.demandeEnvoyeeLe,
+  '2026-08-01T10:00:00.000Z',
+);
+
 console.log(`\n${reussis} réussis, ${echoues} échoués\n`);
 process.exit(echoues > 0 ? 1 : 0);

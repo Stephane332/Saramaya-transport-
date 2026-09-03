@@ -28,7 +28,7 @@ import type { Caisse, Colis, Reservation, Voyageur } from '../types';
  * 3 — un colis naît « à déposer » et non « déposé » : `prepareLe` devient le
  *     moment de la préparation, `deposeLe` n'existe qu'après passage au guichet.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** La part de l'état qui est réellement enregistrée sur le téléphone. */
 export interface EtatEnregistre {
@@ -78,6 +78,17 @@ export function migrerEtat(
       }),
     };
   }
+
+  /*
+   * Version 4 : ajout de `demandeEnvoyeeLe` sur les réservations.
+   *
+   * **Aucune donnée à transformer.** Le champ est facultatif, et son absence dit
+   * exactement ce qu'il faut dire d'une réservation d'avant : la demande n'a pas été
+   * envoyée depuis l'application. Cette étape est donc vide — et elle est écrite
+   * quand même, parce que la règle du projet veut qu'un changement de forme des
+   * données enregistrées se voie dans ce fichier, fût-il sans effet. Une version
+   * silencieuse est une version qu'on oublie d'avoir passée.
+   */
 
   return etat;
 }

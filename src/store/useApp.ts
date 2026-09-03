@@ -59,6 +59,7 @@ interface EtatApp {
   reprendre: (id: string) => Promise<void>;
   reporter: (id: string, nouveau: { date: string; heure: string }) => Promise<void>;
   marquerPaiementDeclare: (id: string, moyen: Reservation['moyenPaiement']) => Promise<void>;
+  marquerDemandeEnvoyee: (id: string) => Promise<void>;
   importerPapier: (t: TicketScanne) => Promise<Reservation>;
 
   envoyerColis: (d: DemandeColis, moyen: Colis['moyenPaiement']) => Promise<Colis>;
@@ -180,6 +181,22 @@ export const useApp = create<EtatApp>()(
         set({
           reservations: get().reservations.map((r) =>
             r.id === id ? { ...r, moyenPaiement: moyen, paiementDeclareLe: new Date().toISOString() } : r,
+          ),
+        });
+      },
+
+      /**
+       * Retient que la demande est partie vers la gare.
+       *
+       * On enregistre l'**ouverture** du message, pas sa réception : l'application
+       * ne peut pas savoir si le SMS est parti, ni s'il a été lu. Ce qu'on note sert
+       * uniquement à cesser de réclamer en premier un geste déjà fait — et l'écran
+       * propose toujours de le renvoyer, précisément parce qu'on n'en est pas sûr.
+       */
+      marquerDemandeEnvoyee: async (id) => {
+        set({
+          reservations: get().reservations.map((r) =>
+            r.id === id ? { ...r, demandeEnvoyeeLe: new Date().toISOString() } : r,
           ),
         });
       },

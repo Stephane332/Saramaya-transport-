@@ -129,6 +129,15 @@ export interface Reservation {
   payeLe?: string;
   /** Le voyageur a déclaré avoir payé (mobile money). Non vérifié tant qu'il n'y a pas de backend. */
   paiementDeclareLe?: string;
+  /**
+   * Date d'envoi du message à la gare — le pont de l'horizon 1.
+   *
+   * Sans ce message, la réservation n'existe que dans ce téléphone : la gare
+   * n'a rien enregistré, la place n'est pas retenue chez elle, et la référence
+   * affichée ne correspond à rien qu'un guichet puisse retrouver. Le savoir permet
+   * à l'écran de le réclamer en premier, puis de cesser d'insister.
+   */
+  demandeEnvoyeeLe?: string;
   confirmeLe?: string;
   annuleLe?: string;
   /** Validité de 30 jours, comme sur le ticket papier. */

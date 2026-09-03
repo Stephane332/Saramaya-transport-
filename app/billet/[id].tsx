@@ -46,6 +46,7 @@ export default function Billet() {
   const marquerPaiementDeclare = useApp((e) => e.marquerPaiementDeclare);
   const confirmer = useApp((e) => e.confirmer);
   const reprendre = useApp((e) => e.reprendre);
+  const marquerDemandeEnvoyee = useApp((e) => e.marquerDemandeEnvoyee);
   const [conditionsVisibles, setConditionsVisibles] = useState(false);
 
   const r = reservations.find((x) => x.id === id);
@@ -89,6 +90,7 @@ export default function Billet() {
         ? `sms:${numero}?body=${encodeURIComponent(texte)}`
         : `sms:${numero}${separateur}body=${encodeURIComponent(texte)}`;
     await Linking.openURL(url);
+    await marquerDemandeEnvoyee(r.id);
   }, "L'application de messages n'a pas pu être ouverte. Le numéro de la gare est indiqué sur le billet.");
 
   if (!r || !voyageur) {
@@ -405,6 +407,39 @@ export default function Billet() {
 
           {!actions.afficherBillet ? (
             <>
+              {/*
+                Le premier geste, et il était le dernier.
+
+                « Envoyer la demande à la gare » se trouvait tout en bas de l'écran,
+                sous le paiement, le report et l'annulation. Or **sans lui, la gare
+                ne sait rien** : la réservation n'existe que dans ce téléphone, la
+                place n'est pas retenue chez eux, et la référence que l'application
+                affiche ne correspond à rien qu'un guichet puisse retrouver. Tout le
+                pont de l'horizon 1 tient à ce message, et il fallait le chercher.
+
+                Il vient donc en premier, et l'écran dit dans quel ordre faire les
+                choses : prévenir, payer, déclarer.
+              */}
+              <MessageErreur texte={demandeGare.erreur} />
+              <Bouton
+                titre={r.demandeEnvoyeeLe ? 'Renvoyer la demande à la gare' : '1 · Prévenir la gare'}
+                sousTitre={
+                  r.demandeEnvoyeeLe
+                    ? 'Déjà envoyée — à renvoyer si la gare ne rappelle pas'
+                    : `SMS pré-rempli vers ${gare?.telephones[0] ?? 'la gare'}`
+                }
+                variante={r.demandeEnvoyeeLe ? 'secondaire' : 'principal'}
+                icone={
+                  <Ionicons
+                    name={r.demandeEnvoyeeLe ? 'checkmark-circle-outline' : 'send-outline'}
+                    size={18}
+                    color={r.demandeEnvoyeeLe ? couleurs.texteDoux : couleurs.texte}
+                  />
+                }
+                desactive={demandeGare.enCours}
+                onPress={demandeGare.lancer}
+              />
+
               <Carte style={{ borderColor: 'rgba(245,165,36,0.35)' }}>
                 <Txt v="corpsFort" couleur={couleurs.attention}>
                   {r.paiementDeclareLe ? 'Paiement déclaré' : 'Réservation à payer'}
@@ -527,15 +562,6 @@ export default function Billet() {
               />
             </>
           ) : null}
-
-          <MessageErreur texte={demandeGare.erreur} />
-          <Bouton
-            titre="Envoyer la demande à la gare"
-            sousTitre={`SMS pré-rempli vers ${gare?.telephones[0] ?? 'la gare'}`}
-            variante="secondaire"
-            desactive={demandeGare.enCours}
-            onPress={demandeGare.lancer}
-          />
 
           <Bouton
             titre="Reporter mon voyage"
