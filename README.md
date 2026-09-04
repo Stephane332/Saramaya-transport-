@@ -130,7 +130,7 @@ npm run web             # ou dans le navigateur
 Vérifications :
 
 ```bash
-npm run verifier                        # paquets, types, 200 exemples, 22 invariants
+npm run verifier                        # paquets, types, exemples, invariants
 npm run fumee                           # les deux paquets, dans un vrai navigateur
 ```
 
@@ -280,7 +280,7 @@ src/
   store/                useApp.ts (zustand + AsyncStorage), migration.ts
   sync/                 types.ts (SyncProvider), localProvider.ts
   theme/                couleurs, typographie, espacements
-tests/                  verification.ts (200 exemples), invariants.ts (22 propriétés), fumee.mjs (navigateur)
+tests/                  verification.ts (exemples), invariants.ts (propriétés), fumee.mjs (navigateur)
 docs/presentation/      argumentaire, chiffres à collecter, déroulé de démonstration
 docs/production/        état de préparation, mise en production, partage et mises à jour
 docs/integration/       comment se brancher sur la billetterie Digiparc de la compagnie

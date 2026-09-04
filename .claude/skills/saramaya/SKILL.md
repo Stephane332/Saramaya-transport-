@@ -188,6 +188,11 @@ npm run verifier   # paquets, types de routes régénérés, tsc, exemples, inva
 npm run fumee      # les deux paquets s'ouvrent dans un vrai navigateur
 ```
 
+> **Un seul document porte le nombre de contrôles** — la première section de
+> `docs/production/etat-de-preparation.md`. Il s'est trouvé périmé trois fois parce
+> qu'il était recopié dans le README et ailleurs ; ces copies ont été retirées. En
+> ajoutant des tests, rafraîchir ce chiffre-là, et lui seul.
+
 > **Tout export porte `--clear`, sans exception.** Metro fige la valeur des
 > variables `EXPO_PUBLIC_*` dans ses modules transformés, et la contamination va
 > dans les deux sens :

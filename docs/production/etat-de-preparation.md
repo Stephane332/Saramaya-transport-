@@ -18,11 +18,16 @@ Ce qui relève de Saramaya est branché et attend leur feu vert.
 
 ## 1. Ce qui est fini et vérifié
 
-**14 écrans, 23 modules de règles, 11 900 lignes, 222 contrôles automatiques**, plus
-les parcours joués de bout en bout dans un vrai navigateur — voyageur et agent.
+**14 écrans, 24 modules de règles, 16 500 lignes, 259 contrôles automatiques** —
+237 exemples et 22 invariants — plus 33 contrôles joués de bout en bout dans un vrai
+navigateur, côté voyageur et côté agent.
+
+> Ce chiffre est le seul du dossier à devoir être rafraîchi à la main ; les autres
+> documents ne le répètent plus, précisément parce qu'il s'est trouvé périmé trois
+> fois. `npm run verifier` affiche le total exact à chaque exécution.
 
 ```bash
-npm run verifier    # paquets, types, 200 exemples, 22 invariants
+npm run verifier    # paquets, types, exemples, invariants
 npm run fumee       # les deux paquets s'ouvrent dans Chromium : 33 contrôles
 ```
 
@@ -221,7 +226,7 @@ Pour que ce ne soit pas un oubli :
 Le détail est dans `mise-en-production.md`. En deux lignes :
 
 ```bash
-npm run verifier      # versions, types, 200 exemples, 22 invariants
+npm run verifier      # versions, types, exemples, invariants
 npm run fumee         # l'application s'ouvre et se laisse utiliser pour de vrai
 ```
 
