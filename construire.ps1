@@ -149,16 +149,30 @@ Write-Host '  Comptez 10 a 20 minutes. Vous pouvez fermer cette fenetre sans rie
 Write-Host '  le lien de telechargement restera sur https://expo.dev/accounts' -ForegroundColor DarkGray
 Write-Host ''
 
-npx $EAS build --platform android --profile preview
-if ($LASTEXITCODE -ne 0) {
-    Abandonner 'La construction a echoue.' `
-        'Envoyez le message ci-dessus a Claude. Le journal complet est aussi consultable sur https://expo.dev'
+# --non-interactive : sans lui, EAS propose a la fin « Install and run the Android
+# build on an emulator? », repond « yes » tout seul, et tente de lancer un emulateur
+# Android qui n'existe pas sur ce PC. L'echec de CETTE etape faisait echouer la
+# commande entiere — et ce script annoncait « La construction a echoue » alors que
+# l'APK etait construit, telecharge, et son lien affiche deux lignes plus haut.
+npx $EAS build --platform android --profile preview --non-interactive
+$codeBuild = $LASTEXITCODE
+
+if ($codeBuild -ne 0) {
+    Write-Host ''
+    Alerte 'La commande s''est terminee en erreur.'
+    Note 'Regardez les lignes ci-dessus : si vous y lisez « Build finished » et un lien'
+    Note 'de telechargement, l''APK EST construit — seule une etape locale a echoue.'
+    Note 'Vos constructions sont toujours listees sur https://expo.dev/accounts'
+    Write-Host ''
+    Read-Host '  Appuyez sur Entree pour fermer'
+    exit 1
 }
 
 Write-Host ''
 Write-Host '  CONSTRUIT' -ForegroundColor Green
 Write-Host ''
-Write-Host '  Le lien de telechargement de l''APK s''affiche ci-dessus.' -ForegroundColor Green
+Write-Host '  Le lien de telechargement de l''APK s''affiche ci-dessus,' -ForegroundColor Green
+Write-Host '  et reste disponible sur https://expo.dev/accounts' -ForegroundColor Green
 Write-Host '  Ouvrez-le depuis le telephone Android pour installer l''application.' -ForegroundColor DarkGray
 Write-Host '  Android demandera d''autoriser les « sources inconnues » : c''est normal' -ForegroundColor DarkGray
 Write-Host '  pour une application qui ne vient pas du Play Store.' -ForegroundColor DarkGray

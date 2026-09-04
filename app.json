@@ -85,6 +85,12 @@
     },
     "runtimeVersion": {
       "policy": "fingerprint"
+    },
+    "owner": "stephane11",
+    "extra": {
+      "eas": {
+        "projectId": "e6fd2393-325a-4837-8b11-8af085911e3c"
+      }
     }
   }
 }
