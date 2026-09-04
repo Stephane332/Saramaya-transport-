@@ -66,6 +66,67 @@ for (const [nom, attendu] of Object.entries(attendus)) {
   }
 }
 
+/* ── 3. Ce qui est réellement installé, et pas seulement déclaré ────────────── */
+
+/*
+ * Le contrôle ne regardait que `package.json`. Il a donc annoncé « tout est
+ * cohérent » sur une machine où Expo affichait, deux lignes plus bas :
+ *
+ *     expo@54.0.36 - expected version: ~54.0.37
+ *     expo-constants@18.0.13 - expected version: ~18.0.14
+ *
+ * Deux causes, et il faut les deux :
+ *
+ * 1. **Un `node_modules` périmé.** La déclaration peut être juste et l'installation
+ *    en retard — c'est ce qui arrive quand `npm install` échoue à moitié, ou qu'on
+ *    change de branche sans réinstaller.
+ * 2. **La liste de référence bouge avec `expo` lui-même.** `bundledNativeModules`
+ *    est livré *dans* le paquet `expo` : mettre à jour `expo` change ce qu'il
+ *    attend des autres. Comparer les déclarations à la liste d'une version d'`expo`
+ *    plus ancienne que celle installée ne prouve rien.
+ *
+ * On compare donc aussi, pour chaque dépendance, la version **installée** à la
+ * plage déclarée.
+ */
+
+/** Vrai si `version` tombe dans la plage `~x.y.z` ou `^x.y.z`. Sans dépendance. */
+function versionSatisfait(version, plage) {
+  const m = plage.match(/^([~^]?)(\d+)\.(\d+)\.(\d+)/);
+  if (!m) return true; // plage exotique (« * », une URL…) : hors de portée de ce contrôle
+  const [, operateur, maj, min, cor] = m;
+  const v = version.split('.').map(Number);
+  const attendu = [Number(maj), Number(min), Number(cor)];
+  if (v.some(Number.isNaN)) return true;
+
+  if (operateur === '~') {
+    // ~x.y.z : même majeure, même mineure, correctif au moins égal.
+    return v[0] === attendu[0] && v[1] === attendu[1] && v[2] >= attendu[2];
+  }
+  if (operateur === '^') {
+    // ^x.y.z : même majeure, et au moins x.y.z.
+    if (v[0] !== attendu[0]) return false;
+    return v[1] > attendu[1] || (v[1] === attendu[1] && v[2] >= attendu[2]);
+  }
+  return version === `${maj}.${min}.${cor}`;
+}
+
+const declarations = { ...paquet.dependencies, ...paquet.devDependencies };
+for (const [nom, plage] of Object.entries(declarations)) {
+  let installe;
+  try {
+    installe = require(`${nom}/package.json`).version;
+  } catch {
+    continue; // paquet sans point d'entrée lisible : on ne conclut pas
+  }
+  if (!versionSatisfait(installe, plage)) {
+    problemes.push(
+      `${nom} : ${installe} est installé, mais « ${plage} » est déclaré.\n` +
+        `      Le dossier node_modules est en retard sur package.json.\n` +
+        `      Corriger : npm install`,
+    );
+  }
+}
+
 /* ── Verdict ────────────────────────────────────────────────────────────────── */
 
 if (problemes.length === 0) {
