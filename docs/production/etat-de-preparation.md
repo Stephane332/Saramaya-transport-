@@ -88,8 +88,14 @@ créé. Il réserve, paie, retire son billet, le présente à la porte du bus. C
   transmise à la gare, et ne fabrique aucun titre de transport — l'application ne
   peut pas la vérifier, et ne fait pas semblant.
 - **Un colis préparé n'est ni déposé ni payé.** Il attend le guichet, où il est pesé,
-  réglé, enregistré. Le code de retrait n'apparaît qu'après, et si le guichet en
-  remet un autre, c'est celui-là qui est conservé.
+  réglé, enregistré. Rien n'apparaît avant le dépôt.
+- **Et le code de retrait est celui du guichet, ou n'en porte pas le nom.**
+  L'application s'en fabrique un en attendant, et elle l'affichait en très grand,
+  avec un QR, sous « CODE DE RETRAIT — à présenter au guichet ». Quand le guichet
+  n'en avait remis aucun, le destinataire se déplaçait avec un code que personne
+  n'avait émis. Ce n'était pas une gêne, c'était un colis perdu. Le code de la
+  compagnie fait foi ; le nôtre est annoncé comme une simple référence, et l'écran
+  dit ce qui compte au retrait — le nom et la pièce d'identité.
 - **Un voyage effectué ne se reporte plus, une annulation se rattrape.**
 
 Ces règles ne sont pas dispersées dans les écrans : elles vivent dans `parcours.ts`

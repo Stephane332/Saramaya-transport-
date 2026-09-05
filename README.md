@@ -113,9 +113,19 @@ remboursement en second (`src/lib/annulation.ts`).
 
 Une réservation, **une seule référence**, deux supports. Celui qui a l'application montre son
 QR code — qui fonctionne sans réseau, ce qui compte à la gare où le réseau manque. Celui qui
-n'en a pas garde son ticket papier. L'agent scanne l'un ou l'autre. L'application importe un
-ticket papier par scan ; le guichet peut imprimer une réservation faite dans l'application.
-Personne n'est exclu, ni les clients sans smartphone, ni les paiements en espèces.
+n'en a pas garde son ticket papier. L'agent scanne l'un ou l'autre ; le guichet peut imprimer
+une réservation faite dans l'application. Personne n'est exclu, ni les clients sans
+smartphone, ni les paiements en espèces.
+
+**Un ticket papier entre dans l'application en une photo.** Le code-barres ne donne que le
+numéro : date, heure, convocation, tarif, trajet et classe se recopiaient à la main, six
+champs sur un téléphone, à la gare — autant dire que personne ne le faisait. Le moteur de
+reconnaissance qui lit la CNIB lit désormais le ticket, et les champs trouvés pré-remplissent
+le formulaire. Rien n'est affirmé pour autant : un ticket n'a ni positions fixes ni clés de
+contrôle, on ne peut que reconnaître des formes. Chaque champ est donc **proposé**, relu par
+le voyageur, et un champ non reconnu reste vide plutôt que deviné — exactement ce que la
+compagnie écrit au dos de son propre ticket, « vérifiez l'heure et la date, car nos agents
+peuvent se tromper ».
 
 ---
 
